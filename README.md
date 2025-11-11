@@ -282,7 +282,6 @@ We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 
 - **Discord**: [discord.gg/graphql-cascade](https://discord.gg/graphql-cascade)
 - **GitHub Discussions**: [github.com/graphql-cascade/graphql-cascade/discussions](https://github.com/graphql-cascade/graphql-cascade/discussions)
-- **Twitter**: [@graphql_cascade](https://twitter.com/graphql_cascade)
 - **Stack Overflow**: Tag `graphql-cascade`
 
 ## Business Case
