@@ -159,35 +159,33 @@ jobs:
       run: |
         echo "📊 Generating compliance report..."
         mkdir -p compliance-reports
-        cat > compliance-reports/compliance-summary.md << 'EOF'
-# GraphQL Cascade Compliance Test Results
-
-## Test Run Information
-- Date: $(date)
-- Commit: ${{ github.sha }}
-- Branch: ${{ github.ref }}
-
-## Test Results
-
-### Specification Compliance
-- ✅ Specification validation: Completed
-
-### Reference Implementations
-- ✅ Python reference: Tested
-- ✅ Node.js reference: Tested
-
-### Example Implementations
-- ✅ Todo app example: Validated
-
-### Performance Benchmarks
-- ✅ Documentation build time: Measured
-
-### Package Validation
-- ✅ Package structure: Verified
-
-## Notes
-This is an automated compliance test run. For detailed results, check the individual test outputs above.
-EOF
+        echo '# GraphQL Cascade Compliance Test Results' > compliance-reports/compliance-summary.md
+        echo '' >> compliance-reports/compliance-summary.md
+        echo '## Test Run Information' >> compliance-reports/compliance-summary.md
+        echo "- Date: $(date)" >> compliance-reports/compliance-summary.md
+        echo "- Commit: ${{ github.sha }}" >> compliance-reports/compliance-summary.md
+        echo "- Branch: ${{ github.ref }}" >> compliance-reports/compliance-summary.md
+        echo '' >> compliance-reports/compliance-summary.md
+        echo '## Test Results' >> compliance-reports/compliance-summary.md
+        echo '' >> compliance-reports/compliance-summary.md
+        echo '### Specification Compliance' >> compliance-reports/compliance-summary.md
+        echo '- ✅ Specification validation: Completed' >> compliance-reports/compliance-summary.md
+        echo '' >> compliance-reports/compliance-summary.md
+        echo '### Reference Implementations' >> compliance-reports/compliance-summary.md
+        echo '- ✅ Python reference: Tested' >> compliance-reports/compliance-summary.md
+        echo '- ✅ Node.js reference: Tested' >> compliance-reports/compliance-summary.md
+        echo '' >> compliance-reports/compliance-summary.md
+        echo '### Example Implementations' >> compliance-reports/compliance-summary.md
+        echo '- ✅ Todo app example: Validated' >> compliance-reports/compliance-summary.md
+        echo '' >> compliance-reports/compliance-summary.md
+        echo '### Performance Benchmarks' >> compliance-reports/compliance-summary.md
+        echo '- ✅ Documentation build time: Measured' >> compliance-reports/compliance-summary.md
+        echo '' >> compliance-reports/compliance-summary.md
+        echo '### Package Validation' >> compliance-reports/compliance-summary.md
+        echo '- ✅ Package structure: Verified' >> compliance-reports/compliance-summary.md
+        echo '' >> compliance-reports/compliance-summary.md
+        echo '## Notes' >> compliance-reports/compliance-summary.md
+        echo 'This is an automated compliance test run. For detailed results, check the individual test outputs above.' >> compliance-reports/compliance-summary.md
 
     - name: Upload compliance reports
       if: always()
