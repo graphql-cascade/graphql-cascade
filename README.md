@@ -2,7 +2,6 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Specification](https://img.shields.io/badge/Specification-v0.1-blue)](./specification/)
-[![Discord](https://img.shields.io/discord/123456789)](https://discord.gg/graphql-cascade)
 
 **Cascading cache updates for GraphQL** - Automatic, intelligent cache invalidation that cascades through your entire data graph.
 
@@ -198,7 +197,6 @@ That's it! Cache invalidation now cascades automatically.
 
 ## Community
 
-- **Discord**: Join our [community Discord](https://discord.gg/graphql-cascade)
 - **GitHub Discussions**: Ask questions and share ideas
 - **Contributing**: See our [contribution guide](./CONTRIBUTING.md)
 
