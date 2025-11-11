@@ -78,7 +78,7 @@ response = builder.build_response(todo)
           { "queryName": "listTodos", "strategy": "INVALIDATE", "scope": "PREFIX" }
         ],
         "metadata": {
-          "timestamp": "2025-11-11T10:30:00Z",
+          "timestamp": "2025-11-20T10:30:00Z",
           "affectedCount": 1
         }
       }
@@ -325,13 +325,13 @@ See [Comparison Matrix](./research/comparison_matrix.md) for detailed framework 
 - ✅ Example applications
 - 🔄 Beta testing with real applications
 
-### v0.2 (Next - Q1 2025)
+### v0.2 (Next - Q1 2026)
 - Community feedback integration
 - Performance optimizations
 - Additional framework integrations (Vue, Angular)
 - Developer tools (DevTools extension, VS Code)
 
-### v1.0 (Target - Q2 2025)
+### v1.0 (Target - Q2 2026)
 - Production-ready stable release
 - Full compliance test suite
 - Comprehensive documentation
