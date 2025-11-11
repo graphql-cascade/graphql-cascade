@@ -102,35 +102,45 @@ const todo = await cascade.mutate(CREATE_TODO, variables);
 ## Benefits
 
 ### 🎯 Zero Boilerplate
+
 **Before**: 15-30 lines of manual cache logic per mutation
+
 **After**: 0 lines
 
 **Impact**: Eliminate 300-600 lines in a typical app
 
 ### ✅ Automatic Correctness
+
 **Before**: Developer guesses which queries to update
+
 **After**: Server provides complete, consistent updates
 
 **Impact**: 50-70% reduction in cache-related bugs
 
 ### 🧪 Simplified Testing
+
 **Before**: 3-5 tests per mutation for cache logic
+
 **After**: 0 mutation-specific cache tests
 
 **Impact**: 150-250 fewer tests in a typical app
 
 ### 🔧 Reduced Maintenance
+
 **Scenario**: Add new field to entity
 
 **Before**: Update 5-10 cache update functions
+
 **After**: Nothing—automatic
 
 ### ⚡ Performance
-**Single network request** includes all affected entities
-**No over-fetching** with configurable cascade depth
-**No multiple refetches** like `refetchQueries`
+
+- **Single network request** includes all affected entities
+- **No over-fetching** with configurable cascade depth
+- **No multiple refetches** like `refetchQueries`
 
 ### 🔌 Framework Agnostic
+
 Works with any GraphQL client:
 - ✅ Apollo Client
 - ✅ Relay Modern
@@ -353,4 +363,4 @@ Special thanks to the GraphQL community for inspiration and feedback.
 
 **GraphQL Cascade**: Making cache updates automatic, one mutation at a time.
 
-🌊 [graphql-cascade.dev](https://graphql-cascade.dev) | 📖 [Documentation](./docs/) | 💬 [Discussions](https://github.com/graphql-cascade/graphql-cascade/discussions)
+🌊 **GraphQL Cascade** | 📖 [Documentation](./docs/) | 💬 [Discussions](https://github.com/graphql-cascade/graphql-cascade/discussions)
