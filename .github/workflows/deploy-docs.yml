@@ -33,6 +33,7 @@ jobs:
       uses: actions/configure-pages@v4
       with:
         enablement: true
+      continue-on-error: true
 
     - name: Set up Python
       uses: actions/setup-python@v4
