@@ -1,0 +1,33 @@
+sequenceDiagram
+    participant Client
+    participant Cache
+    participant CascadeClient
+
+    Client->>CascadeClient: mutate(mutation, variables)
+    CascadeClient->>Client: execute GraphQL mutation
+    Client->>CascadeClient: receive response with cascade
+    CascadeClient->>CascadeClient: extract cascade data
+
+    rect rgb(240, 248, 255)
+        Note over CascadeClient: Apply Cascade Updates
+        CascadeClient->>Cache: write primary result entity
+        CascadeClient->>Cache: for each updated entity
+        Cache-->>CascadeClient: entity written to cache
+        CascadeClient->>Cache: for each deleted entity
+        Cache-->>CascadeClient: entity evicted from cache
+    end
+
+    rect rgb(255, 248, 220)
+        Note over CascadeClient: Process Invalidations
+        CascadeClient->>Cache: for each invalidation hint
+        alt InvalidationStrategy.INVALIDATE
+            Cache-->>CascadeClient: mark query as stale
+        else InvalidationStrategy.REFETCH
+            Cache-->>CascadeClient: trigger immediate refetch
+        else InvalidationStrategy.REMOVE
+            Cache-->>CascadeClient: remove query from cache
+        end
+    end
+
+    CascadeClient->>Client: return primary mutation result
+    Note over Client: Cache automatically updated

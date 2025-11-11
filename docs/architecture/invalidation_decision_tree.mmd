@@ -1,0 +1,52 @@
+flowchart TD
+    A[Mutation Completes] --> B[Collect Affected Entity Types]
+    B --> C[For Each Affected Type]
+
+    C --> D{List Query Exists?<br/>e.g., listUsers}
+    D -->|Yes| E[Add Invalidation:<br/>queryName: listUsers<br/>strategy: INVALIDATE<br/>scope: PREFIX]
+
+    D -->|No| F[Skip List Query]
+
+    C --> G{Get Query Exists?<br/>e.g., getUser}
+    G -->|Yes| H[For Each Updated Entity ID]
+    H --> I[Add Invalidation:<br/>queryName: getUser<br/>arguments: {id: entityId}<br/>strategy: REFETCH<br/>scope: EXACT]
+
+    G -->|No| J[Skip Get Query]
+
+    C --> K{Search Query Exists?<br/>e.g., searchUsers}
+    K -->|Yes| L[Add Invalidation:<br/>queryPattern: searchUser*<br/>strategy: INVALIDATE<br/>scope: PATTERN]
+
+    K -->|No| M[Skip Search Query]
+
+    C --> N[Check Custom Rules<br/>from @cascadeInvalidates]
+
+    N --> O{Field Changed<br/>has @cascadeInvalidates?}
+    O -->|Yes| P[For Each Directive Rule]
+    P --> Q[Add Invalidation:<br/>queryName: rule.query<br/>strategy: rule.strategy<br/>scope: rule.scope]
+
+    O -->|No| R[No Custom Rules]
+
+    E --> S[Next Entity Type]
+    F --> S
+    I --> S
+    J --> S
+    L --> S
+    M --> S
+    Q --> S
+    R --> S
+
+    S --> T{All Types Processed?}
+    T -->|No| C
+    T -->|Yes| U[Deduplicate Invalidations]
+    U --> V[Return Invalidation Hints]
+
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style V fill:#e8f5e8
+
+    subgraph "Example Invalidations"
+        W[listUsers<br/>strategy: INVALIDATE]
+        X[getUser id:123<br/>strategy: REFETCH]
+        Y[searchUsers*<br/>strategy: INVALIDATE]
+        Z[customQuery<br/>strategy: REMOVE]
+    end

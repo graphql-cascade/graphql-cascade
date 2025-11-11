@@ -1,0 +1,225 @@
+"""
+GraphQL Cascade TODO App Schema
+
+Demonstrates basic CRUD operations with GraphQL Cascade.
+"""
+
+interface Node {
+  id: ID!
+}
+
+interface Timestamped {
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+type User implements Node & Timestamped {
+  id: ID!
+  email: String!
+  name: String!
+  todos: [Todo!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+type Todo implements Node & Timestamped {
+  id: ID!
+  title: String!
+  description: String
+  completed: Boolean!
+  owner: User!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+# Cascade Response Types
+interface CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: MutationPayload
+  cascade: CascadeUpdates!
+}
+
+type CascadeUpdates {
+  updated: [UpdatedEntity!]!
+  deleted: [DeletedEntity!]!
+  invalidations: [QueryInvalidation!]!
+  metadata: CascadeMetadata!
+}
+
+type CascadeMetadata {
+  timestamp: DateTime!
+  transactionId: ID
+  depth: Int!
+  affectedCount: Int!
+}
+
+type UpdatedEntity {
+  __typename: String!
+  id: ID!
+  operation: CascadeOperation!
+  entity: Node!
+}
+
+type DeletedEntity {
+  __typename: String!
+  id: ID!
+  deletedAt: DateTime!
+}
+
+enum CascadeOperation {
+  CREATED
+  UPDATED
+  DELETED
+}
+
+type CascadeError {
+  message: String!
+  code: CascadeErrorCode!
+  field: String
+  path: [String!]
+  extensions: JSON
+}
+
+enum CascadeErrorCode {
+  VALIDATION_ERROR
+  NOT_FOUND
+  UNAUTHORIZED
+  FORBIDDEN
+  CONFLICT
+  INTERNAL_ERROR
+  TRANSACTION_FAILED
+}
+
+type QueryInvalidation {
+  queryName: String
+  queryHash: String
+  arguments: JSON
+  queryPattern: String
+  strategy: InvalidationStrategy!
+  scope: InvalidationScope!
+}
+
+enum InvalidationStrategy {
+  INVALIDATE
+  REFETCH
+  REMOVE
+}
+
+enum InvalidationScope {
+  EXACT
+  PREFIX
+  PATTERN
+  ALL
+}
+
+# Mutation Response Types
+type CreateUserCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type UpdateUserCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type DeleteUserCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type CreateTodoCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Todo
+  cascade: CascadeUpdates!
+}
+
+type UpdateTodoCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Todo
+  cascade: CascadeUpdates!
+}
+
+type DeleteTodoCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Todo
+  cascade: CascadeUpdates!
+}
+
+# Input Types
+input CreateUserInput {
+  email: String!
+  name: String!
+}
+
+input UpdateUserInput {
+  email: String
+  name: String
+}
+
+input CreateTodoInput {
+  title: String!
+  description: String
+  ownerId: ID!
+}
+
+input UpdateTodoInput {
+  title: String
+  description: String
+  completed: Boolean
+}
+
+# Queries
+type Query {
+  # Get single entities
+  getUser(id: ID!): User
+  getTodo(id: ID!): Todo
+
+  # List entities
+  listUsers(limit: Int = 10, offset: Int = 0): [User!]!
+  listTodos(limit: Int = 10, offset: Int = 0): [Todo!]!
+
+  # Search
+  searchUsers(query: String!): [User!]!
+  searchTodos(query: String!): [Todo!]!
+}
+
+# Mutations
+type Mutation {
+  # User mutations
+  createUser(input: CreateUserInput!): CreateUserCascade!
+    @cascade(maxDepth: 2)
+
+  updateUser(id: ID!, input: UpdateUserInput!): UpdateUserCascade!
+    @cascade(maxDepth: 2)
+
+  deleteUser(id: ID!): DeleteUserCascade!
+    @cascade(maxDepth: 3)  # Cascade to delete user's todos
+
+  # Todo mutations
+  createTodo(input: CreateTodoInput!): CreateTodoCascade!
+    @cascade(maxDepth: 2)
+
+  updateTodo(id: ID!, input: UpdateTodoInput!): UpdateTodoCascade!
+    @cascade(maxDepth: 2)
+
+  deleteTodo(id: ID!): DeleteTodoCascade!
+    @cascade(maxDepth: 1)
+}
+
+# Custom Scalars
+scalar DateTime
+scalar JSON

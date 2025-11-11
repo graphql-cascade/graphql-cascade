@@ -1,0 +1,491 @@
+# GraphQL Cascade Example: Many-to-Many Relationships
+# Order with Products through OrderItem - demonstrates complex cascading through junction entities
+
+"""
+Base schema imports - all Cascade schemas must include these
+"""
+interface Node {
+  id: ID!
+}
+
+interface Timestamped {
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+interface CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: MutationPayload
+  cascade: CascadeUpdates!
+}
+
+type CascadeUpdates {
+  updated: [UpdatedEntity!]!
+  deleted: [DeletedEntity!]!
+  invalidations: [QueryInvalidation!]!
+  metadata: CascadeMetadata!
+}
+
+type UpdatedEntity {
+  __typename: String!
+  id: ID!
+  operation: CascadeOperation!
+  entity: Node!
+}
+
+type DeletedEntity {
+  __typename: String!
+  id: ID!
+  deletedAt: DateTime!
+}
+
+type QueryInvalidation {
+  queryName: String
+  queryPattern: String
+  strategy: InvalidationStrategy!
+  scope: InvalidationScope!
+}
+
+enum CascadeOperation {
+  CREATED
+  UPDATED
+  DELETED
+}
+
+enum InvalidationStrategy {
+  INVALIDATE
+  REFETCH
+  REMOVE
+}
+
+enum InvalidationScope {
+  EXACT
+  PREFIX
+  PATTERN
+  ALL
+}
+
+type CascadeMetadata {
+  timestamp: DateTime!
+  depth: Int!
+  affectedCount: Int!
+}
+
+type CascadeError {
+  message: String!
+  code: CascadeErrorCode!
+  field: String
+  path: [String!]
+  extensions: JSON
+}
+
+enum CascadeErrorCode {
+  VALIDATION_ERROR
+  NOT_FOUND
+  UNAUTHORIZED
+  FORBIDDEN
+  CONFLICT
+  INTERNAL_ERROR
+  TRANSACTION_FAILED
+}
+
+scalar DateTime
+scalar JSON
+scalar MutationPayload
+
+# Directives
+directive @cascade(
+  maxDepth: Int = 3
+  includeRelated: Boolean = true
+  autoInvalidate: Boolean = true
+  excludeTypes: [String!]
+) on FIELD_DEFINITION
+
+directive @cascadeInvalidates(
+  queries: [String!]!
+  strategy: InvalidationStrategy = INVALIDATE
+) on FIELD_DEFINITION
+
+# Pagination types
+interface Connection {
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+interface Edge {
+  cursor: String!
+  node: Node!
+}
+
+input PaginationArgs {
+  first: Int
+  last: Int
+  after: String
+  before: String
+}
+
+# Domain entities
+
+"""
+Order entity with many-to-many relationship to Products through OrderItem
+"""
+type Order implements Node & Timestamped {
+  id: ID!
+  orderNumber: String!
+  customer: User!
+  items: [OrderItem!]!
+  total: Float! @cascadeInvalidates(queries: ["listOrders", "getOrder"])
+  status: OrderStatus! @cascadeInvalidates(queries: ["listOrders", "getOrder"])
+  shippingAddress: Address!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+type OrderItem {
+  id: ID!
+  order: Order!
+  product: Product!
+  quantity: Int!
+  unitPrice: Float!
+  totalPrice: Float!
+}
+
+type Product implements Node {
+  id: ID!
+  name: String!
+  description: String
+  price: Float!
+  category: ProductCategory!
+  inventory: Int!
+  isActive: Boolean!
+}
+
+type User implements Node & Timestamped {
+  id: ID!
+  email: String!
+  name: String!
+  orders: [Order!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+type Address implements Node {
+  id: ID!
+  street: String!
+  city: String!
+  state: String!
+  country: String!
+  postalCode: String!
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum ProductCategory {
+  ELECTRONICS
+  CLOTHING
+  BOOKS
+  HOME
+  SPORTS
+  TOYS
+}
+
+# Input types
+
+input CreateOrderInput {
+  customerId: ID!
+  items: [OrderItemInput!]!
+  shippingAddressId: ID!
+}
+
+input OrderItemInput {
+  productId: ID!
+  quantity: Int!
+}
+
+input UpdateOrderInput {
+  status: OrderStatus
+  shippingAddressId: ID
+  items: [OrderItemUpdateInput!]
+}
+
+input OrderItemUpdateInput {
+  productId: ID!
+  quantity: Int!
+}
+
+input AddProductToOrderInput {
+  orderId: ID!
+  productId: ID!
+  quantity: Int!
+}
+
+input CreateProductInput {
+  name: String!
+  description: String
+  price: Float!
+  category: ProductCategory!
+  inventory: Int!
+}
+
+input UpdateProductInput {
+  name: String
+  description: String
+  price: Float
+  category: ProductCategory
+  inventory: Int
+  isActive: Boolean
+}
+
+# Response types
+
+type CreateOrderCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Order
+  cascade: CascadeUpdates!
+}
+
+type UpdateOrderCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Order
+  cascade: CascadeUpdates!
+}
+
+type AddProductToOrderCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Order
+  cascade: CascadeUpdates!
+}
+
+type CreateProductCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Product
+  cascade: CascadeUpdates!
+}
+
+type UpdateProductCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Product
+  cascade: CascadeUpdates!
+}
+
+# Queries
+
+type Query {
+  # Order queries
+  getOrder(id: ID!): Order
+  listOrders(
+    first: Int = 10
+    after: String
+    filter: OrderFilter
+    orderBy: OrderOrderBy = CREATED_AT_DESC
+  ): OrderConnection!
+
+  # Product queries
+  getProduct(id: ID!): Product
+  listProducts(
+    first: Int = 10
+    after: String
+    filter: ProductFilter
+    orderBy: ProductOrderBy = NAME_ASC
+  ): ProductConnection!
+
+  # User queries
+  getUser(id: ID!): User
+  listUsers(
+    first: Int = 10
+    after: String
+    filter: UserFilter
+    orderBy: UserOrderBy = CREATED_AT_DESC
+  ): UserConnection!
+
+  # Search queries
+  searchProducts(query: String!, first: Int = 10, after: String): ProductConnection!
+}
+
+type OrderConnection {
+  edges: [OrderEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type OrderEdge {
+  node: Order!
+  cursor: String!
+}
+
+type ProductConnection {
+  edges: [ProductEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ProductEdge {
+  node: Product!
+  cursor: String!
+}
+
+type UserConnection {
+  edges: [UserEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type UserEdge {
+  node: User!
+  cursor: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+input OrderFilter {
+  customerId: ID
+  status: OrderStatus
+  totalMin: Float
+  totalMax: Float
+  createdAfter: DateTime
+  createdBefore: DateTime
+}
+
+input ProductFilter {
+  category: ProductCategory
+  priceMin: Float
+  priceMax: Float
+  inStock: Boolean
+  isActive: Boolean
+}
+
+input UserFilter {
+  emailContains: String
+  nameContains: String
+}
+
+enum OrderOrderBy {
+  CREATED_AT_ASC
+  CREATED_AT_DESC
+  TOTAL_ASC
+  TOTAL_DESC
+  STATUS_ASC
+  STATUS_DESC
+}
+
+enum ProductOrderBy {
+  NAME_ASC
+  NAME_DESC
+  PRICE_ASC
+  PRICE_DESC
+  CREATED_AT_ASC
+  CREATED_AT_DESC
+}
+
+enum UserOrderBy {
+  CREATED_AT_ASC
+  CREATED_AT_DESC
+  NAME_ASC
+  NAME_DESC
+  EMAIL_ASC
+  EMAIL_DESC
+}
+
+# Mutations
+
+type Mutation {
+  # Order mutations
+  createOrder(input: CreateOrderInput!): CreateOrderCascade!
+    @cascade(maxDepth: 3)
+
+  updateOrder(id: ID!, input: UpdateOrderInput!): UpdateOrderCascade!
+    @cascade(maxDepth: 3)
+
+  addProductToOrder(input: AddProductToOrderInput!): AddProductToOrderCascade!
+    @cascade(maxDepth: 3)
+
+  # Product mutations
+  createProduct(input: CreateProductInput!): CreateProductCascade!
+    @cascade(maxDepth: 2)
+
+  updateProduct(id: ID!, input: UpdateProductInput!): UpdateProductCascade!
+    @cascade(maxDepth: 2)
+}
+
+# Cascade directives on fields
+
+type Order {
+  orderNumber: String!
+  customer: User!
+    @cascadeInvalidates(queries: ["listOrders", "getUser"])
+
+  items: [OrderItem!]!
+  total: Float!
+    @cascadeInvalidates(queries: ["listOrders"])
+
+  status: OrderStatus!
+    @cascadeInvalidates(queries: ["listOrders"])
+
+  shippingAddress: Address!
+}
+
+type OrderItem {
+  order: Order!
+  product: Product!
+  quantity: Int!
+    @cascadeInvalidates(queries: ["getOrder"])
+
+  unitPrice: Float!
+  totalPrice: Float!
+}
+
+type Product {
+  name: String!
+    @cascadeInvalidates(queries: ["listProducts", "searchProducts"])
+
+  description: String
+  price: Float!
+    @cascadeInvalidates(queries: ["listProducts", "getProduct"])
+
+  category: ProductCategory!
+    @cascadeInvalidates(queries: ["listProducts"])
+
+  inventory: Int!
+    @cascadeInvalidates(queries: ["listProducts"])
+
+  isActive: Boolean!
+    @cascadeInvalidates(queries: ["listProducts"])
+}
+
+type User {
+  email: String!
+    @cascadeInvalidates(queries: ["listUsers"])
+
+  name: String!
+    @cascadeInvalidates(queries: ["listUsers"])
+
+  orders: [Order!]!
+}

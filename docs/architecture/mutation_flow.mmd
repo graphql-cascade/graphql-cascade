@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant Client
+    participant Server
+    participant Database
+
+    Client->>Server: mutation request
+    Server->>Database: begin transaction
+    Database-->>Server: transaction started
+    Server->>Server: start entity tracking
+    Server->>Database: write mutation data
+    Database-->>Server: data written
+    Server->>Database: fetch related entities
+    Database-->>Server: related entities
+    Server->>Database: commit transaction
+    Database-->>Server: transaction committed
+    Server->>Server: build cascade response
+    Server-->>Client: mutation response with cascade
+    Client->>Client: apply cascade to cache
+    Note over Client: Cache automatically updated

@@ -1,0 +1,445 @@
+# GraphQL Cascade Base Schema
+# This file contains the core types and interfaces that all Cascade-compliant
+# GraphQL schemas must implement.
+
+"""
+Marks a mutation as Cascade-compliant and configures cascade behavior.
+"""
+directive @cascade(
+  """Maximum relationship depth to cascade through."""
+  maxDepth: Int = 3
+
+  """Whether to include related entities in the cascade."""
+  includeRelated: Boolean = true
+
+  """
+  Whether to automatically compute invalidation hints.
+  If false, server must manually specify invalidations.
+  """
+  autoInvalidate: Boolean = true
+
+  """
+  Entity types to exclude from cascade (e.g., don't cascade to audit logs).
+  """
+  excludeTypes: [String!]
+) on FIELD_DEFINITION
+
+"""
+Marks a field as triggering cascade invalidation when this field changes.
+"""
+directive @cascadeInvalidates(
+  """Queries to invalidate when this field changes."""
+  queries: [String!]!
+
+  """Invalidation strategy to use."""
+  strategy: InvalidationStrategy = INVALIDATE
+) on FIELD_DEFINITION
+
+"""
+Global object identification for GraphQL Cascade.
+All domain entities MUST implement this interface.
+"""
+interface Node {
+  """Globally unique identifier for this entity."""
+  id: ID!
+}
+
+"""
+Timestamped entities for version tracking.
+"""
+interface Timestamped {
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int  # Optional: for optimistic concurrency control
+}
+
+"""
+Standard GraphQL Cascade mutation response.
+All Cascade-compliant mutations MUST return this interface.
+"""
+interface CascadeResponse {
+  """Whether the mutation succeeded."""
+  success: Boolean!
+
+  """List of errors if mutation failed or partially succeeded."""
+  errors: [CascadeError!]
+
+  """The primary result of the mutation."""
+  data: MutationPayload
+
+  """The cascade of updates triggered by this mutation."""
+  cascade: CascadeUpdates!
+}
+
+"""
+The cascade of updates triggered by a mutation.
+"""
+type CascadeUpdates {
+  """All entities updated by this mutation (including the primary result)."""
+  updated: [UpdatedEntity!]!
+
+  """All entities deleted by this mutation."""
+  deleted: [DeletedEntity!]!
+
+  """Query invalidation hints for cache management."""
+  invalidations: [QueryInvalidation!]!
+
+  """Metadata about the cascade."""
+  metadata: CascadeMetadata!
+}
+
+"""
+Metadata about a cascade operation.
+"""
+type CascadeMetadata {
+  """Server timestamp when mutation executed."""
+  timestamp: DateTime!
+
+  """Transaction ID for tracking (optional)."""
+  transactionId: ID
+
+  """Maximum relationship depth traversed."""
+  depth: Int!
+
+  """Total number of entities affected."""
+  affectedCount: Int!
+}
+
+"""
+An entity that was updated in the cascade.
+"""
+type UpdatedEntity {
+  """Type name of the entity (e.g., "User", "Company")."""
+  __typename: String!
+
+  """ID of the entity."""
+  id: ID!
+
+  """The operation performed."""
+  operation: CascadeOperation!
+
+  """The full entity data."""
+  entity: Node!
+}
+
+"""
+An entity that was deleted in the cascade.
+"""
+type DeletedEntity {
+  """Type name of the deleted entity."""
+  __typename: String!
+
+  """ID of the deleted entity."""
+  id: ID!
+
+  """When the entity was deleted."""
+  deletedAt: DateTime!
+}
+
+"""
+Type of cascade operation.
+"""
+enum CascadeOperation {
+  CREATED
+  UPDATED
+  DELETED
+}
+
+"""
+Instructions for cache invalidation after a mutation.
+"""
+type QueryInvalidation {
+  """
+  Query name to invalidate (e.g., "listUsers", "getCompany").
+  If null, use queryPattern.
+  """
+  queryName: String
+
+  """
+  Hash of the query for exact matching.
+  """
+  queryHash: String
+
+  """
+  Arguments that identify the query to invalidate.
+  Example: { "companyId": "123" }
+  """
+  arguments: JSON
+
+  """
+  Pattern to match queries (e.g., "list*", "get*").
+  """
+  queryPattern: String
+
+  """
+  Strategy for handling the invalidation.
+  """
+  strategy: InvalidationStrategy!
+
+  """
+  Scope of the invalidation.
+  """
+  scope: InvalidationScope!
+}
+
+"""
+Strategy for cache invalidation.
+"""
+enum InvalidationStrategy {
+  """Mark the query as stale, refetch on next access."""
+  INVALIDATE
+
+  """Immediately refetch the query."""
+  REFETCH
+
+  """Remove the query from cache entirely."""
+  REMOVE
+}
+
+"""
+Scope of cache invalidation.
+"""
+enum InvalidationScope {
+  """Only invalidate the exact query with exact arguments."""
+  EXACT
+
+  """Invalidate all queries with names matching the prefix."""
+  PREFIX
+
+  """Invalidate all queries matching the pattern (glob-style)."""
+  PATTERN
+
+  """Invalidate all queries."""
+  ALL
+}
+
+"""
+Error in a cascade mutation.
+"""
+type CascadeError {
+  """Human-readable error message."""
+  message: String!
+
+  """Machine-readable error code."""
+  code: CascadeErrorCode!
+
+  """Field that caused the error (if applicable)."""
+  field: String
+
+  """Path to the error in the input."""
+  path: [String!]
+
+  """Additional error metadata."""
+  extensions: JSON
+}
+
+"""
+Standard error codes for Cascade mutations.
+"""
+enum CascadeErrorCode {
+  VALIDATION_ERROR
+  NOT_FOUND
+  UNAUTHORIZED
+  FORBIDDEN
+  CONFLICT
+  INTERNAL_ERROR
+  TRANSACTION_FAILED
+}
+
+"""
+Subscription for real-time cascade updates.
+"""
+type Subscription {
+  """
+  Subscribe to cascade updates for specific entity types.
+  """
+  cascadeUpdates(
+    """Entity types to subscribe to (e.g., ["User", "Company"])."""
+    entityTypes: [String!]
+
+    """Optional filter by entity IDs."""
+    entityIds: [ID!]
+
+    """Optional filter by operations."""
+    operations: [CascadeOperation!]
+  ): CascadeUpdateEvent!
+}
+
+"""
+Real-time cascade update event.
+"""
+type CascadeUpdateEvent {
+  """Type of event."""
+  eventType: CascadeEventType!
+
+  """The updated entity (for CREATED/UPDATED events)."""
+  entity: UpdatedEntity
+
+  """The deleted entity (for DELETED events)."""
+  deletedEntity: DeletedEntity
+
+  """Timestamp of the event."""
+  timestamp: DateTime!
+
+  """Transaction that caused this update."""
+  transactionId: ID
+
+  """Source of the event."""
+  source: EventSource!
+}
+
+"""
+Type of cascade event.
+"""
+enum CascadeEventType {
+  ENTITY_CREATED
+  ENTITY_UPDATED
+  ENTITY_DELETED
+}
+
+"""
+Source of the cascade event.
+"""
+enum EventSource {
+  MUTATION     # Event from a mutation
+  SUBSCRIPTION # Event from another subscription
+  SYSTEM       # System-generated event
+}
+
+# Custom scalars
+"""
+Custom scalar for date/time values.
+"""
+scalar DateTime
+
+"""
+Custom scalar for JSON data.
+"""
+scalar JSON
+
+"""
+Placeholder for mutation payload - should be replaced with actual types.
+"""
+scalar MutationPayload
+
+# Pagination Types
+"""
+Connection interface for cursor-based pagination.
+All list queries SHOULD use this pattern for consistency.
+"""
+interface Connection {
+  """Information about the current page."""
+  pageInfo: PageInfo!
+
+  """Total count of items (optional but recommended)."""
+  totalCount: Int
+}
+
+"""
+Page information for cursor-based pagination.
+"""
+type PageInfo {
+  """Whether there are more items after this page."""
+  hasNextPage: Boolean!
+
+  """Whether there are more items before this page."""
+  hasPreviousPage: Boolean!
+
+  """Cursor for the first item in this page."""
+  startCursor: String
+
+  """Cursor for the last item in this page."""
+  endCursor: String
+}
+
+"""
+Edge wrapper for cursor-based pagination.
+"""
+interface Edge {
+  """Cursor for this item."""
+  cursor: String!
+
+  """The item itself."""
+  node: Node!
+}
+
+"""
+Arguments for cursor-based pagination.
+"""
+input PaginationArgs {
+  """Number of items to return."""
+  first: Int
+
+  """Number of items to return before this cursor."""
+  last: Int
+
+  """Cursor to start after."""
+  after: String
+
+  """Cursor to start before."""
+  before: String
+}
+
+"""
+Arguments for offset-based pagination (MAY be used as alternative).
+"""
+input OffsetPaginationArgs {
+  """Number of items to skip."""
+  offset: Int = 0
+
+  """Number of items to return."""
+  limit: Int = 10
+}
+
+# Query Naming Conventions
+"""
+Standard query interface that all Cascade-compliant schemas SHOULD implement.
+Provides consistent query naming and pagination patterns.
+"""
+type Query {
+  """
+  Get a single entity by ID.
+  Convention: get<EntityType>
+  """
+  # Example: getUser(id: ID!): User
+
+  """
+  List entities with pagination.
+  Convention: list<EntityType>s
+  """
+  # Example: listUsers(args: PaginationArgs): UserConnection
+
+  """
+  Search entities.
+  Convention: search<EntityType>s
+  """
+  # Example: searchUsers(query: String!, args: PaginationArgs): UserConnection
+}
+
+# Mutation Naming Conventions
+"""
+Standard mutation interface that all Cascade-compliant schemas SHOULD implement.
+Provides consistent mutation naming and response patterns.
+"""
+type Mutation {
+  """
+  Create a new entity.
+  Convention: create<EntityType>
+  Response: Create<EntityType>Cascade
+  """
+  # Example: createUser(input: CreateUserInput!): CreateUserCascade!
+
+  """
+  Update an existing entity.
+  Convention: update<EntityType>
+  Response: Update<EntityType>Cascade
+  """
+  # Example: updateUser(id: ID!, input: UpdateUserInput!): UpdateUserCascade!
+
+  """
+  Delete an entity.
+  Convention: delete<EntityType>
+  Response: Delete<EntityType>Cascade
+  """
+  # Example: deleteUser(id: ID!): DeleteUserCascade!
+}

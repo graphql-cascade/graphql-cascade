@@ -1,0 +1,556 @@
+# SpecQL Extended Syntax Example: Contact Entity with Full UI Metadata
+# This demonstrates the language extension approach where UI concepts are first-class
+
+entity: Contact
+schema: crm
+description: "CRM contact with integrated UI metadata"
+
+# Entity-level UI metadata
+ui:
+  label: "Contacts"
+  label_singular: "Contact"
+  icon: user-circle
+  color: blue
+
+  # Display configuration (how entities are shown in references)
+  display:
+    title_template: "{{first_name}} {{last_name}}"
+    subtitle_template: "{{job_title}} at {{organization.name}}"
+    avatar_field: avatar
+
+  # Search configuration
+  search:
+    fields: [first_name, last_name, email, phone]
+    placeholder: "Search contacts by name, email, or phone..."
+
+  # Auto-generation control
+  auto_generate:
+    list: true
+    form: true
+    detail: true
+
+# Fields with integrated UI metadata
+fields:
+  # Simple short form (backwards compatible)
+  first_name: text!
+  last_name: text!
+
+  # Long form with UI metadata
+  email:
+    type: email!
+    label: "Work Email"
+    placeholder: "user@company.com"
+    help_text: "Primary business email address"
+
+    # Visibility control
+    visible_in: [list, form, detail]
+
+    # List view configuration
+    list:
+      width: 250
+      sortable: true
+      alignment: left
+
+    # Form configuration
+    form:
+      section: contact_info
+      order: 1
+      validation: strict  # Use backend validation strictly
+
+    # Detail view configuration
+    detail:
+      section: primary
+      order: 1
+      render_as: link  # Clickable email link
+
+  phone:
+    type: phoneNumber
+    label: "Phone Number"
+    placeholder: "+1 (555) 000-0000"
+    help_text: "Primary contact number"
+
+    visible_in: [list, form, detail]
+
+    list:
+      width: 180
+      sortable: false
+
+    form:
+      section: contact_info
+      order: 2
+
+    detail:
+      section: primary
+      order: 2
+      render_as: call_link  # Click to call
+
+  website:
+    type: url
+    label: "Website"
+    placeholder: "https://company.com"
+
+    visible_in: [form, detail]
+
+    form:
+      section: contact_info
+      order: 3
+
+    detail:
+      section: primary
+      render_as: external_link
+
+  avatar:
+    type: image
+    label: "Profile Picture"
+
+    visible_in: [detail]
+
+    form:
+      section: personal
+      widget: image_upload
+      max_size: 5242880  # 5MB
+
+    detail:
+      section: header
+      render_as: avatar
+
+  job_title:
+    type: text
+    label: "Job Title"
+    placeholder: "e.g., Sales Manager"
+
+    visible_in: [list, form, detail]
+
+    list:
+      width: 200
+      sortable: true
+
+    form:
+      section: organization_info
+      order: 2
+
+  # Reference field with UI configuration
+  organization:
+    type: ref(Organization)
+    label: "Company"
+
+    visible_in: [list, form, detail]
+
+    list:
+      width: 200
+      sortable: true
+
+    form:
+      section: organization_info
+      order: 1
+      widget: autocomplete
+      lookup_config:
+        display_template: "{{name}} - {{city}}, {{country}}"
+        filters: ["active = true"]
+        sort: name
+        allow_create: true
+        create_inline: false  # Open modal instead
+
+    detail:
+      section: organization
+      render_as: reference_card  # Show card with org details
+
+  # Enum field with UI config
+  status:
+    type: enum(lead, qualified, customer, inactive)
+    label: "Status"
+    default: lead
+
+    visible_in: [list, form, detail]
+
+    list:
+      width: 120
+      sortable: true
+      render_as: badge  # Colored badge
+      badge_colors:
+        lead: gray
+        qualified: blue
+        customer: green
+        inactive: red
+
+    form:
+      section: status_info
+      order: 1
+      widget: radio_group  # Instead of dropdown
+
+    detail:
+      section: status
+      render_as: badge
+
+  notes:
+    type: text
+    label: "Notes"
+    placeholder: "Add notes about this contact..."
+
+    visible_in: [form, detail]
+
+    form:
+      section: additional
+      order: 1
+      widget: textarea
+      rows: 4
+
+    detail:
+      section: additional
+      render_as: markdown
+
+  # Fields hidden from UI (backend only)
+  internal_score:
+    type: integer
+    visible_in: []  # Not visible in any UI
+
+# Actions with integrated UI metadata
+actions:
+  - name: create_contact
+    description: "Create a new contact"
+
+    # Backend logic
+    steps:
+      - validate: email IS NOT NULL
+      - validate: email NOT IN (SELECT email FROM crm.contact WHERE deleted_at IS NULL)
+      - insert: Contact
+
+    # Frontend UI metadata
+    ui:
+      label: "New Contact"
+      icon: plus-circle
+      variant: primary
+
+      # Where this action button appears
+      show_in: [list_primary, list_bulk]
+
+      # No confirmation needed
+      confirmation:
+        enabled: false
+
+      # Success handling
+      on_success:
+        message: "Contact {{first_name}} {{last_name}} created successfully!"
+        toast: success
+        redirect: "/contacts/{{id}}"
+        refetch: [Contact]
+
+      # Error handling
+      on_error:
+        message: "Failed to create contact: {{error}}"
+        toast: error
+        retry: true
+
+  - name: update_contact
+    description: "Update contact information"
+
+    steps:
+      - validate: email IS NOT NULL
+      - update: Contact
+
+    ui:
+      label: "Save Changes"
+      icon: save
+      variant: primary
+
+      show_in: [form_submit]
+
+      confirmation:
+        enabled: false
+
+      on_success:
+        message: "Contact updated successfully!"
+        toast: success
+        redirect: "/contacts/{{id}}"
+        refetch: [Contact, Organization]
+
+  - name: qualify_lead
+    description: "Qualify lead as customer"
+
+    steps:
+      - validate: status = 'lead'
+      - update: Contact SET status = 'qualified'
+      - notify: sales_team
+
+    ui:
+      label: "Qualify Lead"
+      icon: check-circle
+      variant: success
+
+      show_in: [detail_actions, list_row_actions]
+
+      # Conditional visibility (only show for leads)
+      visible_when: "status = 'lead'"
+
+      confirmation:
+        enabled: true
+        title: "Qualify Lead?"
+        message: "Qualify {{first_name}} {{last_name}} as a customer?"
+        confirm_label: "Qualify"
+        cancel_label: "Cancel"
+
+      # Permissions
+      roles: [sales_manager, admin]
+
+      on_success:
+        message: "Lead qualified successfully!"
+        toast: success
+        refetch: [Contact]
+
+  - name: convert_to_customer
+    description: "Convert qualified lead to customer"
+
+    steps:
+      - validate: status = 'qualified'
+      - update: Contact SET status = 'customer'
+      - call: create_customer_record
+
+    ui:
+      label: "Convert to Customer"
+      icon: star
+      variant: primary
+
+      show_in: [detail_actions]
+
+      visible_when: "status = 'qualified'"
+
+      confirmation:
+        enabled: true
+        title: "Convert to Customer?"
+        message: "This will create a customer record for {{first_name}} {{last_name}}."
+        confirm_label: "Convert"
+
+      roles: [sales_manager, admin]
+
+      on_success:
+        message: "Contact converted to customer!"
+        toast: success
+        redirect: "/customers/{{customer_id}}"
+        refetch: [Contact]
+
+  - name: delete_contact
+    description: "Soft delete a contact"
+
+    steps:
+      - delete: Contact  # Soft delete (sets deleted_at)
+
+    ui:
+      label: "Delete"
+      icon: trash
+      variant: danger
+
+      show_in: [detail_actions, list_row_actions]
+
+      confirmation:
+        enabled: true
+        title: "Delete Contact?"
+        message: "Permanently delete {{first_name}} {{last_name}}? This cannot be undone."
+        confirm_label: "Delete"
+        cancel_label: "Cancel"
+        require_typing: true  # Require typing contact name to confirm
+        type_text: "{{first_name}} {{last_name}}"
+
+      roles: [admin]
+
+      on_success:
+        message: "Contact deleted"
+        toast: success
+        redirect: "/contacts"
+        refetch: [Contact]
+
+      on_error:
+        message: "Failed to delete contact"
+        toast: error
+
+# Page definitions (reference fields and actions defined above)
+pages:
+  # List page
+  list:
+    title: "Contacts"
+    description: "Manage your contacts and leads"
+    icon: user-circle
+
+    # Columns to display (references fields defined above)
+    columns: [first_name, last_name, email, phone, organization, status, created_at]
+
+    # Default sort
+    default_sort:
+      - created_at: desc
+
+    # Available filters
+    filters:
+      - field: email
+        operators: [contains, eq, starts_with]
+        placeholder: "Filter by email..."
+
+      - field: status
+        operators: [eq, in]
+        default: [lead, qualified]
+        widget: multi_select
+
+      - field: organization
+        operators: [eq, in]
+        widget: entity_select
+
+      - field: created_at
+        operators: [gte, lte, between]
+        widget: date_range
+
+    # Quick filters (above the table)
+    quick_filters:
+      - label: "Active Leads"
+        filter: { status: lead }
+        icon: user-plus
+
+      - label: "Customers"
+        filter: { status: customer }
+        icon: star
+
+      - label: "Recent"
+        filter: { created_at: { gte: "now() - interval '7 days'" } }
+        icon: clock
+
+    # Row actions (dropdown on each row)
+    row_actions: [qualify_lead, convert_to_customer, delete_contact]
+
+    # Primary actions (top right of page)
+    primary_actions: [create_contact]
+
+    # Bulk actions (when rows are selected)
+    bulk_actions:
+      - action: bulk_delete
+        label: "Delete Selected"
+        confirmation: true
+
+      - action: export_csv
+        label: "Export to CSV"
+        confirmation: false
+
+    # Pagination
+    pagination:
+      page_size: 25
+      options: [10, 25, 50, 100]
+
+    # Empty state
+    empty_state:
+      icon: user-circle
+      title: "No contacts yet"
+      description: "Get started by creating your first contact"
+      action: create_contact
+
+  # Form page (create/edit)
+  form:
+    title_create: "New Contact"
+    title_edit: "Edit Contact"
+
+    # Organize fields into sections
+    sections:
+      contact_info:
+        title: "Contact Information"
+        description: "Basic contact details"
+        icon: mail
+        fields: [first_name, last_name, email, phone, website]
+
+      organization_info:
+        title: "Organization"
+        description: "Company and role information"
+        icon: briefcase
+        fields: [organization, job_title]
+
+      personal:
+        title: "Personal"
+        icon: user
+        fields: [avatar]
+
+      status_info:
+        title: "Status"
+        icon: flag
+        fields: [status]
+
+      additional:
+        title: "Additional Information"
+        icon: file-text
+        fields: [notes]
+        collapsible: true
+        default_collapsed: true
+
+    # Layout
+    layout: two_column  # Or: single_column, tabs
+
+    # Submit action (references action defined above)
+    submit_action: create_contact  # or update_contact based on mode
+
+    # Secondary actions
+    secondary_actions:
+      - action: save_draft
+        label: "Save Draft"
+      - action: cancel
+        label: "Cancel"
+        redirect: "/contacts"
+
+    # Validation
+    validation:
+      mode: onChange  # onChange | onBlur | onSubmit
+      show_errors: immediate  # immediate | onSubmit
+
+  # Detail page
+  detail:
+    title: "{{first_name}} {{last_name}}"
+    subtitle: "{{job_title}} at {{organization.name}}"
+    icon: user-circle
+
+    # Layout sections
+    sections:
+      header:
+        layout: header_card
+        fields: [avatar, first_name, last_name, status]
+
+      primary:
+        title: "Contact Information"
+        layout: two_column
+        fields: [email, phone, website]
+
+      organization:
+        title: "Organization"
+        layout: reference_card
+        fields: [organization, job_title]
+
+      status:
+        title: "Status & Timeline"
+        fields: [status, created_at, updated_at]
+
+      additional:
+        title: "Additional"
+        fields: [notes]
+        collapsible: true
+
+      activity:
+        title: "Recent Activity"
+        type: custom
+        component: ContactActivityTimeline
+        props:
+          show_emails: true
+          show_meetings: true
+
+    # Actions (top right)
+    actions: [update_contact, qualify_lead, convert_to_customer, delete_contact]
+
+    # Tabs (alternative to sections)
+    # tabs:
+    #   - id: overview
+    #     label: "Overview"
+    #     sections: [header, primary, organization]
+    #   - id: activity
+    #     label: "Activity"
+    #     sections: [activity]
+    #   - id: notes
+    #     label: "Notes"
+    #     sections: [additional]
+
+# Navigation (how this entity appears in the app navigation)
+navigation:
+  menu_item:
+    label: "Contacts"
+    icon: user-circle
+    section: crm
+    order: 1

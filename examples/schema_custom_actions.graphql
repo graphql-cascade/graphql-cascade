@@ -1,0 +1,386 @@
+# GraphQL Cascade - Custom Actions Example
+# Password reset and other custom business logic
+
+"""
+Base schema imports (from cascade_base.graphql)
+"""
+interface Node {
+  id: ID!
+}
+
+interface Timestamped {
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+interface CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: MutationPayload
+  cascade: CascadeUpdates!
+}
+
+type CascadeUpdates {
+  updated: [UpdatedEntity!]!
+  deleted: [DeletedEntity!]!
+  invalidations: [QueryInvalidation!]!
+  metadata: CascadeMetadata!
+}
+
+type UpdatedEntity {
+  __typename: String!
+  id: ID!
+  operation: CascadeOperation!
+  entity: Node!
+}
+
+type DeletedEntity {
+  __typename: String!
+  id: ID!
+  deletedAt: DateTime!
+}
+
+type QueryInvalidation {
+  queryName: String
+  queryPattern: String
+  strategy: InvalidationStrategy!
+  scope: InvalidationScope!
+}
+
+enum CascadeOperation {
+  CREATED
+  UPDATED
+  DELETED
+}
+
+enum InvalidationStrategy {
+  INVALIDATE
+  REFETCH
+  REMOVE
+}
+
+enum InvalidationScope {
+  EXACT
+  PREFIX
+  PATTERN
+  ALL
+}
+
+type CascadeMetadata {
+  timestamp: DateTime!
+  depth: Int!
+  affectedCount: Int!
+}
+
+type CascadeError {
+  message: String!
+  code: CascadeErrorCode!
+  field: String
+  path: [String!]
+  extensions: JSON
+}
+
+enum CascadeErrorCode {
+  VALIDATION_ERROR
+  NOT_FOUND
+  UNAUTHORIZED
+  FORBIDDEN
+  CONFLICT
+  INTERNAL_ERROR
+  TRANSACTION_FAILED
+}
+
+scalar DateTime
+scalar JSON
+scalar MutationPayload
+
+# Domain entities
+
+type User implements Node & Timestamped {
+  id: ID!
+  email: String!
+  name: String!
+  role: UserRole!
+  isEmailVerified: Boolean!
+  lastLoginAt: DateTime
+  passwordResetToken: PasswordResetToken
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+type PasswordResetToken implements Node & Timestamped {
+  id: ID!
+  user: User!
+  token: String!
+  expiresAt: DateTime!
+  isUsed: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+type EmailVerificationToken implements Node & Timestamped {
+  id: ID!
+  user: User!
+  token: String!
+  expiresAt: DateTime!
+  isUsed: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+type AuditLog implements Node & Timestamped {
+  id: ID!
+  user: User
+  action: String!
+  resourceType: String!
+  resourceId: ID!
+  details: JSON
+  ipAddress: String
+  userAgent: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  GUEST
+}
+
+# Input types
+
+input SendPasswordResetInput {
+  email: String!
+}
+
+input ResetPasswordInput {
+  token: String!
+  newPassword: String!
+}
+
+input VerifyEmailInput {
+  token: String!
+}
+
+input ChangePasswordInput {
+  currentPassword: String!
+  newPassword: String!
+}
+
+input UpdateProfileInput {
+  name: String
+  email: String
+}
+
+# Response types
+
+type SendPasswordResetCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: PasswordResetResult
+  cascade: CascadeUpdates!
+}
+
+type ResetPasswordCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type VerifyEmailCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type ChangePasswordCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type UpdateProfileCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+# Custom result types
+
+type PasswordResetResult {
+  emailSent: Boolean!
+  expiresAt: DateTime!
+  rateLimitRemaining: Int!
+}
+
+type EmailVerificationResult {
+  emailVerified: Boolean!
+  user: User!
+}
+
+# Queries
+
+type Query {
+  # User queries
+  getUser(id: ID!): User
+  getCurrentUser: User
+
+  listUsers(
+    first: Int = 10
+    after: String
+    filter: UserFilter
+    orderBy: UserOrderBy = CREATED_AT_DESC
+  ): UserConnection!
+
+  # Audit log queries (admin only)
+  listAuditLogs(
+    first: Int = 10
+    after: String
+    filter: AuditLogFilter
+    orderBy: AuditLogOrderBy = CREATED_AT_DESC
+  ): AuditLogConnection!
+}
+
+type UserConnection {
+  edges: [UserEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type UserEdge {
+  node: User!
+  cursor: String!
+}
+
+type AuditLogConnection {
+  edges: [AuditLogEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type AuditLogEdge {
+  node: AuditLog!
+  cursor: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+input UserFilter {
+  role: UserRole
+  isEmailVerified: Boolean
+  emailContains: String
+  nameContains: String
+}
+
+input AuditLogFilter {
+  userId: ID
+  action: String
+  resourceType: String
+  resourceId: ID
+  createdAfter: DateTime
+  createdBefore: DateTime
+}
+
+enum UserOrderBy {
+  CREATED_AT_ASC
+  CREATED_AT_DESC
+  NAME_ASC
+  NAME_DESC
+  EMAIL_ASC
+  EMAIL_DESC
+  LAST_LOGIN_ASC
+  LAST_LOGIN_DESC
+}
+
+enum AuditLogOrderBy {
+  CREATED_AT_ASC
+  CREATED_AT_DESC
+  ACTION_ASC
+  ACTION_DESC
+}
+
+# Mutations
+
+type Mutation {
+  # Authentication mutations
+  sendPasswordReset(input: SendPasswordResetInput!): SendPasswordResetCascade!
+    @cascade(maxDepth: 2, excludeTypes: ["AuditLog"])
+
+  resetPassword(input: ResetPasswordInput!): ResetPasswordCascade!
+    @cascade(maxDepth: 2, excludeTypes: ["AuditLog"])
+
+  verifyEmail(input: VerifyEmailInput!): VerifyEmailCascade!
+    @cascade(maxDepth: 2, excludeTypes: ["AuditLog"])
+
+  changePassword(input: ChangePasswordInput!): ChangePasswordCascade!
+    @cascade(maxDepth: 1, excludeTypes: ["AuditLog"])
+
+  # Profile mutations
+  updateProfile(input: UpdateProfileInput!): UpdateProfileCascade!
+    @cascade(maxDepth: 1, excludeTypes: ["AuditLog"])
+}
+
+# Cascade directives on fields
+
+type User {
+  email: String!
+    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
+
+  name: String!
+    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
+
+  role: UserRole!
+    @cascadeInvalidates(queries: ["listUsers"])
+
+  isEmailVerified: Boolean!
+    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
+
+  lastLoginAt: DateTime
+  passwordResetToken: PasswordResetToken
+  createdAt: DateTime!
+  updatedAt: DateTime!
+    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
+}
+
+type PasswordResetToken {
+  user: User!
+  token: String!
+  expiresAt: DateTime!
+  isUsed: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type EmailVerificationToken {
+  user: User!
+  token: String!
+  expiresAt: DateTime!
+  isUsed: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type AuditLog {
+  user: User
+  action: String!
+  resourceType: String!
+  resourceId: ID!
+  details: JSON
+  ipAddress: String
+  userAgent: String
+  createdAt: DateTime!
+}

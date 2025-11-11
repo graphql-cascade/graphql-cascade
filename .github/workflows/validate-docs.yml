@@ -1,0 +1,96 @@
+name: Validate Documentation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'specification/**'
+      - 'research/**'
+      - 'examples/**'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - 'CODE_OF_CONDUCT.md'
+      - 'CHANGELOG.md'
+      - 'scripts/**'
+      - '.github/workflows/validate-docs.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'specification/**'
+      - 'research/**'
+      - 'examples/**'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - 'CODE_OF_CONDUCT.md'
+      - 'CHANGELOG.md'
+      - 'scripts/**'
+      - '.github/workflows/validate-docs.yml'
+
+jobs:
+  validate-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyyaml requests beautifulsoup4 lxml
+
+    - name: Install Node.js dependencies
+      run: |
+        npm install -g markdownlint-cli2
+        npm install -g markdown-link-check
+        npm install -g cspell
+
+    - name: Validate documentation structure
+      run: |
+        echo "🔍 Validating documentation structure..."
+        ./scripts/validate_structure.sh
+
+    - name: Validate documentation content
+      run: |
+        echo "📝 Validating documentation content..."
+        ./scripts/validate_docs.sh --verbose --generate-reports --output-dir ./validation-reports
+
+    - name: Test examples
+      run: |
+        echo "🧪 Testing code examples..."
+        ./scripts/test_examples.sh
+
+    - name: Check markdown formatting
+      run: |
+        echo "📏 Checking markdown formatting..."
+        markdownlint-cli2 "**/*.md" --config .markdownlint.json || true
+
+    - name: Check links
+      run: |
+        echo "🔗 Checking links..."
+        find . -name "*.md" -exec markdown-link-check {} \; || true
+
+    - name: Spell check
+      run: |
+        echo "📖 Running spell check..."
+        cspell "**/*.md" --config .cspell.json || true
+
+    - name: Upload validation reports
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: validation-reports
+        path: ./validation-reports/
+        retention-days: 7

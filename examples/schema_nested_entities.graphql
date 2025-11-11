@@ -1,0 +1,408 @@
+# GraphQL Cascade Example: Complex Nested Entities
+# Company with Address and Users - demonstrates nested relationships and cascading updates
+
+"""
+Base schema imports - all Cascade schemas must include these
+"""
+interface Node {
+  id: ID!
+}
+
+interface Timestamped {
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+interface CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: MutationPayload
+  cascade: CascadeUpdates!
+}
+
+type CascadeUpdates {
+  updated: [UpdatedEntity!]!
+  deleted: [DeletedEntity!]!
+  invalidations: [QueryInvalidation!]!
+  metadata: CascadeMetadata!
+}
+
+type UpdatedEntity {
+  __typename: String!
+  id: ID!
+  operation: CascadeOperation!
+  entity: Node!
+}
+
+type DeletedEntity {
+  __typename: String!
+  id: ID!
+  deletedAt: DateTime!
+}
+
+type QueryInvalidation {
+  queryName: String
+  queryPattern: String
+  strategy: InvalidationStrategy!
+  scope: InvalidationScope!
+}
+
+enum CascadeOperation {
+  CREATED
+  UPDATED
+  DELETED
+}
+
+enum InvalidationStrategy {
+  INVALIDATE
+  REFETCH
+  REMOVE
+}
+
+enum InvalidationScope {
+  EXACT
+  PREFIX
+  PATTERN
+  ALL
+}
+
+type CascadeMetadata {
+  timestamp: DateTime!
+  depth: Int!
+  affectedCount: Int!
+}
+
+type CascadeError {
+  message: String!
+  code: CascadeErrorCode!
+  field: String
+  path: [String!]
+  extensions: JSON
+}
+
+enum CascadeErrorCode {
+  VALIDATION_ERROR
+  NOT_FOUND
+  UNAUTHORIZED
+  FORBIDDEN
+  CONFLICT
+  INTERNAL_ERROR
+  TRANSACTION_FAILED
+}
+
+scalar DateTime
+scalar JSON
+scalar MutationPayload
+
+# Directives
+directive @cascade(
+  maxDepth: Int = 3
+  includeRelated: Boolean = true
+  autoInvalidate: Boolean = true
+  excludeTypes: [String!]
+) on FIELD_DEFINITION
+
+directive @cascadeInvalidates(
+  queries: [String!]!
+  strategy: InvalidationStrategy = INVALIDATE
+) on FIELD_DEFINITION
+
+# Pagination types
+interface Connection {
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+interface Edge {
+  cursor: String!
+  node: Node!
+}
+
+input PaginationArgs {
+  first: Int
+  last: Int
+  after: String
+  before: String
+}
+
+# Domain entities
+
+"""
+Company entity with nested relationships to Address and Users
+"""
+type Company implements Node & Timestamped {
+  id: ID!
+  name: String! @cascadeInvalidates(queries: ["listCompanies", "searchCompanies"])
+  description: String
+  address: Address!
+  owner: User!
+  employees: [User!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+"""
+Address entity - related to Company
+"""
+type Address implements Node {
+  id: ID!
+  street: String!
+  city: String! @cascadeInvalidates(queries: ["listCompanies", "searchCompanies"])
+  state: String!
+  country: String! @cascadeInvalidates(queries: ["listCompanies", "searchCompanies"])
+  postalCode: String!
+}
+
+"""
+User entity - can be related to Company as owner or employee
+"""
+type User implements Node & Timestamped {
+  id: ID!
+  email: String! @cascadeInvalidates(queries: ["listUsers", "searchUsers"])
+  name: String! @cascadeInvalidates(queries: ["listUsers", "searchUsers"])
+  role: UserRole!
+  company: Company
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  version: Int
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+  CONTRACTOR
+}
+
+# Input types
+
+input CreateCompanyInput {
+  name: String!
+  description: String
+  address: AddressInput!
+  ownerId: ID!
+}
+
+input UpdateCompanyInput {
+  name: String
+  description: String
+  addressId: ID
+  ownerId: ID
+}
+
+input AddressInput {
+  street: String!
+  city: String!
+  state: String!
+  country: String!
+  postalCode: String!
+}
+
+input CreateUserInput {
+  email: String!
+  name: String!
+  role: UserRole = EMPLOYEE
+  companyId: ID
+}
+
+input UpdateUserInput {
+  email: String
+  name: String
+  role: UserRole
+  companyId: ID
+}
+
+# Response types
+
+type CreateCompanyCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Company
+  cascade: CascadeUpdates!
+}
+
+type UpdateCompanyCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Company
+  cascade: CascadeUpdates!
+}
+
+type DeleteCompanyCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Company
+  cascade: CascadeUpdates!
+}
+
+type CreateUserCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type UpdateUserCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+# Queries
+
+type Query {
+  """
+  Get a single company by ID.
+  Convention: get<EntityType>
+  """
+  getCompany(id: ID!): Company
+
+  """
+  List companies with pagination.
+  Convention: list<EntityType>s
+  """
+  listCompanies(args: PaginationArgs): CompanyConnection
+
+  """
+  Search companies by name.
+  Convention: search<EntityType>s
+  """
+  searchCompanies(query: String!, args: PaginationArgs): CompanyConnection
+
+  """
+  Get a single user by ID.
+  Convention: get<EntityType>
+  """
+  getUser(id: ID!): User
+
+  """
+  List users with pagination.
+  Convention: list<EntityType>s
+  """
+  listUsers(args: PaginationArgs): UserConnection
+}
+
+type CompanyConnection {
+  edges: [CompanyEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type CompanyEdge {
+  node: Company!
+  cursor: String!
+}
+
+type UserConnection {
+  edges: [UserEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type UserEdge {
+  node: User!
+  cursor: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+input CompanyFilter {
+  nameContains: String
+  ownerId: ID
+  city: String
+  country: String
+}
+
+input UserFilter {
+  role: UserRole
+  companyId: ID
+  emailContains: String
+  nameContains: String
+}
+
+enum CompanyOrderBy {
+  CREATED_AT_ASC
+  CREATED_AT_DESC
+  NAME_ASC
+  NAME_DESC
+}
+
+enum UserOrderBy {
+  CREATED_AT_ASC
+  CREATED_AT_DESC
+  NAME_ASC
+  NAME_DESC
+  EMAIL_ASC
+  EMAIL_DESC
+}
+
+# Mutations
+
+type Mutation {
+  """
+  Create a new company.
+  Convention: create<EntityType>
+  Response: Create<EntityType>Cascade
+  """
+  createCompany(input: CreateCompanyInput!): CreateCompanyCascade!
+    @cascade(maxDepth: 3)
+
+  """
+  Update an existing company.
+  Convention: update<EntityType>
+  Response: Update<EntityType>Cascade
+  """
+  updateCompany(id: ID!, input: UpdateCompanyInput!): UpdateCompanyCascade!
+    @cascade(maxDepth: 3)
+
+  """
+  Delete a company.
+  Convention: delete<EntityType>
+  Response: Delete<EntityType>Cascade
+  """
+  deleteCompany(id: ID!): DeleteCompanyCascade!
+    @cascade(maxDepth: 3)
+
+  """
+  Create a new user.
+  Convention: create<EntityType>
+  Response: Create<EntityType>Cascade
+  """
+  createUser(input: CreateUserInput!): CreateUserCascade!
+    @cascade(maxDepth: 2)
+
+  """
+  Update an existing user.
+  Convention: update<EntityType>
+  Response: Update<EntityType>Cascade
+  """
+  updateUser(id: ID!, input: UpdateUserInput!): UpdateUserCascade!
+    @cascade(maxDepth: 2)
+}
+
+# When Company is updated:
+# - cascade.updated includes: Company, Address (if changed), User (owner, if changed)
+# - cascade.invalidations includes: listCompanies, searchCompanies, getCompany
+#
+# When Company.address changes:
+# - cascade.updated includes: Company, Address
+# - cascade.invalidations includes: listCompanies, searchCompanies
+#
+# When Company.owner changes:
+# - cascade.updated includes: Company, User (old owner), User (new owner)
+# - cascade.invalidations includes: listCompanies, listUsers
