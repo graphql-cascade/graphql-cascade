@@ -280,7 +280,6 @@ We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 
 ## Community
 
-- **Discord**: [discord.gg/graphql-cascade](https://discord.gg/graphql-cascade)
 - **GitHub Discussions**: [github.com/graphql-cascade/graphql-cascade/discussions](https://github.com/graphql-cascade/graphql-cascade/discussions)
 - **Stack Overflow**: Tag `graphql-cascade`
 
@@ -354,4 +353,4 @@ Special thanks to the GraphQL community for inspiration and feedback.
 
 **GraphQL Cascade**: Making cache updates automatic, one mutation at a time.
 
-🌊 [graphql-cascade.dev](https://graphql-cascade.dev) | 📖 [Documentation](./docs/) | 💬 [Discord](https://discord.gg/graphql-cascade)
+🌊 [graphql-cascade.dev](https://graphql-cascade.dev) | 📖 [Documentation](./docs/) | 💬 [Discussions](https://github.com/graphql-cascade/graphql-cascade/discussions)
