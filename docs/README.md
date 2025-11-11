@@ -158,7 +158,6 @@ Technical deep-dives and design decisions:
 
 - **[GitHub Discussions](https://github.com/your-org/graphql-cascade/discussions)** - Ask questions
 - **[GitHub Issues](https://github.com/your-org/graphql-cascade/issues)** - Report bugs
-- **[Discord](https://discord.gg/graphql-cascade)** - Chat with the community
 - **[Troubleshooting](guides/debugging.md)** - Common issues and solutions
 
 ## 📊 Documentation Status

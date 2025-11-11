@@ -39,4 +39,3 @@ See complete working implementations:
 
 - **[Troubleshooting](../guides/debugging.md)** - Common issues and solutions
 - **[GitHub Discussions](https://github.com/your-org/graphql-cascade/discussions)** - Ask questions
-- **[Discord](https://discord.gg/graphql-cascade)** - Chat with the community
