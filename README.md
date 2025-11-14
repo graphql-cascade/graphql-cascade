@@ -1,5 +1,9 @@
 # GraphQL Cascade
 
+<p align="center">
+  <img src="cascade.png" alt="GraphQL Cascade Logo" width="300">
+</p>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Specification](https://img.shields.io/badge/Specification-v0.1-blue)](./specification/)
 
