@@ -4,13 +4,12 @@ GraphQL Cascade Middleware
 Integrates cascade tracking into GraphQL execution.
 """
 
-from typing import Any, Dict, List, Optional, Callable, Awaitable
 from contextlib import asynccontextmanager
-import asyncio
+from typing import Any, Awaitable, Callable, Dict, Optional
 
-from .tracker import CascadeTracker, CascadeTransaction
-from .builder import CascadeBuilder, CascadeResponse, CascadeError
+from .builder import CascadeBuilder, CascadeError
 from .invalidator import CascadeInvalidator
+from .tracker import CascadeTracker, CascadeTransaction
 
 
 class CascadeMiddleware:
@@ -25,7 +24,7 @@ class CascadeMiddleware:
         self,
         tracker_factory: Optional[Callable[[], CascadeTracker]] = None,
         invalidator_factory: Optional[Callable[[], CascadeInvalidator]] = None,
-        config: Optional[Dict[str, Any]] = None
+        config: Optional[Dict[str, Any]] = None,
     ):
         self.config = config or {}
         self.tracker_factory = tracker_factory or self._default_tracker_factory
@@ -34,15 +33,14 @@ class CascadeMiddleware:
     def _default_tracker_factory(self) -> CascadeTracker:
         """Create default cascade tracker."""
         return CascadeTracker(
-            max_depth=self.config.get('max_depth', 3),
-            exclude_types=self.config.get('exclude_types', [])
+            max_depth=self.config.get("max_depth", 3),
+            exclude_types=self.config.get("exclude_types", []),
         )
 
     def _default_invalidator_factory(self) -> CascadeInvalidator:
         """Create default cascade invalidator."""
         return CascadeInvalidator(
-            schema=None,  # Would be set by GraphQL framework
-            config=self.config
+            schema=None, config=self.config  # Would be set by GraphQL framework
         )
 
     async def intercept_mutation(
@@ -52,7 +50,7 @@ class CascadeMiddleware:
         field_def: Any,
         args: Dict[str, Any],
         context: Any,
-        info: Any
+        info: Any,
     ) -> Any:
         """
         Intercept mutation execution to add cascade tracking.
@@ -97,10 +95,7 @@ class CascadeMiddleware:
 
             except Exception as e:
                 # Handle mutation errors
-                error = CascadeError(
-                    message=str(e),
-                    code='INTERNAL_ERROR'
-                )
+                error = CascadeError(message=str(e), code="INTERNAL_ERROR")
 
                 builder = CascadeBuilder(tracker)
                 cascade_response = builder.build_error_response([error])
@@ -109,47 +104,42 @@ class CascadeMiddleware:
 
     def _has_cascade_directive(self, field_def: Any) -> bool:
         """Check if field has @cascade directive."""
-        if not hasattr(field_def, 'directives'):
+        if not hasattr(field_def, "directives"):
             return False
 
         directives = field_def.directives or []
-        return any(directive.name.value == 'cascade' for directive in directives)
+        return any(directive.name.value == "cascade" for directive in directives)
 
     def _get_cascade_config(self, field_def: Any) -> Dict[str, Any]:
         """Extract cascade configuration from directive."""
-        config = {
-            'maxDepth': 3,
-            'includeRelated': True,
-            'autoInvalidate': True,
-            'excludeTypes': []
-        }
+        config = {"maxDepth": 3, "includeRelated": True, "autoInvalidate": True, "excludeTypes": []}
 
-        if not hasattr(field_def, 'directives'):
+        if not hasattr(field_def, "directives"):
             return config
 
         for directive in field_def.directives or []:
-            if directive.name.value == 'cascade':
+            if directive.name.value == "cascade":
                 # Extract arguments from directive
                 for arg in directive.arguments or []:
                     arg_name = arg.name.value
                     arg_value = self._parse_directive_value(arg.value)
 
-                    if arg_name == 'maxDepth':
-                        config['maxDepth'] = arg_value
-                    elif arg_name == 'includeRelated':
-                        config['includeRelated'] = arg_value
-                    elif arg_name == 'autoInvalidate':
-                        config['autoInvalidate'] = arg_value
-                    elif arg_name == 'excludeTypes':
-                        config['excludeTypes'] = arg_value
+                    if arg_name == "maxDepth":
+                        config["maxDepth"] = arg_value
+                    elif arg_name == "includeRelated":
+                        config["includeRelated"] = arg_value
+                    elif arg_name == "autoInvalidate":
+                        config["autoInvalidate"] = arg_value
+                    elif arg_name == "excludeTypes":
+                        config["excludeTypes"] = arg_value
 
         return config
 
     def _parse_directive_value(self, value_node: Any) -> Any:
         """Parse GraphQL directive argument value."""
-        if hasattr(value_node, 'value'):
+        if hasattr(value_node, "value"):
             return value_node.value
-        elif hasattr(value_node, 'values'):
+        elif hasattr(value_node, "values"):
             # List value
             return [self._parse_directive_value(v) for v in value_node.values]
         else:
@@ -158,9 +148,9 @@ class CascadeMiddleware:
 
     def _configure_tracker(self, tracker: CascadeTracker, config: Dict[str, Any]) -> None:
         """Configure tracker with cascade directive settings."""
-        tracker.max_depth = config.get('maxDepth', tracker.max_depth)
-        tracker.exclude_types = set(config.get('excludeTypes', []))
-        tracker.enable_relationship_tracking = config.get('includeRelated', True)
+        tracker.max_depth = config.get("maxDepth", tracker.max_depth)
+        tracker.exclude_types = set(config.get("excludeTypes", []))
+        tracker.enable_relationship_tracking = config.get("includeRelated", True)
 
 
 class AriadneCascadeMiddleware(CascadeMiddleware):
@@ -170,6 +160,7 @@ class AriadneCascadeMiddleware(CascadeMiddleware):
 
     def get_middleware(self):
         """Get Ariadne middleware function."""
+
         async def middleware(next_resolver, root, info, **kwargs):
             field_def = info.field_definition
 
@@ -177,12 +168,7 @@ class AriadneCascadeMiddleware(CascadeMiddleware):
                 return await next_resolver(root, info, **kwargs)
 
             return await self.intercept_mutation(
-                execute_fn,
-                info.field_name,
-                field_def,
-                kwargs,
-                root,
-                info
+                execute_fn, info.field_name, field_def, kwargs, root, info
             )
 
         return middleware
@@ -213,7 +199,7 @@ class GraphQLYogaCascadePlugin:
     def onExecute(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Hook into Yoga execution."""
         # Check if operation is a mutation with cascade
-        if payload.get('operation', {}).get('operation') == 'mutation':
+        if payload.get("operation", {}).get("operation") == "mutation":
             # Apply cascade logic
             pass
 
@@ -224,6 +210,7 @@ class GraphQLYogaCascadePlugin:
 # due to Apollo's complex plugin system
 
 # Utility functions
+
 
 @asynccontextmanager
 async def cascade_transaction(tracker: CascadeTracker):
@@ -246,7 +233,7 @@ async def cascade_transaction(tracker: CascadeTracker):
 
 def create_cascade_middleware(
     tracker_config: Optional[Dict[str, Any]] = None,
-    invalidator_config: Optional[Dict[str, Any]] = None
+    invalidator_config: Optional[Dict[str, Any]] = None,
 ) -> CascadeMiddleware:
     """
     Create a configured cascade middleware instance.
@@ -270,15 +257,16 @@ def create_cascade_middleware(
     return CascadeMiddleware(
         tracker_factory=tracker_factory,
         invalidator_factory=invalidator_factory,
-        config={**tracker_config, **invalidator_config}
+        config={**tracker_config, **invalidator_config},
     )
 
 
 # Example usage
 
+
 def example_ariadne_integration():
     """Example of integrating with Ariadne."""
-    from ariadne import make_executable_schema, graphql
+    from ariadne import make_executable_schema
 
     # Create middleware
     middleware = create_cascade_middleware()
@@ -288,9 +276,7 @@ def example_ariadne_integration():
 
     # Add to schema
     schema = make_executable_schema(
-        type_defs,
-        mutation_resolvers,
-        middleware=[ariadne_middleware.get_middleware()]
+        type_defs, mutation_resolvers, middleware=[ariadne_middleware.get_middleware()]
     )
 
     return schema
@@ -309,10 +295,6 @@ def example_strawberry_integration():
     class Mutation:
         # Mutation definitions...
 
-        schema = strawberry.Schema(
-            query=Query,
-            mutation=Mutation,
-            extensions=[extension]
-        )
+        schema = strawberry.Schema(query=Query, mutation=Mutation, extensions=[extension])
 
     return schema

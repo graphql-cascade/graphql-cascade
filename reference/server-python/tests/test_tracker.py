@@ -9,10 +9,10 @@ from graphql_cascade import CascadeTracker, CascadeTransaction
 class MockEntity:
     """Mock entity for testing."""
 
-    def __init__(self, id: str, name: str, __typename: str = "MockEntity"):
+    def __init__(self, id: str, name: str, typename: str = "MockEntity"):
         self.id = id
         self.name = name
-        self.__typename__ = __typename
+        self.__typename__ = typename
 
     def to_dict(self):
         return {
@@ -28,7 +28,7 @@ class TestCascadeTracker:
         """Test tracker initialization."""
         tracker = CascadeTracker()
         assert tracker.max_depth == 3
-        assert tracker.exclude_types == []
+        assert tracker.exclude_types == set()
         assert tracker.enable_relationship_tracking is True
         assert tracker.in_transaction is False
 
@@ -40,14 +40,14 @@ class TestCascadeTracker:
             enable_relationship_tracking=False
         )
         assert tracker.max_depth == 5
-        assert tracker.exclude_types == ["AuditLog"]
+        assert tracker.exclude_types == {"AuditLog"}
         assert tracker.enable_relationship_tracking is False
 
     def test_transaction_context_manager(self):
         """Test transaction context manager."""
         tracker = CascadeTracker()
 
-        with tracker:
+        with CascadeTransaction(tracker):
             assert tracker.in_transaction is True
             assert tracker.transaction_id is not None
 
@@ -59,7 +59,7 @@ class TestCascadeTracker:
         tracker = CascadeTracker()
         entity = MockEntity("1", "Test Entity")
 
-        with tracker:
+        with CascadeTransaction(tracker):
             tracker.track_create(entity)
 
         # Check that entity was tracked
@@ -76,7 +76,7 @@ class TestCascadeTracker:
         tracker = CascadeTracker()
         entity = MockEntity("1", "Test Entity")
 
-        with tracker:
+        with CascadeTransaction(tracker):
             tracker.track_update(entity)
 
         assert len(tracker.updated_entities) == 1
@@ -91,7 +91,7 @@ class TestCascadeTracker:
         """Test tracking entity deletion."""
         tracker = CascadeTracker()
 
-        with tracker:
+        with CascadeTransaction(tracker):
             tracker.track_delete("MockEntity", "1")
 
         assert len(tracker.deleted_entities) == 1
@@ -100,10 +100,10 @@ class TestCascadeTracker:
     def test_exclude_types(self):
         """Test excluding entity types."""
         tracker = CascadeTracker(exclude_types=["AuditLog"])
-        audit_entity = MockEntity("1", "Audit Log", __typename="AuditLog")
+        audit_entity = MockEntity("1", "Audit Log", typename="AuditLog")
         normal_entity = MockEntity("2", "Normal Entity")
 
-        with tracker:
+        with CascadeTransaction(tracker):
             tracker.track_create(audit_entity)
             tracker.track_create(normal_entity)
 
@@ -116,7 +116,7 @@ class TestCascadeTracker:
         tracker = CascadeTracker()
         entity = MockEntity("1", "Test Entity")
 
-        with tracker:
+        with CascadeTransaction(tracker):
             tracker.track_create(entity)
             tracker.track_delete("OtherEntity", "2")
 
@@ -140,7 +140,7 @@ class TestCascadeTracker:
         tracker = CascadeTracker()
 
         with pytest.raises(ValueError):
-            with tracker:
+            with CascadeTransaction(tracker):
                 tracker.track_create(MockEntity("1", "Test"))
                 raise ValueError("Test error")
 
@@ -160,7 +160,7 @@ class TestCascadeTracker:
         """Test error when starting nested transaction."""
         tracker = CascadeTracker()
 
-        with tracker:
+        with CascadeTransaction(tracker):
             with pytest.raises(RuntimeError, match="Transaction already in progress"):
                 tracker.start_transaction()
 
@@ -192,6 +192,4 @@ class TestCascadeTransaction:
 
         # But data should still be accessible until end_transaction is called
         # (This is a bit of an implementation detail, but testing it for completeness)
-        assert len(tracker.updated_entities) == 1</content>
-</xai:function_call name="write">
-<parameter name="filePath">server-reference/tests/test_builder.py
+        assert len(tracker.updated_entities) == 1
