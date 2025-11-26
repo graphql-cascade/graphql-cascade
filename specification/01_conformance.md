@@ -148,9 +148,35 @@ Implementations SHOULD pass the compliance test suite:
 
 ## Version Compatibility
 
-- **v0.1**: Initial specification
-- Future versions MUST maintain backward compatibility
-- Breaking changes require major version bump
+Version compatibility is defined in detail in [VERSIONING.md](VERSIONING.md).
+
+### Key Requirements
+
+- **Semantic Versioning**: All versions follow [SemVer 2.0.0](https://semver.org/)
+- **Version Negotiation**: Clients and servers MUST negotiate compatible versions
+- **Deprecation Policy**: Deprecated features have defined migration timelines
+- **Breaking Changes**: Require MAJOR version bumps with migration guides
+
+### Version Discovery
+
+Implementations MUST support version discovery through the `__cascade` introspection query:
+
+```graphql
+query {
+  __cascade {
+    version              # Server implementation version
+    supportedVersions    # Supported specification versions
+    experimentalFeatures # Enabled experimental features
+    deprecatedFeatures   # Deprecated features in use
+  }
+}
+```
+
+### Compatibility Levels
+
+- **Forward Compatible**: Implementations MAY support newer minor/patch versions
+- **Backward Compatible**: Newer versions MUST support older clients where possible
+- **Experimental Features**: MAY change without notice until stabilized
 
 ## Implementation Notes
 

@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://graphql-cascade.org/schema/v1/cascade-response",
+  "title": "CascadeResponse",
+  "description": "The root interface that all Cascade-compliant mutations must return",
+  "type": "object",
+  "required": ["success", "errors", "data", "cascade"],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "Whether the mutation succeeded"
+    },
+    "errors": {
+      "type": "array",
+      "description": "List of errors if mutation failed or partially succeeded",
+      "items": {
+        "$ref": "error.schema.json"
+      },
+      "minItems": 0
+    },
+    "data": {
+      "description": "The primary result of the mutation (schema-defined mutation result)",
+      "oneOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cascade": {
+      "type": "object",
+      "description": "The cascade of updates triggered by this mutation",
+      "required": ["updated", "deleted", "invalidations", "metadata"],
+      "properties": {
+        "updated": {
+          "type": "array",
+          "description": "All entities updated by this mutation (including the primary result)",
+          "items": {
+            "$ref": "entity.schema.json#/definitions/UpdatedEntity"
+          },
+          "minItems": 0
+        },
+        "deleted": {
+          "type": "array",
+          "description": "All entities deleted by this mutation",
+          "items": {
+            "$ref": "entity.schema.json#/definitions/DeletedEntity"
+          },
+          "minItems": 0
+        },
+        "invalidations": {
+          "type": "array",
+          "description": "Query invalidation hints for cache management",
+          "items": {
+            "$ref": "invalidation.schema.json"
+          },
+          "minItems": 0
+        },
+        "metadata": {
+          "$ref": "metadata.schema.json",
+          "description": "Metadata about the cascade"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "success": true,
+      "errors": [],
+      "data": {
+        "user": {
+          "__typename": "User",
+          "id": "123",
+          "name": "John Doe"
+        }
+      },
+      "cascade": {
+        "updated": [
+          {
+            "__typename": "User",
+            "id": "123",
+            "operation": "UPDATED",
+            "entity": {
+              "id": "123",
+              "name": "John Doe",
+              "email": "john@example.com"
+            }
+          }
+        ],
+        "deleted": [],
+        "invalidations": [
+          {
+            "queryName": "getUser",
+            "arguments": { "id": "123" },
+            "strategy": "REFETCH",
+            "scope": "EXACT"
+          }
+        ],
+        "metadata": {
+          "timestamp": "2023-11-26T10:30:00Z",
+          "transactionId": "txn_123456",
+          "depth": 1,
+          "affectedCount": 1
+        }
+      }
+    },
+    {
+      "success": false,
+      "errors": [
+        {
+          "message": "User not found",
+          "code": "NOT_FOUND",
+          "field": "userId",
+          "path": ["updateUser", "userId"],
+          "extensions": null
+        }
+      ],
+      "data": null,
+      "cascade": {
+        "updated": [],
+        "deleted": [],
+        "invalidations": [],
+        "metadata": {
+          "timestamp": "2023-11-26T10:30:00Z",
+          "transactionId": null,
+          "depth": 0,
+          "affectedCount": 0
+        }
+      }
+    }
+  ]
+}
