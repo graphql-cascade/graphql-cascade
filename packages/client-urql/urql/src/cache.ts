@@ -7,7 +7,7 @@
  */
 
 import {
-  CascadeCacheAdapter,
+  CascadeCache,
   QueryInvalidation,
   InvalidationScope,
 } from './types';
@@ -39,7 +39,7 @@ interface CachedQuery {
  * This is a basic implementation suitable for testing and simple use cases.
  * For production with URQL graphcache, use GraphcacheCascadeAdapter.
  */
-export class InMemoryCascadeCache implements CascadeCacheAdapter {
+export class InMemoryCascadeCache implements CascadeCache {
   private entities: Map<string, CacheEntity> = new Map();
   private queries: Map<string, CachedQuery> = new Map();
   private refetchFn?: (queryName: string, args?: Record<string, unknown>) => Promise<void>;

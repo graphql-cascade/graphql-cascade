@@ -8,7 +8,7 @@
 import type { Client, OperationResult, TypedDocumentNode } from '@urql/core';
 import type { DocumentNode } from 'graphql';
 import {
-  CascadeCacheAdapter,
+  CascadeCache,
   CascadeUpdates,
   URQLCascadeConfig,
   CascadeOperation,
@@ -63,12 +63,12 @@ export interface OptimisticConfig<T, V> {
  */
 export class URQLCascadeClient {
   private client: Client;
-  private cache: CascadeCacheAdapter;
+  private cache: CascadeCache;
   private config: Required<URQLCascadeConfig>;
 
   constructor(
     client: Client,
-    cache: CascadeCacheAdapter,
+    cache: CascadeCache,
     config: URQLCascadeConfig = {}
   ) {
     this.client = client;
@@ -239,7 +239,7 @@ export class URQLCascadeClient {
   /**
    * Get the cache adapter.
    */
-  getCache(): CascadeCacheAdapter {
+  getCache(): CascadeCache {
     return this.cache;
   }
 
