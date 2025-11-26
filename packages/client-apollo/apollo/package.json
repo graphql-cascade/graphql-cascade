@@ -23,7 +23,8 @@
   },
   "peerDependencies": {
     "@apollo/client": "^3.0.0",
-    "graphql": "^16.0.0"
+    "graphql": "^16.0.0",
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0"
   },
   "devDependencies": {
     "@types/node": "^18.0.0",
