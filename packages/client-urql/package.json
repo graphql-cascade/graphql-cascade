@@ -1,0 +1,38 @@
+{
+  "name": "@graphql-cascade/urql",
+  "version": "0.1.0",
+  "description": "URQL integration for GraphQL Cascade",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "graphql",
+    "cascade",
+    "urql",
+    "cache",
+    "invalidation"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@urql/core": ">=4.0.0",
+    "graphql": ">=16.0.0"
+  },
+  "dependencies": {
+    "wonka": "^6.3.4"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@urql/core": "^5.1.1",
+    "graphql": "^16.10.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.2"
+  }
+}
