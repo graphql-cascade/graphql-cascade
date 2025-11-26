@@ -1,0 +1,20 @@
+{
+  "name": "graphql-cascade-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/client-core/core",
+    "packages/client-apollo/apollo",
+    "packages/client-react-query/react-query"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "clean": "rm -rf packages/*/dist packages/**/node_modules node_modules"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

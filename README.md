@@ -150,35 +150,19 @@ const updateUser = async (userId, updates) => {
 
 ## Quick Start
 
-Get started in 5 minutes:
+### Server (Python)
 
-1. **Install** the server package:
-   ```bash
-   pip install graphql-cascade
-   # or
-   npm install @graphql-cascade/server
-   ```
+```bash
+pip install graphql-cascade
+```
 
-2. **Add cascade tracking** to your schema:
-   ```graphql
-   type Mutation {
-     updateUser(id: ID!, input: UserInput!): User
-       @cascade(entity: "User", operation: "update")
-   }
-   ```
+### Client (TypeScript)
 
-3. **Configure your client**:
-   ```javascript
-   import { ApolloClient } from '@apollo/client';
-   import { cascadeLink } from '@graphql-cascade/apollo';
-
-   const client = new ApolloClient({
-     link: cascadeLink.concat(httpLink),
-     cache: new InMemoryCache()
-   });
-   ```
-
-That's it! Cache invalidation now cascades automatically.
+```bash
+npm install @graphql-cascade/client
+# Or with Apollo
+npm install @graphql-cascade/client @graphql-cascade/client-apollo
+```
 
 ## Getting Started
 
