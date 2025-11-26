@@ -155,8 +155,8 @@ Implementations SHOULD pass the compliance test suite:
 ## Implementation Notes
 
 ### Gradual Adoption
-- Servers can implement Cascade alongside existing mutations
-- Clients can opt-in to cascade processing
+- Servers MAY implement Cascade alongside existing mutations
+- Clients MAY opt-in to cascade processing
 - Mixed environments supported during migration
 
 ### Performance Considerations

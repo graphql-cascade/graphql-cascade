@@ -400,7 +400,7 @@ Mutations MAY succeed partially:
 Clients MUST process cascade responses in this order:
 
 1. **Check success status**
-2. **Handle errors** (may be warnings even on success)
+2. **Handle errors** (MAY be warnings even on success)
 3. **Apply cascade updates** to cache
 4. **Return primary data** to application code
 

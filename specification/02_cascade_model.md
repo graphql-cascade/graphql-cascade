@@ -165,7 +165,7 @@ type CascadeMetadata {
 ### Full Entity Updates
 Cascade uses **full entity updates** rather than partial updates:
 - Each `UpdatedEntity` contains the complete entity data
-- Clients can choose which fields to query via GraphQL selection
+- Clients MAY choose which fields to query via GraphQL selection
 - Simplifies client logic and ensures consistency
 
 ### Operation Types
@@ -305,7 +305,7 @@ cascade:
 ### Response Size Limits
 - Maximum 500 updated entities per cascade
 - Maximum 5MB total response size
-- Servers may truncate cascades that exceed limits
+- Servers MAY truncate cascades that exceed limits
 
 ### Memory Efficiency
 - Stream entity processing rather than loading all in memory

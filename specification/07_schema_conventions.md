@@ -135,7 +135,7 @@ type UpdateCompanyCascade implements CascadeResponse {
 
 **Requirements:**
 - All response types MUST implement `CascadeResponse`
-- The `data` field type should be the entity being mutated (or appropriate payload type)
+- The `data` field type SHOULD be the entity being mutated (or appropriate payload type)
 - Response types MUST include all required fields from `CascadeResponse`
 
 ## Query Naming Conventions
@@ -349,7 +349,7 @@ enum CascadeErrorCode {
 **Requirements:**
 - Error codes MUST be from the standard enum
 - `field` and `path` help clients highlight problematic input fields
-- `extensions` can contain additional context (constraint names, etc.)
+- `extensions` MAY contain additional context (constraint names, etc.)
 
 ## Pagination Requirements
 

@@ -54,7 +54,7 @@ Mark the query as stale, refetch on next access.
 
 **When to use:**
 - When the query data has changed but isn't critical to refetch immediately
-- For list queries that can tolerate slight staleness
+- For list queries that CAN tolerate slight staleness
 - To reduce network requests
 
 **Client behavior:**
@@ -69,7 +69,7 @@ Immediately refetch the query.
 
 **When to use:**
 - When the query data is currently visible to the user
-- For critical data that should update immediately
+- For critical data that SHOULD update immediately
 - When the invalidation affects the active view
 
 **Client behavior:**
@@ -168,7 +168,7 @@ Servers SHOULD generate invalidation hints automatically based on:
 
 3. **Field-Specific Rules**
    - When a `Company.name` changes, invalidate `searchCompanies`
-   - When a `User.email` changes, may not need to invalidate lists
+   - When a `User.email` changes, MAY not need to invalidate lists
 
 ### Custom Invalidation Rules
 Servers MAY define custom rules using directives:
