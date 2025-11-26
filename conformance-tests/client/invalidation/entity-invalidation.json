@@ -1,0 +1,37 @@
+{
+  "id": "TC-C-021",
+  "name": "Entity-Based Query Invalidation",
+  "description": "Clients MUST invalidate queries containing a specific entity when that entity is updated or deleted",
+  "category": "client",
+  "subcategory": "invalidation",
+  "requirement": "REQ-031",
+  "priority": "high",
+  "input": {
+    "clientState": {
+      "cache": {
+        "User:1": { "__typename": "User", "id": "1", "name": "John" },
+        "Post:1": { "__typename": "Post", "id": "1", "title": "Hello", "authorId": "1" }
+      },
+      "queries": [
+        { "query": "getUser", "variables": { "id": "1" }, "result": { "user": { "__typename": "User", "id": "1" } } },
+        { "query": "getPosts", "variables": {}, "result": { "posts": [{ "__typename": "Post", "id": "1", "author": { "__typename": "User", "id": "1" } }] } }
+      ]
+    },
+    "cascade": {
+      "updated": [{ "__typename": "User", "id": "1", "name": "John Updated" }],
+      "invalidations": [
+        { "type": "entity", "target": "User:1", "reason": "entity updated" }
+      ],
+      "metadata": { "affectedCount": 1, "operationType": "UPDATE" }
+    }
+  },
+  "expected": {
+    "clientState": {
+      "cache": {
+        "User:1": { "__typename": "User", "id": "1", "name": "John Updated" }
+      },
+      "invalidatedQueries": ["getUser", "getPosts"]
+    }
+  },
+  "tags": ["invalidation", "entity", "cache-update"]
+}

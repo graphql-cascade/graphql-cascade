@@ -1,0 +1,40 @@
+{
+  "id": "TC-T-001",
+  "name": "HTTP Response Extensions",
+  "description": "Cascade data MUST be delivered in the 'extensions.cascade' field of the GraphQL HTTP response",
+  "category": "transport",
+  "subcategory": "http",
+  "requirement": "REQ-040",
+  "priority": "critical",
+  "input": {
+    "request": {
+      "method": "POST",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "query": "mutation { updateUser(id: \"1\", name: \"Test\") { id name } }"
+      }
+    }
+  },
+  "expected": {
+    "response": {
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "data": {
+          "updateUser": { "id": "1", "name": "Test" }
+        },
+        "extensions": {
+          "cascade": {
+            "updated": [{ "__typename": "User", "id": "1", "name": "Test" }],
+            "invalidations": [],
+            "metadata": { "affectedCount": 1, "operationType": "UPDATE" }
+          }
+        }
+      }
+    }
+  },
+  "tags": ["transport", "http", "extensions"]
+}
