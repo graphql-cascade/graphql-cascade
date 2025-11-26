@@ -1,0 +1,40 @@
+{
+  "name": "@graphql-cascade/relay",
+  "version": "0.1.0",
+  "description": "Relay Modern integration for GraphQL Cascade",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts"
+  },
+  "keywords": [
+    "graphql",
+    "cascade",
+    "relay",
+    "client"
+  ],
+  "author": "GraphQL Cascade Team",
+  "license": "MIT",
+  "files": ["dist"],
+  "dependencies": {
+    "@graphql-cascade/client": "^0.1.0"
+  },
+  "peerDependencies": {
+    "relay-runtime": "^14.0.0 || ^15.0.0 || ^16.0.0",
+    "graphql": "^16.0.0",
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/parser": "^5.0.0",
+    "relay-runtime": "^14.0.0"
+  }
+}

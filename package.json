@@ -6,6 +6,7 @@
     "packages/client-core/core",
     "packages/client-apollo/apollo",
     "packages/client-react-query/react-query",
+    "packages/client-relay/relay",
     "packages/cli",
     "packages/server-node"
   ],
