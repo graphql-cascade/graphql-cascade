@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "packages/client-core",
-    "packages/client-apollo",
-    "packages/client-react-query",
-    "packages/client-relay",
-    "packages/client-urql",
+    "packages/client-core/core",
+    "packages/client-apollo/apollo",
+    "packages/client-react-query/react-query",
+    "packages/client-relay/relay",
+    "packages/client-urql/urql",
     "packages/cli",
     "packages/server-node"
   ],
