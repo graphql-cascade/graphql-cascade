@@ -63,6 +63,7 @@ export class CascadeTracker implements EntityChangeIterator {
   private deletedEntities: Set<string> = new Set();
   private visitedEntities: Set<string> = new Set();
   public currentDepth: number = 0;
+  private maxDepthReached: number = 0;
 
   // Performance tracking
   private trackingStartTime?: number;
@@ -86,6 +87,7 @@ export class CascadeTracker implements EntityChangeIterator {
     this.deletedEntities.clear();
     this.visitedEntities.clear();
     this.currentDepth = 0;
+    this.maxDepthReached = 0;
   }
 
   constructor(config: CascadeTrackerConfig = {}) {
@@ -126,17 +128,17 @@ export class CascadeTracker implements EntityChangeIterator {
 
     const trackingTime = Date.now() - (this.getTrackingStartTime() ?? 0);
 
-    const cascadeData = {
-      updated: this.buildUpdatedEntities(),
-      deleted: this.buildDeletedEntities(),
-      metadata: {
-        transactionId: this.transactionId,
-        timestamp: new Date().toISOString(),
-        depth: this.currentDepth,
-        affectedCount: this.updatedEntities.size + this.deletedEntities.size,
-        trackingTime,
-      },
-    };
+     const cascadeData = {
+       updated: this.buildUpdatedEntities(),
+       deleted: this.buildDeletedEntities(),
+       metadata: {
+         transactionId: this.transactionId,
+         timestamp: new Date().toISOString(),
+         depth: this.maxDepthReached,
+         affectedCount: this.updatedEntities.size + this.deletedEntities.size,
+         trackingTime,
+       },
+     };
 
     // Reset state
     this.resetTransactionState();
@@ -162,7 +164,7 @@ export class CascadeTracker implements EntityChangeIterator {
       metadata: {
         transactionId: this.transactionId,
         timestamp: new Date().toISOString(),
-        depth: this.currentDepth,
+        depth: this.maxDepthReached,
         affectedCount: this.updatedEntities.size + this.deletedEntities.size,
         trackingTime,
       },
@@ -236,6 +238,7 @@ export class CascadeTracker implements EntityChangeIterator {
    */
   private traverseRelationships(entity: any, operation: 'CREATED' | 'UPDATED' | 'DELETED'): void {
     this.currentDepth += 1;
+    this.maxDepthReached = Math.max(this.maxDepthReached, this.currentDepth);
 
     try {
       const relatedEntities = this.getRelatedEntities(entity);

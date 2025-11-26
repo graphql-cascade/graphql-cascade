@@ -51,17 +51,39 @@ export class CascadeBuilder {
     const startTime = Date.now();
 
     // Get cascade data from tracker
-    const cascadeData = this.tracker.getCascadeData();
-    this.tracker.endTransaction();
+    let cascadeData: any;
+    try {
+      cascadeData = this.tracker.getCascadeData();
+      this.tracker.endTransaction();
+    } catch (e) {
+      // If tracker has no transaction, return empty cascade data
+      cascadeData = {
+        updated: [],
+        deleted: [],
+        invalidations: [],
+        metadata: {
+          timestamp: new Date().toISOString(),
+          depth: 0,
+          affectedCount: 0,
+          trackingTime: 0,
+        },
+      };
+    }
 
     // Compute invalidations if invalidator provided
     if (this.invalidator && success) {
-      const invalidations = this.invalidator.computeInvalidations(
-        cascadeData.updated,
-        cascadeData.deleted,
-        primaryResult
-      );
-      cascadeData.invalidations = invalidations?.slice(0, this.maxInvalidations) ?? [];
+      try {
+        const invalidations = this.invalidator.computeInvalidations(
+          cascadeData.updated,
+          cascadeData.deleted,
+          primaryResult
+        );
+        cascadeData.invalidations = invalidations?.slice(0, this.maxInvalidations) ?? [];
+      } catch (e) {
+        // Log error but continue without invalidations
+        console.error(`Error computing invalidations: ${e}`);
+        cascadeData.invalidations = [];
+      }
     } else {
       cascadeData.invalidations = [];
     }
@@ -126,9 +148,9 @@ export class CascadeBuilder {
    * Apply size limits to cascade data.
    */
   private applySizeLimits(cascadeData: any): any {
-    const updated = cascadeData.updated;
-    const deleted = cascadeData.deleted;
-    const invalidations = cascadeData.invalidations;
+    const updated = cascadeData.updated || [];
+    const deleted = cascadeData.deleted || [];
+    const invalidations = cascadeData.invalidations || [];
 
     // Apply entity limits
     let truncatedUpdated = false;
