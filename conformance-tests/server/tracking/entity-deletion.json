@@ -1,0 +1,43 @@
+{
+  "id": "TC-S-003",
+  "name": "Entity Deletion Tracking",
+  "description": "Servers MUST track entity deletions during mutation execution and include deletion information in the cascade response",
+  "category": "server",
+  "subcategory": "tracking",
+  "requirement": "REQ-003",
+  "priority": "critical",
+  "input": {
+    "mutation": "mutation DeleteUser($id: ID!) { deleteUser(id: $id) { success } }",
+    "context": {
+      "variables": {
+        "id": "user_123"
+      },
+      "entities": [
+        {
+          "__typename": "User",
+          "id": "user_123",
+          "name": "John Doe",
+          "email": "john@example.com"
+        }
+      ],
+      "schema": "type Mutation { deleteUser(id: ID!): DeleteResult } type DeleteResult { success: Boolean! } type User { id: ID! name: String! email: String! }"
+    }
+  },
+  "expected": {
+    "cascade": {
+      "updated": [],
+      "invalidations": [
+        {
+          "type": "entity",
+          "target": "User:user_123",
+          "reason": "Entity deleted"
+        }
+      ],
+      "metadata": {
+        "affectedCount": 1,
+        "operationType": "DELETE"
+      }
+    }
+  },
+  "tags": ["entity-deletion", "tracking", "mutation", "invalidation"]
+}

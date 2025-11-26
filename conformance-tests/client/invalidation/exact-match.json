@@ -1,0 +1,54 @@
+{
+  "id": "TC-C-003",
+  "name": "Exact Match Invalidation",
+  "description": "Clients MUST invalidate cached queries that exactly match invalidation hints from cascade responses",
+  "category": "client",
+  "subcategory": "invalidation",
+  "requirement": "REQ-103",
+  "priority": "high",
+  "input": {
+    "clientState": {
+      "cache": {
+        "User:user_123": {
+          "__typename": "User",
+          "id": "user_123",
+          "name": "John Doe",
+          "email": "john@example.com"
+        },
+        "query:GetUserList:{}": {
+          "users": [
+            {
+              "__typename": "User",
+              "id": "user_123",
+              "name": "John Doe"
+            }
+          ]
+        }
+      },
+      "queries": [
+        {
+          "query": "query GetUserList { users { id name } }",
+          "variables": {},
+          "result": {
+            "users": [
+              {
+                "__typename": "User",
+                "id": "user_123",
+                "name": "John Doe"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "expected": {
+    "clientState": {
+      "cache": {
+        "query:GetUserList:{}": null
+      },
+      "invalidatedQueries": ["query:GetUserList:{}"]
+    }
+  },
+  "tags": ["exact-match", "invalidation", "client"]
+}
