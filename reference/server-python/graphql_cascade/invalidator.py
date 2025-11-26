@@ -92,7 +92,6 @@ class CascadeInvalidator:
 
         for entity in updated:
             entity_type = entity["__typename"]
-            entity_data = entity["entity"]
 
             # Get changed fields (simplified - would need entity diffing in practice)
             changed_fields = self._get_changed_fields(entity)
@@ -171,9 +170,9 @@ class CascadeInvalidator:
         entity_data = entity.get("entity", {})
         return list(entity_data.keys())
 
-    def _load_custom_rules(self) -> Any:
+    def _load_custom_rules(self) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
         """Load invalidation rules from schema directives."""
-        rules = defaultdict(lambda: defaultdict(list))
+        rules: Dict[str, Dict[str, List[Dict[str, Any]]]] = defaultdict(lambda: defaultdict(list))
 
         if not self.schema:
             return rules

@@ -28,7 +28,7 @@ class CascadeTransaction:
     def __enter__(self):
         return self.tracker.start_transaction()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         if exc_type is None:
             # Normal exit - mark as not in transaction but keep data
             self.tracker.in_transaction = False

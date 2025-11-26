@@ -242,7 +242,7 @@ class ConfigBuilder:
     Fluent builder for cascade configuration.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._config = CascadeConfig().to_dict()
 
     def enable_cascade(self, enabled: bool = True) -> "ConfigBuilder":
@@ -311,7 +311,7 @@ def validate_config_file(config_path: str) -> List[str]:
     Returns a list of validation errors, empty if valid.
     """
     try:
-        config = CascadeConfig.from_file(config_path)
+        CascadeConfig.from_file(config_path)
         return []
     except Exception as e:
         return [str(e)]

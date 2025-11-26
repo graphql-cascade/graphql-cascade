@@ -67,7 +67,7 @@ class CascadeBuilder:
         max_updated_entities: int = 500,
         max_deleted_entities: int = 100,
         max_invalidations: int = 50,
-    ):
+    ) -> None:
         self.tracker = tracker
         self.invalidator = invalidator
         self.max_response_size_mb = max_response_size_mb
@@ -141,7 +141,12 @@ class CascadeBuilder:
             CascadeResponse: Error cascade response
         """
         # For errors, we still want to track the transaction if it was started
-        cascade_data = {"updated": [], "deleted": [], "invalidations": [], "metadata": {}}
+        cascade_data: dict[str, Any] = {
+            "updated": [],
+            "deleted": [],
+            "invalidations": [],
+            "metadata": {},
+        }
 
         if self.tracker.in_transaction:
             try:

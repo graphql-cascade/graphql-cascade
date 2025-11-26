@@ -158,7 +158,7 @@ class AriadneCascadeMiddleware(CascadeMiddleware):
     Ariadne-specific cascade middleware.
     """
 
-    def get_middleware(self):
+    def get_middleware(self) -> Callable:
         """Get Ariadne middleware function."""
 
         async def middleware(next_resolver, root, info, **kwargs):
@@ -182,7 +182,7 @@ class StrawberryCascadeExtension:
     def __init__(self, middleware: CascadeMiddleware):
         self.middleware = middleware
 
-    def on_operation(self):
+    def on_operation(self) -> None:
         """Hook into Strawberry operation execution."""
         # Implementation would integrate with Strawberry's extension system
         pass
@@ -264,15 +264,19 @@ def create_cascade_middleware(
 # Example usage
 
 
-def example_ariadne_integration():
+def example_ariadne_integration() -> Any:
     """Example of integrating with Ariadne."""
     from ariadne import make_executable_schema
 
     # Create middleware
-    middleware = create_cascade_middleware()
+    create_cascade_middleware()
 
     # Create Ariadne middleware
     ariadne_middleware = AriadneCascadeMiddleware()
+
+    # Placeholder definitions
+    type_defs = []
+    mutation_resolvers = {}
 
     # Add to schema
     schema = make_executable_schema(
@@ -282,7 +286,7 @@ def example_ariadne_integration():
     return schema
 
 
-def example_strawberry_integration():
+def example_strawberry_integration() -> Any:
     """Example of integrating with Strawberry."""
     import strawberry
 
@@ -290,11 +294,17 @@ def example_strawberry_integration():
     middleware = create_cascade_middleware()
     extension = StrawberryCascadeExtension(middleware)
 
+    # Placeholder definitions
+    @strawberry.type
+    class Query:
+        pass
+
     # Add to schema
     @strawberry.type
     class Mutation:
         # Mutation definitions...
+        pass
 
-        schema = strawberry.Schema(query=Query, mutation=Mutation, extensions=[extension])
+    schema = strawberry.Schema(query=Query, mutation=Mutation, extensions=[extension])
 
     return schema
