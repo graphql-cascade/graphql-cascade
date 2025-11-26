@@ -31,5 +31,18 @@ export type {
   EntityChangeIterator,
 } from './types';
 
+// Integrations (optional - require peer dependencies)
+export {
+  CascadeModule,
+  CascadeService,
+  CascadeModuleOptions,
+  createCascadePlugin,
+  CascadePluginOptions,
+  cascadeMiddleware,
+  getCascadeData,
+  buildCascadeResponse,
+  CascadeMiddlewareOptions,
+} from './integrations';
+
 // Version
 export const VERSION = '0.1.0';
