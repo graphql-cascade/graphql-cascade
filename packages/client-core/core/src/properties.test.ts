@@ -211,6 +211,28 @@ const cascadeMetadataArb: fc.Arbitrary<CascadeMetadata> = fc.record({
   affectedCount: fc.integer({ min: 0, max: 100 })
 });
 
+// Helper function to deduplicate entities by typename+id (keeps first occurrence)
+function deduplicateEntities(entities: UpdatedEntity[]): UpdatedEntity[] {
+  const seen = new Set<string>();
+  return entities.filter(e => {
+    const key = `${e.__typename}:${e.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// Helper function to deduplicate deleted entities by typename+id
+function deduplicateDeletedEntities(entities: DeletedEntity[]): DeletedEntity[] {
+  const seen = new Set<string>();
+  return entities.filter(e => {
+    const key = `${e.__typename}:${e.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 // Generate cascade updates
 const cascadeUpdatesArb: fc.Arbitrary<CascadeUpdates> = fc.record({
   updated: fc.array(updatedEntityArb, { minLength: 0, maxLength: 20 }),
@@ -267,7 +289,7 @@ describe('Property-based tests for CascadeClient', () => {
   });
 
   describe('Order Independence: Entity order does not affect final state', () => {
-    it('should produce same result regardless of entity update order', () => {
+    it('should produce same result regardless of entity update order (unique entities)', () => {
       fc.assert(
         fc.property(
           fc.array(updatedEntityArb, { minLength: 1, maxLength: 20 }),
@@ -275,6 +297,11 @@ describe('Property-based tests for CascadeClient', () => {
           fc.array(queryInvalidationArb, { minLength: 0, maxLength: 5 }),
           cascadeMetadataArb,
           (updatedEntities, deletedEntities, invalidations, metadata) => {
+            // Deduplicate entities by typename+id to test order independence
+            // (When there are duplicates, last-write-wins means order matters)
+            const uniqueUpdated = deduplicateEntities(updatedEntities);
+            const uniqueDeleted = deduplicateDeletedEntities(deletedEntities);
+
             const cache1 = new PropertyTestCache();
             const cache2 = new PropertyTestCache();
             const client1 = new CascadeClient(cache1, mockExecutor);
@@ -284,15 +311,15 @@ describe('Property-based tests for CascadeClient', () => {
             const response1: CascadeResponse = {
               success: true,
               data: null,
-              cascade: { updated: updatedEntities, deleted: deletedEntities, invalidations, metadata }
+              cascade: { updated: uniqueUpdated, deleted: uniqueDeleted, invalidations, metadata }
             };
 
             const response2: CascadeResponse = {
               success: true,
               data: null,
               cascade: {
-                updated: [...updatedEntities].reverse(), // Reverse order
-                deleted: [...deletedEntities].reverse(),
+                updated: [...uniqueUpdated].reverse(), // Reverse order
+                deleted: [...uniqueDeleted].reverse(),
                 invalidations: [...invalidations].reverse(),
                 metadata
               }
@@ -302,7 +329,7 @@ describe('Property-based tests for CascadeClient', () => {
             client1.applyCascade(response1);
             client2.applyCascade(response2);
 
-            // Final states should be identical
+            // Final states should be identical for unique entities
             return cache1.statesEqual(cache2);
           }
         ),
