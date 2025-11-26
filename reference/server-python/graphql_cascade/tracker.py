@@ -6,7 +6,7 @@ Tracks entity changes during GraphQL mutations for cascade response construction
 
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple
 
 
@@ -104,7 +104,7 @@ class CascadeTracker:
             "deleted": self._build_deleted_entities(),
             "metadata": {
                 "transaction_id": self.transaction_id,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "depth": self.current_depth,
                 "affected_count": len(self.updated_entities) + len(self.deleted_entities),
                 "tracking_time": tracking_time,
@@ -139,7 +139,7 @@ class CascadeTracker:
             "deleted": self._build_deleted_entities(),
             "metadata": {
                 "transaction_id": self.transaction_id,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "depth": self.current_depth,
                 "affected_count": len(self.updated_entities) + len(self.deleted_entities),
                 "tracking_time": tracking_time,
@@ -298,7 +298,7 @@ class CascadeTracker:
                 {
                     "__typename": typename,
                     "id": entity_id,
-                    "deletedAt": datetime.utcnow().isoformat(),
+                    "deletedAt": datetime.now(timezone.utc).isoformat(),
                 }
             )
 
@@ -345,8 +345,7 @@ class CascadeTracker:
 
     def get_deleted_stream(self) -> Iterator[Tuple[str, str]]:
         """Stream deleted entities."""
-        for typename, entity_id in self.deleted_entities:
-            yield (typename, entity_id)
+        yield from self.deleted_entities
 
 
 # Convenience context manager

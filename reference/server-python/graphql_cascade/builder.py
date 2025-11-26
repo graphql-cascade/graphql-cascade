@@ -6,7 +6,7 @@ Constructs CascadeResponse objects from tracked entity changes.
 
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from .tracker import CascadeTracker
@@ -152,7 +152,7 @@ class CascadeBuilder:
 
         # Minimal metadata for error responses
         cascade_data["metadata"] = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "depth": 0,
             "affected_count": 0,
             "construction_time": 0,
@@ -236,7 +236,7 @@ class StreamingCascadeBuilder(CascadeBuilder):
             "deleted": [],
             "invalidations": [],
             "metadata": {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "depth": self.tracker.current_depth,
                 "affected_count": 0,
                 "streaming": True,
@@ -276,7 +276,7 @@ class StreamingCascadeBuilder(CascadeBuilder):
                 {
                     "__typename": typename,
                     "id": entity_id,
-                    "deletedAt": datetime.utcnow().isoformat(),
+                    "deletedAt": datetime.now(timezone.utc).isoformat(),
                 }
             )
             deleted_count += 1
