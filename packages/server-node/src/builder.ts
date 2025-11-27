@@ -12,6 +12,7 @@ import {
   CascadeUpdatedEntity,
   CascadeDeletedEntity,
   CascadeInvalidation,
+  Invalidator,
 } from './types';
 
 /**
@@ -21,7 +22,7 @@ import {
  */
 export class CascadeBuilder {
   protected tracker: CascadeTracker;
-  protected invalidator?: any;
+  protected invalidator?: Invalidator;
   protected maxResponseSizeMb: number;
   protected maxUpdatedEntities: number;
   protected maxDeletedEntities: number;
@@ -29,7 +30,7 @@ export class CascadeBuilder {
 
   constructor(
     tracker: CascadeTracker,
-    invalidator?: any,
+    invalidator?: Invalidator,
     config: CascadeBuilderConfig = {}
   ) {
     this.tracker = tracker;
@@ -43,8 +44,8 @@ export class CascadeBuilder {
   /**
    * Build a complete CascadeResponse.
    */
-  buildResponse(
-    primaryResult: any = null,
+  buildResponse<T = unknown>(
+    primaryResult: T | null = null,
     success: boolean = true,
     errors: CascadeError[] = []
   ): CascadeResponse {

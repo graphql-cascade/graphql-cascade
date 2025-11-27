@@ -16,6 +16,8 @@ class MockEntity {
     public __typename: string = 'MockEntity'
   ) {}
 
+  [key: string]: unknown;
+
   toDict() {
     return {
       id: this.id,

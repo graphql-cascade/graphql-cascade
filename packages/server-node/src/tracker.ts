@@ -4,7 +4,7 @@
  * Tracks entity changes during GraphQL mutations for cascade response construction.
  */
 
-import { EntityChange, CascadeTrackerConfig, GraphQLEntity, EntityChangeIterator } from './types';
+import { EntityChange, CascadeTrackerConfig, GraphQLEntity, EntityChangeIterator, TrackedEntity } from './types';
 
 /**
  * Context manager for cascade transaction tracking.
@@ -182,16 +182,18 @@ export class CascadeTracker implements EntityChangeIterator {
 
   /**
    * Track entity creation.
+   * @param entity - Entity with at least an `id` and optionally `__typename`
    */
-  trackCreate(entity: any): void {
+  trackCreate(entity: TrackedEntity | Record<string, unknown>): void {
     this.ensureTransaction();
     this.trackEntity(entity, 'CREATED');
   }
 
   /**
    * Track entity update.
+   * @param entity - Entity with at least an `id` and optionally `__typename`
    */
-  trackUpdate(entity: any): void {
+  trackUpdate(entity: TrackedEntity | Record<string, unknown>): void {
     this.ensureTransaction();
     this.trackEntity(entity, 'UPDATED');
   }
@@ -212,7 +214,7 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * Internal entity tracking with relationship traversal.
    */
-  private trackEntity(entity: any, operation: 'CREATED' | 'UPDATED' | 'DELETED'): void {
+  private trackEntity(entity: TrackedEntity | Record<string, unknown>, operation: 'CREATED' | 'UPDATED' | 'DELETED'): void {
     // Check entity limit to prevent memory exhaustion
     if (this.updatedEntities.size >= this.maxEntities) {
       this.entityLimitReached = true;

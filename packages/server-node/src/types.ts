@@ -179,3 +179,35 @@ export interface EntityChangeIterator {
   /** Iterate over deleted entities */
   getDeletedStream(): IterableIterator<[string, string]>;
 }
+
+/**
+ * Represents an entity that can be tracked by the cascade tracker.
+ */
+export interface TrackedEntity {
+  /** Entity ID (required) */
+  id: string | number;
+  /** GraphQL type name (optional, can use __typename or _typename) */
+  __typename?: string;
+  /** Alternative typename field */
+  _typename?: string;
+  /** Custom serialization method */
+  toDict?: () => Record<string, unknown>;
+  /** Custom method to get related entities */
+  getRelatedEntities?: () => TrackedEntity[];
+  /** Allow additional properties */
+  [key: string]: unknown;
+}
+
+/**
+ * Computes cache invalidations based on entity changes.
+ */
+export interface Invalidator {
+  /**
+   * Compute invalidations based on entity changes.
+   */
+  computeInvalidations(
+    updated: CascadeUpdatedEntity[],
+    deleted: CascadeDeletedEntity[],
+    primaryResult: unknown
+  ): CascadeInvalidation[] | null | undefined;
+}

@@ -14,6 +14,8 @@ class MockEntity {
     public relatedEntities?: MockEntity[]
   ) {}
 
+  [key: string]: unknown;
+
   toDict() {
     return {
       id: String(this.id),
@@ -99,7 +101,7 @@ describe('CascadeTracker', () => {
 
     it('should throw error for entity without id', () => {
       tracker.startTransaction();
-      const entity = new MockEntityWithoutId('Test');
+      const entity = new MockEntityWithoutId('Test') as any;
       expect(() => tracker.trackCreate(entity)).toThrow('Entity [object Object] has no \'id\' attribute');
     });
   });
