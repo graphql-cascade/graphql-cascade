@@ -1,6 +1,24 @@
-# GraphQL Cascade + React Query - Todo App Example
+# GraphQL Cascade Todo App with React Query
 
 A complete Todo application demonstrating **GraphQL Cascade** with **React Query**. This example shows how Cascade eliminates manual cache management, making your React Query applications simpler and more maintainable.
+
+## Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Start both backend and frontend
+npm run dev
+
+# Or run individually:
+# Backend: npm run dev --workspace=backend
+# Frontend: npm run dev --workspace=frontend
+```
+
+The application will be available at:
+- **Frontend**: http://localhost:3000
+- **Backend**: http://localhost:4000/graphql
 
 ## What This Example Demonstrates
 
@@ -140,42 +158,79 @@ React Query's existing reactivity system takes over:
 
 ```
 todo-react-query/
-├── src/
-│   ├── api/
-│   │   └── client.ts              # Cascade + React Query setup
-│   ├── components/
-│   │   ├── AddTodo.tsx            # Create todo form
-│   │   ├── TodoItem.tsx           # Single todo component
-│   │   └── TodoList.tsx           # Todo list component
-│   ├── hooks/
-│   │   ├── useTodos.ts            # Query hooks
-│   │   └── useTodoMutations.ts    # Mutation hooks with Cascade
-│   ├── App.tsx                    # Main app component
-│   ├── App.css                    # Styles
-│   └── main.tsx                   # Entry point
-├── index.html
-├── package.json
-├── tsconfig.json
+├── backend/                       # Apollo Server backend
+│   ├── src/
+│   │   ├── db.ts                  # In-memory todo storage
+│   │   ├── index.ts               # Server entry point
+│   │   ├── resolvers.ts           # GraphQL resolvers with Cascade
+│   │   └── schema.ts              # GraphQL schema
+│   ├── package.json
+│   └── tsconfig.json
+├── frontend/                      # React Query frontend
+│   ├── src/
+│   │   ├── api/
+│   │   │   └── client.ts          # Cascade + React Query setup
+│   │   ├── components/
+│   │   │   ├── AddTodo.tsx        # Create todo form
+│   │   │   ├── TodoItem.tsx       # Single todo component
+│   │   │   └── TodoList.tsx       # Todo list component
+│   │   ├── hooks/
+│   │   │   ├── useTodos.ts        # Query hooks
+│   │   │   └── useTodoMutations.ts # Mutation hooks with Cascade
+│   │   ├── App.tsx                # Main app component
+│   │   ├── App.css                # Styles
+│   │   └── main.tsx               # Entry point
+│   ├── index.html
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   └── vite.config.ts
+├── docker-compose.yml
+├── package.json                   # Workspace root
 └── README.md
 ```
 
 ## Key Files to Study
 
-### `/src/api/client.ts` - Cascade Integration
+### Backend
+
+#### `/backend/src/schema.ts` - GraphQL Schema
+
+Defines the Todo GraphQL schema with cascade response types:
+- `Todo` type for todo entities
+- Cascade response types (`CreateTodoCascade`, `UpdateTodoCascade`, etc.)
+- Query and mutation definitions
+
+#### `/backend/src/resolvers.ts` - Cascade-Enabled Resolvers
+
+Shows how to use `CascadeBuilder` to create cascade responses:
+- Automatic entity tracking for CREATE/UPDATE/DELETE operations
+- Error handling with cascade responses
+- Integration with in-memory database
+
+#### `/backend/src/db.ts` - Data Layer
+
+Simple in-memory todo storage demonstrating:
+- CRUD operations
+- Data persistence across server restarts
+
+### Frontend
+
+#### `/frontend/src/api/client.ts` - Cascade Integration
 
 Shows how to:
 - Set up React Query with Cascade
 - Create the cascade client
 - Process cascade metadata from responses
 
-### `/src/hooks/useTodoMutations.ts` - Mutation Hooks
+#### `/frontend/src/hooks/useTodoMutations.ts` - Mutation Hooks
 
 Demonstrates:
 - Simple mutation hooks without manual cache updates
 - How Cascade eliminates onSuccess callbacks
 - Type-safe mutations with TypeScript
 
-### `/src/hooks/useTodos.ts` - Query Hooks
+#### `/frontend/src/hooks/useTodos.ts` - Query Hooks
 
 Shows:
 - Standard React Query query hooks
@@ -185,37 +240,41 @@ Shows:
 
 ### Prerequisites
 
-- Node.js 16+ and npm/yarn/pnpm
-- A GraphQL server that supports Cascade (see backend setup below)
+- Node.js 16+ and npm
+- Docker (optional, for containerized setup)
 
-### Frontend Setup
+### Development Setup
 
 ```bash
-# Install dependencies
+# Install all dependencies
 npm install
 
-# Start development server
+# Start both backend and frontend in development mode
 npm run dev
-
-# Open http://localhost:3000
 ```
 
-### Backend Setup
+This will start:
+- **Backend**: Apollo Server with GraphQL Cascade at http://localhost:4000/graphql
+- **Frontend**: Vite dev server at http://localhost:3000
 
-This example expects a GraphQL server at `http://localhost:4000/graphql`. You can use the existing todo-app backend:
+### Manual Setup
+
+If you prefer to run services individually:
 
 ```bash
-# From the repository root
-cd examples/todo-app/backend
+# Backend
+npm run dev --workspace=backend
 
-# Install Python dependencies
-pip install graphql-cascade strawberry-graphql
-
-# Start the server
-python server.py
+# Frontend (in another terminal)
+npm run dev --workspace=frontend
 ```
 
-Or implement your own server following the [GraphQL Cascade specification](../../specification/).
+### Docker Setup
+
+```bash
+# Build and run with Docker Compose
+docker-compose up --build
+```
 
 ## Usage
 
