@@ -7,12 +7,18 @@ services:
       - "4000:4000"
     environment:
       - NODE_ENV=development
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
 
   frontend:
     build: ./frontend
     ports:
       - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - backend
-    environment:
-      - VITE_GRAPHQL_URL=http://backend:4000/graphql

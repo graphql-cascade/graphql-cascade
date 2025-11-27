@@ -1,65 +1,33 @@
 # Dashboard Vue Example
 
-An analytics dashboard demonstrating GraphQL Cascade with Vue 3 Composition API and URQL.
+This example demonstrates building a dashboard application with Vue.js and GraphQL Cascade.
 
 ## Overview
 
-This example shows how to integrate GraphQL Cascade with:
-- **Backend**: Express with graphql-http middleware
-- **Frontend**: Vue 3 with URQL client
-- **Features**: Real-time data updates, filter-based invalidations
+The dashboard-vue example shows how to create a modern dashboard interface using Vue 3, integrating with GraphQL Cascade for efficient data management and real-time updates.
 
-## Quick Start
+## Structure
 
-```bash
-# Install dependencies
-npm install
+- `backend/`: Node.js GraphQL server with Cascade
+- `frontend/`: Vue.js dashboard application
 
-# Start development servers
-npm run dev
-```
+## Getting Started
 
-Or with Docker:
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```bash
-docker-compose up
-```
+2. Start the development environment:
+   ```bash
+   docker-compose up
+   ```
 
-## Architecture
+3. Open http://localhost:3000 for the frontend
 
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Vue 3 App     │────▶│  Express Server  │────▶│   In-Memory DB  │
-│   (URQL)        │◀────│  (graphql-http)  │◀────│                 │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-        │                        │
-        │    Cascade Exchange    │    Cascade Middleware
-        └────────────────────────┘
-```
+## Features
 
-## Key Files
-
-### Backend
-- `backend/src/index.ts` - Express server setup with cascade middleware
-- `backend/src/schema.ts` - GraphQL schema for metrics and analytics
-- `backend/src/resolvers.ts` - Cascade-enabled resolvers
-
-### Frontend
-- `frontend/src/urql-client.ts` - URQL client with cascade exchange
-- `frontend/src/components/MetricsChart.vue` - Real-time metrics visualization
-- `frontend/src/components/FilterPanel.vue` - Filter controls with invalidation
-
-## Features Demonstrated
-
-- [x] Basic cascade updates
-- [x] Vue 3 Composition API integration
-- [x] URQL client with custom exchange
-- [x] Filter-based cache invalidation
-- [x] Real-time data updates
-- [ ] Complex aggregations
-
-## Learn More
-
-- [GraphQL Cascade Documentation](../../docs/)
-- [URQL Integration Guide](../../docs/guides/urql.md)
-- [Vue 3 with GraphQL](../../docs/guides/vue.md)
+- Real-time data updates
+- Efficient caching with Cascade
+- Vue 3 Composition API
+- Modern dashboard UI

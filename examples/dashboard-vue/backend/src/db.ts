@@ -2,85 +2,57 @@ export interface Metric {
   id: string;
   name: string;
   value: number;
-  category: string;
-  timestamp: string;
+  trend: 'UP' | 'DOWN' | 'STABLE';
+  updatedAt: string;
 }
 
-export interface Dashboard {
+export interface DataRow {
   id: string;
-  name: string;
-  widgets: string[];
-  createdAt: string;
-  updatedAt: string;
+  category: string;
+  values: number[];
 }
 
 // In-memory database
 class Database {
   private metrics: Metric[] = [
-    { id: '1', name: 'Page Views', value: 1250, category: 'traffic', timestamp: '2024-01-15T10:00:00Z' },
-    { id: '2', name: 'Unique Visitors', value: 450, category: 'traffic', timestamp: '2024-01-15T10:00:00Z' },
-    { id: '3', name: 'Conversions', value: 32, category: 'sales', timestamp: '2024-01-15T10:00:00Z' },
-    { id: '4', name: 'Revenue', value: 5280, category: 'sales', timestamp: '2024-01-15T10:00:00Z' },
-    { id: '5', name: 'Bounce Rate', value: 42.5, category: 'engagement', timestamp: '2024-01-15T10:00:00Z' },
-    { id: '6', name: 'Avg Session Duration', value: 185, category: 'engagement', timestamp: '2024-01-15T10:00:00Z' },
+    { id: '1', name: 'Page Views', value: 1250, trend: 'UP', updatedAt: '2024-01-15T10:00:00Z' },
+    { id: '2', name: 'Unique Visitors', value: 450, trend: 'DOWN', updatedAt: '2024-01-15T10:00:00Z' },
+    { id: '3', name: 'Conversions', value: 32, trend: 'UP', updatedAt: '2024-01-15T10:00:00Z' },
+    { id: '4', name: 'Revenue', value: 5280, trend: 'STABLE', updatedAt: '2024-01-15T10:00:00Z' },
+    { id: '5', name: 'Bounce Rate', value: 42.5, trend: 'DOWN', updatedAt: '2024-01-15T10:00:00Z' },
+    { id: '6', name: 'Avg Session Duration', value: 185, trend: 'UP', updatedAt: '2024-01-15T10:00:00Z' },
   ];
 
-  private dashboards: Dashboard[] = [
-    {
-      id: '1',
-      name: 'Main Dashboard',
-      widgets: ['traffic-chart', 'sales-summary', 'recent-activity'],
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-15T10:00:00Z',
-    },
-    {
-      id: '2',
-      name: 'Sales Dashboard',
-      widgets: ['revenue-chart', 'conversion-funnel', 'top-products'],
-      createdAt: '2024-01-05T00:00:00Z',
-      updatedAt: '2024-01-14T15:30:00Z',
-    },
+  private dataRows: DataRow[] = [
+    { id: '1', category: 'traffic', values: [1250, 1180, 1320, 1100, 1400] },
+    { id: '2', category: 'sales', values: [32, 28, 35, 30, 38] },
+    { id: '3', category: 'engagement', values: [42.5, 45.2, 38.1, 41.8, 39.3] },
   ];
-
-  private nextMetricId = 7;
 
   getMetrics(): Metric[] {
     return [...this.metrics];
   }
 
-  createMetric(input: { name: string; value: number; category: string }): Metric {
-    const metric: Metric = {
-      id: String(this.nextMetricId++),
-      name: input.name,
-      value: input.value,
-      category: input.category,
-      timestamp: new Date().toISOString(),
-    };
-    this.metrics.push(metric);
-    return metric;
-  }
-
-  getDashboards(): Dashboard[] {
-    return [...this.dashboards];
-  }
-
-  getDashboard(id: string): Dashboard | undefined {
-    return this.dashboards.find(d => d.id === id);
-  }
-
-  updateDashboard(id: string, input: { name?: string; widgets?: string[] }): Dashboard | undefined {
-    const index = this.dashboards.findIndex(d => d.id === id);
+  updateMetric(id: string, value: number): Metric | undefined {
+    const index = this.metrics.findIndex(m => m.id === id);
     if (index === -1) return undefined;
 
-    const dashboard = this.dashboards[index];
-    const updated: Dashboard = {
-      ...dashboard,
-      name: input.name ?? dashboard.name,
-      widgets: input.widgets ?? dashboard.widgets,
+    const metric = this.metrics[index];
+    const oldValue = metric.value;
+    const newTrend = value > oldValue ? 'UP' : value < oldValue ? 'DOWN' : 'STABLE';
+
+    const updated: Metric = {
+      ...metric,
+      value,
+      trend: newTrend,
       updatedAt: new Date().toISOString(),
     };
-    this.dashboards[index] = updated;
+    this.metrics[index] = updated;
     return updated;
+  }
+
+  getDataRows(): DataRow[] {
+    return [...this.dataRows];
   }
 }
 

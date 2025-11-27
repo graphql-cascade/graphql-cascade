@@ -1,9 +1,8 @@
 {
-  "name": "dashboard-vue-example",
+  "name": "dashboard-vue",
   "private": true,
-  "workspaces": ["backend", "frontend"],
-  "scripts": {
-    "dev": "npm run dev --workspaces",
-    "build": "npm run build --workspaces"
-  }
+  "workspaces": [
+    "backend",
+    "frontend"
+  ]
 }

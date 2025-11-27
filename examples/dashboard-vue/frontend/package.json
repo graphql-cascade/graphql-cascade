@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@graphql-cascade/urql": "file:../../../packages/client-urql/urql",
     "@urql/vue": "^1.1.2",
     "graphql": "^16.8.1",
     "urql": "^4.0.6",

@@ -3,27 +3,27 @@ import { useQuery, useMutation } from '@urql/vue';
 import { ref, computed } from 'vue';
 
 const METRICS_QUERY = `
-  query GetMetrics($filter: MetricsFilter) {
-    metrics(filter: $filter) {
+  query GetMetrics {
+    metrics {
       id
       name
       value
-      category
-      timestamp
+      trend
+      updatedAt
     }
   }
 `;
 
-const CREATE_METRIC_MUTATION = `
-  mutation CreateMetric($input: CreateMetricInput!) {
-    createMetric(input: $input) {
+const UPDATE_METRIC_MUTATION = `
+  mutation UpdateMetric($id: ID!, $value: Float!) {
+    updateMetric(id: $id, value: $value) {
       success
       data {
         id
         name
         value
-        category
-        timestamp
+        trend
+        updatedAt
       }
       cascade {
         updated {
@@ -40,50 +40,34 @@ interface Metric {
   id: string;
   name: string;
   value: number;
-  category: string;
-  timestamp: string;
+  trend: 'UP' | 'DOWN' | 'STABLE';
+  updatedAt: string;
 }
-
-const filter = ref<{ category?: string }>({});
 
 const result = useQuery({
   query: METRICS_QUERY,
-  variables: { filter: filter.value },
 });
 
-const createMetricMutation = useMutation(CREATE_METRIC_MUTATION);
+const updateMetricMutation = useMutation(UPDATE_METRIC_MUTATION);
 
 const metrics = computed<Metric[]>(() => result.data.value?.metrics || []);
 const fetching = computed(() => result.fetching.value);
 
-// Group metrics by category
-const metricsByCategory = computed(() => {
-  const grouped: Record<string, Metric[]> = {};
-  for (const metric of metrics.value) {
-    if (!grouped[metric.category]) {
-      grouped[metric.category] = [];
-    }
-    grouped[metric.category].push(metric);
-  }
-  return grouped;
-});
+// Form state for updating metric
+const selectedMetricId = ref('');
+const newValue = ref(0);
 
-// Form state for adding new metric
-const newMetric = ref({
-  name: '',
-  value: 0,
-  category: 'traffic',
-});
+async function handleUpdateMetric() {
+  if (!selectedMetricId.value) return;
 
-async function handleAddMetric() {
-  if (!newMetric.value.name) return;
-
-  await createMetricMutation.executeMutation({
-    input: newMetric.value,
+  await updateMetricMutation.executeMutation({
+    id: selectedMetricId.value,
+    value: newValue.value,
   });
 
   // Reset form
-  newMetric.value = { name: '', value: 0, category: 'traffic' };
+  selectedMetricId.value = '';
+  newValue.value = 0;
 
   // Refetch metrics
   result.executeQuery({ requestPolicy: 'network-only' });
@@ -96,48 +80,44 @@ async function handleAddMetric() {
 
     <div v-if="fetching" class="loading">Loading metrics...</div>
 
-    <div v-else class="metrics-grid">
+    <div v-else class="metrics-list">
       <div
-        v-for="(categoryMetrics, category) in metricsByCategory"
-        :key="category"
-        class="category-card"
+        v-for="metric in metrics"
+        :key="metric.id"
+        class="metric-item"
       >
-        <h3>{{ category }}</h3>
-        <div class="metric-list">
-          <div
-            v-for="metric in categoryMetrics"
-            :key="metric.id"
-            class="metric-item"
-          >
-            <span class="metric-name">{{ metric.name }}</span>
-            <span class="metric-value">{{ metric.value.toLocaleString() }}</span>
-          </div>
+        <div class="metric-info">
+          <span class="metric-name">{{ metric.name }}</span>
+          <span class="metric-value">{{ metric.value.toLocaleString() }}</span>
+          <span class="metric-trend" :class="metric.trend.toLowerCase()">
+            {{ metric.trend }}
+          </span>
+          <span class="metric-updated">{{ new Date(metric.updatedAt).toLocaleDateString() }}</span>
         </div>
       </div>
     </div>
 
-    <div class="add-metric-form">
-      <h3>Add New Metric</h3>
-      <form @submit.prevent="handleAddMetric">
-        <input
-          v-model="newMetric.name"
-          type="text"
-          placeholder="Metric name"
-          required
-        />
-        <input
-          v-model.number="newMetric.value"
-          type="number"
-          placeholder="Value"
-          required
-        />
-        <select v-model="newMetric.category">
-          <option value="traffic">Traffic</option>
-          <option value="sales">Sales</option>
-          <option value="engagement">Engagement</option>
+    <div class="update-metric-form">
+      <h3>Update Metric Value</h3>
+      <form @submit.prevent="handleUpdateMetric">
+        <select v-model="selectedMetricId" required>
+          <option value="">Select metric to update</option>
+          <option
+            v-for="metric in metrics"
+            :key="metric.id"
+            :value="metric.id"
+          >
+            {{ metric.name }}
+          </option>
         </select>
-        <button type="submit" :disabled="createMetricMutation.fetching.value">
-          {{ createMetricMutation.fetching.value ? 'Adding...' : 'Add Metric' }}
+        <input
+          v-model.number="newValue"
+          type="number"
+          placeholder="New value"
+          required
+        />
+        <button type="submit" :disabled="updateMetricMutation.fetching.value">
+          {{ updateMetricMutation.fetching.value ? 'Updating...' : 'Update Metric' }}
         </button>
       </form>
     </div>
@@ -156,84 +136,99 @@ async function handleAddMetric() {
   color: #666;
 }
 
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
+.metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-bottom: 30px;
 }
 
-.category-card {
+.metric-item {
   background: #f8f9fa;
   border-radius: 8px;
   padding: 16px;
 }
 
-.category-card h3 {
-  text-transform: capitalize;
-  color: #4f46e5;
-  margin-bottom: 12px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.metric-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.metric-item {
+.metric-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  background: white;
-  border-radius: 6px;
+  gap: 16px;
 }
 
 .metric-name {
   color: #333;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .metric-value {
   font-weight: 600;
   color: #4f46e5;
+  font-size: 18px;
 }
 
-.add-metric-form {
+.metric-trend {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.metric-trend.up {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.metric-trend.down {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.metric-trend.stable {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.metric-updated {
+  color: #666;
+  font-size: 12px;
+}
+
+.update-metric-form {
   border-top: 1px solid #eee;
   padding-top: 20px;
 }
 
-.add-metric-form h3 {
+.update-metric-form h3 {
   margin-bottom: 16px;
   color: #333;
   font-size: 16px;
 }
 
-.add-metric-form form {
+.update-metric-form form {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
-.add-metric-form input,
-.add-metric-form select {
+.update-metric-form input,
+.update-metric-form select {
   padding: 10px 14px;
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 14px;
 }
 
-.add-metric-form input:focus,
-.add-metric-form select:focus {
+.update-metric-form input:focus,
+.update-metric-form select:focus {
   outline: none;
   border-color: #4f46e5;
 }
 
-.add-metric-form button {
+.update-metric-form button {
   padding: 10px 20px;
   background: #4f46e5;
   color: white;
@@ -243,11 +238,11 @@ async function handleAddMetric() {
   font-size: 14px;
 }
 
-.add-metric-form button:hover:not(:disabled) {
+.update-metric-form button:hover:not(:disabled) {
   background: #4338ca;
 }
 
-.add-metric-form button:disabled {
+.update-metric-form button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

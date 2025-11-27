@@ -1,69 +1,41 @@
 export const typeDefs = `
-  type Query {
-    metrics(filter: MetricsFilter): [Metric!]!
-    aggregations(type: AggregationType!): Aggregation!
-    dashboards: [Dashboard!]!
-    dashboard(id: ID!): Dashboard
-  }
-
-  type Mutation {
-    createMetric(input: CreateMetricInput!): CreateMetricCascade!
-    updateDashboard(id: ID!, input: UpdateDashboardInput!): UpdateDashboardCascade!
-    refreshData: RefreshDataCascade!
-  }
-
-  input MetricsFilter {
-    startDate: String
-    endDate: String
-    category: String
-  }
-
-  input CreateMetricInput {
-    name: String!
-    value: Float!
-    category: String!
-  }
-
-  input UpdateDashboardInput {
-    name: String
-    widgets: [String!]
-  }
-
-  enum AggregationType {
-    DAILY
-    WEEKLY
-    MONTHLY
-  }
-
   type Metric {
     id: ID!
     name: String!
     value: Float!
-    category: String!
-    timestamp: String!
+    trend: TrendDirection!
+    updatedAt: DateTime!
   }
 
-  type Aggregation {
-    type: AggregationType!
-    total: Float!
-    average: Float!
-    count: Int!
-    breakdown: [CategoryBreakdown!]!
-  }
-
-  type CategoryBreakdown {
-    category: String!
-    total: Float!
-    count: Int!
-  }
-
-  type Dashboard {
+  type DataRow {
     id: ID!
-    name: String!
-    widgets: [String!]!
-    createdAt: String!
-    updatedAt: String!
+    category: String!
+    values: [Float!]!
   }
+
+  type Query {
+    metrics: [Metric!]!
+    dataRows(filter: FilterInput): [DataRow!]!
+  }
+
+  type Mutation {
+    updateMetric(id: ID!, value: Float!): UpdateMetricCascade!
+    refreshData: RefreshDataCascade!
+  }
+
+  input FilterInput {
+    category: String
+    minValue: Float
+    maxValue: Float
+  }
+
+  enum TrendDirection {
+    UP
+    DOWN
+    STABLE
+  }
+
+  scalar DateTime
 
   type CascadeData {
     updated: [CascadeEntity!]!
@@ -76,15 +48,9 @@ export const typeDefs = `
     id: ID!
   }
 
-  type CreateMetricCascade {
+  type UpdateMetricCascade {
     success: Boolean!
     data: Metric
-    cascade: CascadeData
-  }
-
-  type UpdateDashboardCascade {
-    success: Boolean!
-    data: Dashboard
     cascade: CascadeData
   }
 
