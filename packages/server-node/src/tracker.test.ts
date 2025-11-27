@@ -102,7 +102,7 @@ describe('CascadeTracker', () => {
     it('should throw error for entity without id', () => {
       tracker.startTransaction();
       const entity = new MockEntityWithoutId('Test') as any;
-      expect(() => tracker.trackCreate(entity)).toThrow('Entity [object Object] has no \'id\' attribute');
+      expect(() => tracker.trackCreate(entity)).toThrow("Entity has no 'id' attribute");
     });
   });
 

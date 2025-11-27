@@ -4,7 +4,9 @@
  * Tracks entity changes during GraphQL mutations for cascade response construction.
  */
 
-import { EntityChange, CascadeTrackerConfig, GraphQLEntity, EntityChangeIterator, TrackedEntity } from './types';
+import { EntityChange, CascadeTrackerConfig, GraphQLEntity, EntityChangeIterator, TrackedEntity, CascadeLoggerInterface } from './types';
+import { CascadeError, CascadeErrorCode } from './errors';
+import { silentLogger, createScopedLogger } from './logger';
 
 /**
  * Context manager for cascade transaction tracking.
@@ -55,6 +57,7 @@ export class CascadeTracker implements EntityChangeIterator {
   private maxEntities: number;
   private maxRelatedPerEntity: number;
   private onSerializationError?: (entity: unknown, error: Error) => void;
+  private log: CascadeLoggerInterface;
 
   // Transaction state
   public inTransaction: boolean = false;
@@ -104,6 +107,15 @@ export class CascadeTracker implements EntityChangeIterator {
     this.maxEntities = config.maxEntities ?? 1000;
     this.maxRelatedPerEntity = config.maxRelatedPerEntity ?? 100;
     this.onSerializationError = config.onSerializationError;
+
+    // Initialize logger: use provided logger, create debug logger if debug=true, or use silent logger
+    if (config.logger) {
+      this.log = config.logger;
+    } else if (config.debug) {
+      this.log = createScopedLogger('[Cascade:Tracker]');
+    } else {
+      this.log = silentLogger;
+    }
   }
 
   /**
@@ -111,7 +123,12 @@ export class CascadeTracker implements EntityChangeIterator {
    */
   startTransaction(): string {
     if (this.inTransaction) {
-      throw new Error('Transaction already in progress');
+      throw new CascadeError(
+        'Transaction already in progress',
+        CascadeErrorCode.TRANSACTION_IN_PROGRESS,
+        'Call endTransaction() first or create a new CascadeTracker instance',
+        '/docs/server/node#transactions'
+      );
     }
 
     this.inTransaction = true;
@@ -125,6 +142,8 @@ export class CascadeTracker implements EntityChangeIterator {
     this.visitedEntities.clear();
     this.currentDepth = 0;
 
+    this.log.debug('Transaction started', { transactionId: this.transactionId });
+
     return this.transactionId;
   }
 
@@ -133,7 +152,12 @@ export class CascadeTracker implements EntityChangeIterator {
    */
   endTransaction(): Record<string, any> {
     if (!this.inTransaction && this.updatedEntities.size === 0 && this.deletedEntities.size === 0) {
-      throw new Error('No transaction in progress');
+      throw new CascadeError(
+        'No transaction in progress',
+        CascadeErrorCode.NO_TRANSACTION,
+        'Call startTransaction() before tracking entities',
+        '/docs/server/node#transactions'
+      );
     }
 
     const trackingTime = Date.now() - (this.getTrackingStartTime() ?? 0);
@@ -160,6 +184,13 @@ export class CascadeTracker implements EntityChangeIterator {
       deleted: deletedEntities,
       metadata,
     };
+
+    this.log.debug('Transaction ended', {
+      transactionId: this.transactionId,
+      updatedCount: updatedEntities.length,
+      deletedCount: deletedEntities.length,
+      trackingTime,
+    });
 
     // Reset state
     this.resetTransactionState();
@@ -207,6 +238,9 @@ export class CascadeTracker implements EntityChangeIterator {
    */
   trackCreate(entity: TrackedEntity | Record<string, unknown>): void {
     this.ensureTransaction();
+    const typename = this.getEntityType(entity);
+    const entityId = this.getEntityId(entity);
+    this.log.debug('Entity created', { typename, id: entityId, operation: 'CREATED' });
     this.trackEntity(entity, 'CREATED');
   }
 
@@ -216,6 +250,9 @@ export class CascadeTracker implements EntityChangeIterator {
    */
   trackUpdate(entity: TrackedEntity | Record<string, unknown>): void {
     this.ensureTransaction();
+    const typename = this.getEntityType(entity);
+    const entityId = this.getEntityId(entity);
+    this.log.debug('Entity updated', { typename, id: entityId, operation: 'UPDATED' });
     this.trackEntity(entity, 'UPDATED');
   }
 
@@ -224,6 +261,7 @@ export class CascadeTracker implements EntityChangeIterator {
    */
   trackDelete(typename: string, entityId: string | number): void {
     this.ensureTransaction();
+    this.log.debug('Entity deleted', { typename, id: entityId, operation: 'DELETED' });
 
     const key = `${typename}:${entityId}`;
     this.deletedEntities.add(key);
@@ -374,7 +412,12 @@ export class CascadeTracker implements EntityChangeIterator {
     if (entity.id !== undefined) {
       return String(entity.id);
     } else {
-      throw new Error(`Entity ${entity} has no 'id' attribute`);
+      throw new CascadeError(
+        `Entity has no 'id' attribute`,
+        CascadeErrorCode.MISSING_ID,
+        'Ensure your entity has an id field',
+        '/docs/server/entity-identification'
+      );
     }
   }
 
@@ -383,8 +426,11 @@ export class CascadeTracker implements EntityChangeIterator {
    */
   private ensureTransaction(): void {
     if (!this.inTransaction) {
-      throw new Error(
-        'No cascade transaction in progress. Use CascadeTransaction context manager.'
+      throw new CascadeError(
+        'No cascade transaction in progress',
+        CascadeErrorCode.NO_TRANSACTION,
+        'Use CascadeTransaction context manager or call startTransaction()',
+        '/docs/server/node#transactions'
       );
     }
   }
@@ -450,7 +496,12 @@ export class CascadeTracker implements EntityChangeIterator {
       }
       return result;
     } else {
-      throw new Error(`Cannot serialize entity ${entity}`);
+      throw new CascadeError(
+        `Cannot serialize entity`,
+        CascadeErrorCode.SERIALIZATION_ERROR,
+        'Ensure entity implements toDict() method or has serializable properties',
+        '/docs/server/entity-identification#serialization'
+      );
     }
   }
 

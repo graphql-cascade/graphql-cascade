@@ -131,6 +131,16 @@ export interface CascadeError {
 }
 
 /**
+ * Logger interface for cascade operations (matches CascadeLogger from logger.ts).
+ */
+export interface CascadeLoggerInterface {
+  debug(message: string, ...args: unknown[]): void;
+  info(message: string, ...args: unknown[]): void;
+  warn(message: string, ...args: unknown[]): void;
+  error(message: string, ...args: unknown[]): void;
+}
+
+/**
  * Configuration options for CascadeTracker.
  */
 export interface CascadeTrackerConfig {
@@ -146,6 +156,10 @@ export interface CascadeTrackerConfig {
   maxRelatedPerEntity?: number;
   /** Optional handler called when entity serialization fails */
   onSerializationError?: (entity: unknown, error: Error) => void;
+  /** Optional logger for debug output */
+  logger?: CascadeLoggerInterface;
+  /** Enable debug logging (shorthand for setting logger to console logger) */
+  debug?: boolean;
 }
 
 /**

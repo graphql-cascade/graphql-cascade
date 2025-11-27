@@ -7,6 +7,17 @@
 // Core classes
 export { CascadeTracker, CascadeTransaction, trackCascade } from './tracker';
 export { CascadeBuilder, StreamingCascadeBuilder } from './builder';
+export { CascadeError, CascadeErrorCode } from './errors';
+
+// Logging
+export {
+  logger,
+  configureLogger,
+  getLoggerConfig,
+  createScopedLogger,
+  silentLogger,
+} from './logger';
+export type { LogLevel, CascadeLogger, LoggerConfig } from './logger';
 
 // Convenience functions
 export {
@@ -24,11 +35,12 @@ export type {
   CascadeInvalidation,
   CascadeData,
   CascadeResponse,
-  CascadeError,
+  CascadeError as CascadeErrorType,
   CascadeTrackerConfig,
   CascadeBuilderConfig,
   GraphQLEntity,
   EntityChangeIterator,
+  CascadeLoggerInterface,
 } from './types';
 
 // Integrations (optional - require peer dependencies)
