@@ -87,6 +87,40 @@ jobs:
       - name: Run tests
         run: npm run test --workspaces --if-present -- --coverage
 
+      - name: Check coverage threshold
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+          let failed = false;
+          const packages = [
+            'packages/cli',
+            'packages/conformance',
+            'packages/server-node',
+            'packages/client-core/core',
+            'packages/client-apollo/apollo',
+            'packages/client-react-query/react-query',
+            'packages/client-relay/relay',
+            'packages/client-urql/urql'
+          ];
+          for (const pkg of packages) {
+            const summaryPath = path.join(pkg, 'coverage', 'coverage-summary.json');
+            if (fs.existsSync(summaryPath)) {
+              const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+              const total = summary.total;
+              if (total.lines.pct < 80 || total.statements.pct < 80) {
+                console.error(\`Coverage below 80% in \${pkg}: lines=\${total.lines.pct}%, statements=\${total.statements.pct}%\`);
+                failed = true;
+              }
+            }
+          }
+          if (failed) {
+            process.exit(1);
+          }
+          console.log('All coverage checks passed');
+          "
+
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
         uses: codecov/codecov-action@v4

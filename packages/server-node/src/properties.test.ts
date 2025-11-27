@@ -327,4 +327,245 @@ describe('Property-based tests for server', () => {
       );
     });
   });
+
+  describe('Transaction isolation', () => {
+    it('concurrent trackers do not interfere with each other', () => {
+      fc.assert(
+        fc.property(
+          fc.array(entityArb, { minLength: 1, maxLength: 5 }),
+          fc.array(entityArb, { minLength: 1, maxLength: 5 }),
+          (entities1, entities2) => {
+            // Deduplicate each set
+            const unique1 = Array.from(
+              new Map(entities1.map(e => [`${e.__typename}:${e.id}`, e])).values()
+            );
+            const unique2 = Array.from(
+              new Map(entities2.map(e => [`${e.__typename}:${e.id}`, e])).values()
+            );
+
+            const tracker1 = new CascadeTracker();
+            const tracker2 = new CascadeTracker();
+
+            tracker1.startTransaction();
+            tracker2.startTransaction();
+
+            // Track different entities in each
+            for (const entity of unique1) {
+              tracker1.trackCreate(entity);
+            }
+            for (const entity of unique2) {
+              tracker2.trackCreate(entity);
+            }
+
+            const data1 = tracker1.getCascadeData();
+            const data2 = tracker2.getCascadeData();
+
+            // Each tracker should only have its own entities
+            return (
+              data1.updated.length === unique1.length &&
+              data2.updated.length === unique2.length
+            );
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('ending one transaction does not affect another', () => {
+      fc.assert(
+        fc.property(entityArb, entityArb, (entity1, entity2) => {
+          const tracker1 = new CascadeTracker();
+          const tracker2 = new CascadeTracker();
+
+          tracker1.startTransaction();
+          tracker2.startTransaction();
+
+          tracker1.trackCreate(entity1);
+          tracker2.trackCreate(entity2);
+
+          // End tracker1's transaction
+          const result1 = tracker1.endTransaction();
+
+          // tracker2 should still be able to get data
+          const data2 = tracker2.getCascadeData();
+
+          return (
+            result1.updated.length === 1 &&
+            data2.updated.length === 1
+          );
+        }),
+        { numRuns: 100 }
+      );
+    });
+  });
+
+  describe('Configuration limits', () => {
+    it('tracker respects maxEntities configuration', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 5, max: 20 }),
+          fc.array(entityArb, { minLength: 30, maxLength: 50 }),
+          (maxEntities, entities) => {
+            // Deduplicate and ensure we have enough unique entities
+            const uniqueEntities = Array.from(
+              new Map(entities.map(e => [`${e.__typename}:${e.id}`, e])).values()
+            );
+
+            const tracker = new CascadeTracker({
+              maxEntities,
+              enableRelationshipTracking: false
+            });
+            tracker.startTransaction();
+
+            for (const entity of uniqueEntities) {
+              tracker.trackCreate(entity);
+            }
+
+            const data = tracker.getCascadeData();
+
+            // Should not exceed maxEntities
+            return data.updated.length <= maxEntities;
+          }
+        ),
+        { numRuns: 50 }
+      );
+    });
+
+    it('tracker indicates when limit was reached', () => {
+      fc.assert(
+        fc.property(
+          fc.array(entityArb, { minLength: 20, maxLength: 30 }),
+          (entities) => {
+            // Deduplicate
+            const uniqueEntities = Array.from(
+              new Map(entities.map(e => [`${e.__typename}:${e.id}`, e])).values()
+            );
+
+            if (uniqueEntities.length <= 10) {
+              return true; // Skip if not enough unique entities
+            }
+
+            const tracker = new CascadeTracker({
+              maxEntities: 10,
+              enableRelationshipTracking: false
+            });
+            tracker.startTransaction();
+
+            for (const entity of uniqueEntities) {
+              tracker.trackCreate(entity);
+            }
+
+            const data = tracker.getCascadeData();
+
+            // Should indicate truncation occurred
+            return data.metadata.truncatedUpdated === true;
+          }
+        ),
+        { numRuns: 50 }
+      );
+    });
+  });
+
+  describe('Builder size limits', () => {
+    it('builder respects maxUpdatedEntities configuration', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 5, max: 15 }),
+          fc.array(entityArb, { minLength: 30, maxLength: 50 }),
+          (maxUpdated, entities) => {
+            // Deduplicate
+            const uniqueEntities = Array.from(
+              new Map(entities.map(e => [`${e.__typename}:${e.id}`, e])).values()
+            );
+
+            const tracker = new CascadeTracker({ enableRelationshipTracking: false });
+            tracker.startTransaction();
+
+            for (const entity of uniqueEntities) {
+              tracker.trackCreate(entity);
+            }
+
+            const builder = new CascadeBuilder(tracker, undefined, {
+              maxUpdatedEntities: maxUpdated
+            });
+            const response = builder.buildResponse(null, true);
+
+            // Builder should respect max limit
+            return response.cascade.updated.length <= maxUpdated;
+          }
+        ),
+        { numRuns: 50 }
+      );
+    });
+
+    it('builder marks truncation when limit exceeded', () => {
+      fc.assert(
+        fc.property(
+          fc.array(entityArb, { minLength: 30, maxLength: 50 }),
+          (entities) => {
+            // Deduplicate
+            const uniqueEntities = Array.from(
+              new Map(entities.map(e => [`${e.__typename}:${e.id}`, e])).values()
+            );
+
+            if (uniqueEntities.length <= 10) {
+              return true; // Skip if not enough unique
+            }
+
+            const tracker = new CascadeTracker({ enableRelationshipTracking: false });
+            tracker.startTransaction();
+
+            for (const entity of uniqueEntities) {
+              tracker.trackCreate(entity);
+            }
+
+            const builder = new CascadeBuilder(tracker, undefined, {
+              maxUpdatedEntities: 10
+            });
+            const response = builder.buildResponse(null, true);
+
+            // Should indicate truncation
+            return response.cascade.metadata.truncatedUpdated === true;
+          }
+        ),
+        { numRuns: 50 }
+      );
+    });
+
+    it('builder respects maxDeletedEntities configuration', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 3, max: 10 }),
+          fc.array(
+            fc.record({
+              typename: fc.constantFrom('User', 'Post', 'Comment'),
+              id: fc.string({ minLength: 1, maxLength: 10 }).filter(s => !s.includes(':'))
+            }),
+            { minLength: 20, maxLength: 30 }
+          ),
+          (maxDeleted, deletions) => {
+            // Deduplicate
+            const uniqueDeletions = Array.from(
+              new Map(deletions.map(d => [`${d.typename}:${d.id}`, d])).values()
+            );
+
+            const tracker = new CascadeTracker();
+            tracker.startTransaction();
+
+            for (const { typename, id } of uniqueDeletions) {
+              tracker.trackDelete(typename, id);
+            }
+
+            const builder = new CascadeBuilder(tracker, undefined, {
+              maxDeletedEntities: maxDeleted
+            });
+            const response = builder.buildResponse(null, true);
+
+            return response.cascade.deleted.length <= maxDeleted;
+          }
+        ),
+        { numRuns: 50 }
+      );
+    });
+  });
 });
