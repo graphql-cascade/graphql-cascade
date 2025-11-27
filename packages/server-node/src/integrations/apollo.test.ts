@@ -366,7 +366,8 @@ describe('createCascadePlugin', () => {
     });
 
     it('should handle invalid cascade data without crashing server', async () => {
-      const plugin = createCascadePlugin();
+      const errorHandler = jest.fn();
+      const plugin = createCascadePlugin({ onInjectionError: errorHandler });
       const requestListener = await plugin.requestDidStart!({} as any);
 
       const requestContext: MockRequestContext = {
@@ -393,18 +394,17 @@ describe('createCascadePlugin', () => {
       };
       requestContext.contextValue.cascadeTracker = invalidTracker as any;
 
-      // Should not crash, should log error
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      // Should not crash, should call error handler
       await expect(
         requestListener!.willSendResponse!(requestContext as any)
       ).resolves.not.toThrow();
 
-      expect(consoleSpy).toHaveBeenCalledWith('Error injecting cascade data:', expect.any(Error));
-      consoleSpy.mockRestore();
+      expect(errorHandler).toHaveBeenCalledWith(expect.any(Error));
     });
 
     it('should still return mutation data when cascade injection fails', async () => {
-      const plugin = createCascadePlugin();
+      const errorHandler = jest.fn();
+      const plugin = createCascadePlugin({ onInjectionError: errorHandler });
       const requestListener = await plugin.requestDidStart!({} as any);
 
       const originalData = { updateUser: { id: 1, name: 'Updated' } };
@@ -433,14 +433,12 @@ describe('createCascadePlugin', () => {
       requestContext.contextValue.cascadeTracker = failingTracker as any;
 
       // Should not crash and should preserve original data
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       await expect(
         requestListener!.willSendResponse!(requestContext as any)
       ).resolves.not.toThrow();
 
       expect(requestContext.response.body.singleResult.data).toBe(originalData);
-      expect(consoleSpy).toHaveBeenCalledWith('Error injecting cascade data:', expect.any(Error));
-      consoleSpy.mockRestore();
+      expect(errorHandler).toHaveBeenCalledWith(expect.any(Error));
     });
   });
 

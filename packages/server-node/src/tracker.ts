@@ -54,6 +54,7 @@ export class CascadeTracker implements EntityChangeIterator {
   private enableRelationshipTracking: boolean;
   private maxEntities: number;
   private maxRelatedPerEntity: number;
+  private onSerializationError?: (entity: unknown, error: Error) => void;
 
   // Transaction state
   public inTransaction: boolean = false;
@@ -67,6 +68,7 @@ export class CascadeTracker implements EntityChangeIterator {
   public currentDepth: number = 0;
   private maxDepthReached: number = 0;
   private entityLimitReached: boolean = false;
+  private serializationErrorCount: number = 0;
 
   // Performance tracking
   private trackingStartTime?: number;
@@ -92,6 +94,7 @@ export class CascadeTracker implements EntityChangeIterator {
     this.currentDepth = 0;
     this.maxDepthReached = 0;
     this.entityLimitReached = false;
+    this.serializationErrorCount = 0;
   }
 
   constructor(config: CascadeTrackerConfig = {}) {
@@ -100,6 +103,7 @@ export class CascadeTracker implements EntityChangeIterator {
     this.enableRelationshipTracking = config.enableRelationshipTracking ?? true;
     this.maxEntities = config.maxEntities ?? 1000;
     this.maxRelatedPerEntity = config.maxRelatedPerEntity ?? 100;
+    this.onSerializationError = config.onSerializationError;
   }
 
   /**
@@ -134,18 +138,27 @@ export class CascadeTracker implements EntityChangeIterator {
 
     const trackingTime = Date.now() - (this.getTrackingStartTime() ?? 0);
     const wasLimitReached = this.entityLimitReached;
+    const updatedEntities = this.buildUpdatedEntities();
+    const deletedEntities = this.buildDeletedEntities();
+    const errorCount = this.serializationErrorCount;
+
+    const metadata: Record<string, unknown> = {
+      transactionId: this.transactionId,
+      timestamp: new Date().toISOString(),
+      depth: this.maxDepthReached,
+      affectedCount: this.updatedEntities.size + this.deletedEntities.size,
+      trackingTime,
+      truncatedUpdated: wasLimitReached,
+    };
+
+    if (errorCount > 0) {
+      metadata.serializationErrors = errorCount;
+    }
 
     const cascadeData = {
-      updated: this.buildUpdatedEntities(),
-      deleted: this.buildDeletedEntities(),
-      metadata: {
-        transactionId: this.transactionId,
-        timestamp: new Date().toISOString(),
-        depth: this.maxDepthReached,
-        affectedCount: this.updatedEntities.size + this.deletedEntities.size,
-        trackingTime,
-        truncatedUpdated: wasLimitReached,
-      },
+      updated: updatedEntities,
+      deleted: deletedEntities,
+      metadata,
     };
 
     // Reset state
@@ -165,18 +178,26 @@ export class CascadeTracker implements EntityChangeIterator {
     }
 
     const trackingTime = Date.now() - (this.getTrackingStartTime() ?? 0);
+    const updatedEntities = this.buildUpdatedEntities();
+    const deletedEntities = this.buildDeletedEntities();
+
+    const metadata: Record<string, unknown> = {
+      transactionId: this.transactionId,
+      timestamp: new Date().toISOString(),
+      depth: this.maxDepthReached,
+      affectedCount: this.updatedEntities.size + this.deletedEntities.size,
+      trackingTime,
+      truncatedUpdated: this.entityLimitReached,
+    };
+
+    if (this.serializationErrorCount > 0) {
+      metadata.serializationErrors = this.serializationErrorCount;
+    }
 
     return {
-      updated: this.buildUpdatedEntities(),
-      deleted: this.buildDeletedEntities(),
-      metadata: {
-        transactionId: this.transactionId,
-        timestamp: new Date().toISOString(),
-        depth: this.maxDepthReached,
-        affectedCount: this.updatedEntities.size + this.deletedEntities.size,
-        trackingTime,
-        truncatedUpdated: this.entityLimitReached,
-      },
+      updated: updatedEntities,
+      deleted: deletedEntities,
+      metadata,
     };
   }
 
@@ -384,8 +405,10 @@ export class CascadeTracker implements EntityChangeIterator {
           entity: entityDict,
         });
       } catch (e) {
-        // Log error but continue
-        console.error(`Error serializing entity: ${e}`);
+        this.serializationErrorCount++;
+        if (this.onSerializationError) {
+          this.onSerializationError(change.entity, e as Error);
+        }
         continue;
       }
     }

@@ -24,6 +24,12 @@ export interface CascadePluginOptions extends CascadeTrackerConfig {
    * @default true
    */
   autoInject?: boolean;
+
+  /**
+   * Optional handler called when cascade injection fails.
+   * If not provided, errors are silently ignored.
+   */
+  onInjectionError?: (error: Error) => void;
 }
 
 /**
@@ -78,6 +84,7 @@ export interface CascadePluginOptions extends CascadeTrackerConfig {
 export function createCascadePlugin(options?: CascadePluginOptions): ApolloServerPlugin {
   const contextKey = options?.contextKey ?? 'cascadeTracker';
   const autoInject = options?.autoInject ?? true;
+  const onInjectionError = options?.onInjectionError;
 
   return {
     async requestDidStart(): Promise<GraphQLRequestListener<any>> {
@@ -115,8 +122,10 @@ export function createCascadePlugin(options?: CascadePluginOptions): ApolloServe
               response.body.singleResult.extensions.cascade = cascadeData;
             }
           } catch (error) {
-            // Log error but don't fail the request
-            console.error('Error injecting cascade data:', error);
+            // Call error handler but don't fail the request
+            if (onInjectionError) {
+              onInjectionError(error as Error);
+            }
           }
         },
       };

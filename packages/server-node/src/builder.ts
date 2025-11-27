@@ -27,6 +27,7 @@ export class CascadeBuilder {
   protected maxUpdatedEntities: number;
   protected maxDeletedEntities: number;
   protected maxInvalidations: number;
+  protected onInvalidationError?: (error: Error) => void;
 
   constructor(
     tracker: CascadeTracker,
@@ -39,6 +40,7 @@ export class CascadeBuilder {
     this.maxUpdatedEntities = config.maxUpdatedEntities ?? 500;
     this.maxDeletedEntities = config.maxDeletedEntities ?? 100;
     this.maxInvalidations = config.maxInvalidations ?? 50;
+    this.onInvalidationError = config.onInvalidationError;
   }
 
   /**
@@ -81,8 +83,9 @@ export class CascadeBuilder {
         );
         cascadeData.invalidations = invalidations?.slice(0, this.maxInvalidations) ?? [];
       } catch (e) {
-        // Log error but continue without invalidations
-        console.error(`Error computing invalidations: ${e}`);
+        if (this.onInvalidationError) {
+          this.onInvalidationError(e as Error);
+        }
         cascadeData.invalidations = [];
       }
     } else {

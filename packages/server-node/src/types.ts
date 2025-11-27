@@ -42,6 +42,8 @@ export interface CascadeMetadata {
   truncatedSize?: boolean;
   /** Whether streaming was used */
   streaming?: boolean;
+  /** Number of entities that failed serialization */
+  serializationErrors?: number;
 }
 
 /**
@@ -142,6 +144,8 @@ export interface CascadeTrackerConfig {
   maxEntities?: number;
   /** Maximum related entities to traverse per entity (breadth limit) */
   maxRelatedPerEntity?: number;
+  /** Optional handler called when entity serialization fails */
+  onSerializationError?: (entity: unknown, error: Error) => void;
 }
 
 /**
@@ -156,6 +160,8 @@ export interface CascadeBuilderConfig {
   maxDeletedEntities?: number;
   /** Maximum number of invalidations */
   maxInvalidations?: number;
+  /** Optional handler called when invalidation computation fails */
+  onInvalidationError?: (error: Error) => void;
 }
 
 /**
