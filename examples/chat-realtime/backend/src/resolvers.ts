@@ -27,7 +27,11 @@ export const resolvers = {
       // Create cascade data for real-time updates
       const cascade = {
         invalidate: [`Channel:${channelId}`],
-        update: `Channel:${channelId}`,
+        update: JSON.stringify({
+          [`Channel:${channelId}`]: {
+            messages: getMessagesWithSenders(channelId),
+          },
+        }),
       };
 
       // Publish to subscriptions with cascade data

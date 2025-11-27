@@ -80,8 +80,8 @@ export const getUsers = (): User[] => users;
 export const getChannels = (): Channel[] => channels;
 export const getMessages = (): Message[] => messages;
 
-export const createUser = (name: string): User => {
-  const user: User = { id: (users.length + 1).toString(), name };
+export const createUser = (name: string, email: string): User => {
+  const user: User = { id: (users.length + 1).toString(), name, email };
   users.push(user);
   return user;
 };
