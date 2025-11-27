@@ -373,5 +373,88 @@ describe('createCascadeUpdater', () => {
       expect(mockStoreProxy.get).toHaveBeenCalledWith('User:9');
       expect(mockRecord.setValue).toHaveBeenCalledWith('Test User 2', 'name');
     });
+
+    it('should handle missing record during UPDATE operation', () => {
+      mockStoreProxy.get.mockReturnValueOnce(null); // Record doesn't exist
+
+      const cascade: CascadeUpdates = {
+        updated: [{
+          __typename: 'User',
+          id: 'missing',
+          operation: CascadeOperation.UPDATED,
+          entity: { name: 'Missing User', status: 'active' }
+        }],
+        deleted: [],
+        invalidations: [],
+        metadata: { timestamp: '2023-01-01T00:00:00Z', transactionId: 'tx_missing', depth: 1, affectedCount: 1 }
+      };
+
+      const updater = createCascadeUpdater(cascade);
+      updater(mockStoreProxy as any);
+
+      expect(mockStoreProxy.get).toHaveBeenCalledWith('User:missing');
+      expect(mockStoreProxy.create).toHaveBeenCalledWith('User:missing', 'User');
+      expect(mockRecord.setValue).toHaveBeenCalledWith('Missing User', 'name');
+      expect(mockRecord.setValue).toHaveBeenCalledWith('active', 'status');
+      expect(mockRecord.setValue).toHaveBeenCalledWith(true, '__isUpdated');
+    });
+
+    it('should skip __typename and id fields during setValue even when present in entity', () => {
+      mockStoreProxy.get.mockReturnValueOnce(mockRecord);
+
+      const cascade: CascadeUpdates = {
+        updated: [{
+          __typename: 'User',
+          id: '10',
+          operation: CascadeOperation.UPDATED,
+          entity: {
+            __typename: 'User', // Should be skipped
+            id: '10', // Should be skipped
+            name: 'Test User'
+          }
+        }],
+        deleted: [],
+        invalidations: [],
+        metadata: { timestamp: '2023-01-01T00:00:00Z', transactionId: 'tx10', depth: 1, affectedCount: 1 }
+      };
+
+      const updater = createCascadeUpdater(cascade);
+      updater(mockStoreProxy as any);
+
+      expect(mockRecord.setValue).not.toHaveBeenCalledWith('User', '__typename');
+      expect(mockRecord.setValue).not.toHaveBeenCalledWith('10', 'id');
+      expect(mockRecord.setValue).toHaveBeenCalledWith('Test User', 'name');
+      expect(mockRecord.setValue).toHaveBeenCalledWith(true, '__isUpdated');
+    });
+
+    it('should handle null field values in entity data', () => {
+      mockStoreProxy.get.mockReturnValueOnce(mockRecord);
+
+      const cascade: CascadeUpdates = {
+        updated: [{
+          __typename: 'User',
+          id: '11',
+          operation: CascadeOperation.UPDATED,
+          entity: {
+            name: null,
+            email: 'test@example.com',
+            age: null,
+            active: false
+          }
+        }],
+        deleted: [],
+        invalidations: [],
+        metadata: { timestamp: '2023-01-01T00:00:00Z', transactionId: 'tx11', depth: 1, affectedCount: 1 }
+      };
+
+      const updater = createCascadeUpdater(cascade);
+      updater(mockStoreProxy as any);
+
+      expect(mockRecord.setValue).toHaveBeenCalledWith(null, 'name');
+      expect(mockRecord.setValue).toHaveBeenCalledWith('test@example.com', 'email');
+      expect(mockRecord.setValue).toHaveBeenCalledWith(null, 'age');
+      expect(mockRecord.setValue).toHaveBeenCalledWith(false, 'active');
+      expect(mockRecord.setValue).toHaveBeenCalledWith(true, '__isUpdated');
+    });
   });
 });

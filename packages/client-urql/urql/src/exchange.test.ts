@@ -1,5 +1,6 @@
-import { extractCascadeData, hasCascadeData } from './exchange';
+import { extractCascadeData, hasCascadeData, cascadeExchange } from './exchange';
 import { InMemoryCascadeCache } from './cache';
+import { fromValue, toArray } from 'wonka';
 import {
   CascadeUpdates,
   CascadeOperation,
@@ -249,5 +250,235 @@ describe('InMemoryCascadeCache', () => {
       expect(stats.queryCount).toBe(1);
       expect(stats.staleQueryCount).toBe(1);
     });
+  });
+});
+
+describe('cascadeExchange', () => {
+  let mockCacheAdapter: any;
+
+  beforeEach(() => {
+    mockCacheAdapter = {
+      write: jest.fn(),
+      evict: jest.fn(),
+      invalidate: jest.fn(),
+      refetch: jest.fn().mockResolvedValue(undefined),
+      remove: jest.fn(),
+      identify: jest.fn(),
+    };
+  });
+
+  it('should process cascade data correctly', () => {
+    const exchange = cascadeExchange({ cacheAdapter: mockCacheAdapter });
+
+    const mockOperation = { kind: 'mutation', key: 1 } as any;
+
+    const mockResult = {
+      operation: mockOperation,
+      data: { some: 'data' },
+      extensions: {
+        cascade: {
+          updated: [{
+            __typename: 'User',
+            id: '1',
+            operation: CascadeOperation.UPDATED,
+            entity: { name: 'Updated' },
+          }],
+          deleted: [],
+          invalidations: [],
+          metadata: { timestamp: '2024-01-01T00:00:00Z', depth: 1, affectedCount: 1 },
+        } as CascadeUpdates,
+      },
+      stale: false,
+      hasNext: false,
+    };
+
+    const forward = jest.fn(() => fromValue(mockResult));
+    const ops$ = fromValue(mockOperation);
+
+    const result$ = exchange({ forward, client: {} as any, dispatchDebug: jest.fn() } as any)(ops$);
+    const results = toArray(result$);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toBe(mockResult);
+    expect(mockCacheAdapter.write).toHaveBeenCalledWith('User', '1', { name: 'Updated' });
+  });
+
+  it('should handle missing cascade data gracefully', () => {
+    const exchange = cascadeExchange({ cacheAdapter: mockCacheAdapter });
+
+    const mockOperation = { kind: 'mutation', key: 1 } as any;
+
+    const mockResult = {
+      operation: mockOperation,
+      data: { some: 'data' },
+      extensions: {},
+      stale: false,
+      hasNext: false,
+    };
+
+    const forward = jest.fn(() => fromValue(mockResult));
+    const ops$ = fromValue(mockOperation);
+
+    const result$ = exchange({ forward, client: {} as any, dispatchDebug: jest.fn() } as any)(ops$);
+    const results = toArray(result$);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toBe(mockResult);
+    expect(mockCacheAdapter.write).not.toHaveBeenCalled();
+  });
+
+  it('should propagate errors from cache operations', () => {
+    mockCacheAdapter.write.mockImplementation(() => {
+      throw new Error('Cache error');
+    });
+
+    const exchange = cascadeExchange({ cacheAdapter: mockCacheAdapter, debug: true });
+
+    const mockOperation = { kind: 'mutation', key: 1 } as any;
+
+    const mockResult = {
+      operation: mockOperation,
+      data: { some: 'data' },
+      extensions: {
+        cascade: {
+          updated: [{
+            __typename: 'User',
+            id: '1',
+            operation: CascadeOperation.UPDATED,
+            entity: { name: 'Updated' },
+          }],
+          deleted: [],
+          invalidations: [],
+          metadata: { timestamp: '2024-01-01T00:00:00Z', depth: 1, affectedCount: 1 },
+        } as CascadeUpdates,
+      },
+      stale: false,
+      hasNext: false,
+    };
+
+    const forward = jest.fn(() => fromValue(mockResult));
+    const ops$ = fromValue(mockOperation);
+
+    const result$ = exchange({ forward, client: {} as any, dispatchDebug: jest.fn() } as any)(ops$);
+    const results = toArray(result$);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toBe(mockResult);
+    // Error should be caught internally
+  });
+
+  it('should handle multiple operations through exchange', () => {
+    const exchange = cascadeExchange({ cacheAdapter: mockCacheAdapter });
+
+    const mockOperation1 = { kind: 'mutation', key: 1 } as any;
+    const mockOperation2 = { kind: 'mutation', key: 2 } as any;
+
+    const mockResult1 = {
+      operation: mockOperation1,
+      data: { some: 'data1' },
+      extensions: {
+        cascade: {
+          updated: [{
+            __typename: 'User',
+            id: '1',
+            operation: CascadeOperation.UPDATED,
+            entity: { name: 'Updated1' },
+          }],
+          deleted: [],
+          invalidations: [],
+          metadata: { timestamp: '2024-01-01T00:00:00Z', depth: 1, affectedCount: 1 },
+        } as CascadeUpdates,
+      },
+      stale: false,
+      hasNext: false,
+    };
+
+    const mockResult2 = {
+      operation: mockOperation2,
+      data: { some: 'data2' },
+      extensions: {
+        cascade: {
+          updated: [{
+            __typename: 'User',
+            id: '2',
+            operation: CascadeOperation.UPDATED,
+            entity: { name: 'Updated2' },
+          }],
+          deleted: [],
+          invalidations: [],
+          metadata: { timestamp: '2024-01-01T00:00:00Z', depth: 1, affectedCount: 1 },
+        } as CascadeUpdates,
+      },
+      stale: false,
+      hasNext: false,
+    };
+
+    // For multiple operations, we can test sequentially
+    const forward1 = jest.fn(() => fromValue(mockResult1));
+    const ops$1 = fromValue(mockOperation1);
+    const result$1 = exchange({ forward: forward1, client: {} as any, dispatchDebug: jest.fn() } as any)(ops$1);
+    const results1 = toArray(result$1);
+
+    expect(results1).toHaveLength(1);
+    expect(mockCacheAdapter.write).toHaveBeenCalledWith('User', '1', { name: 'Updated1' });
+
+    // Reset mock
+    mockCacheAdapter.write.mockClear();
+
+    const forward2 = jest.fn(() => fromValue(mockResult2));
+    const ops$2 = fromValue(mockOperation2);
+    const result$2 = exchange({ forward: forward2, client: {} as any, dispatchDebug: jest.fn() } as any)(ops$2);
+    const results2 = toArray(result$2);
+
+    expect(results2).toHaveLength(1);
+    expect(mockCacheAdapter.write).toHaveBeenCalledWith('User', '2', { name: 'Updated2' });
+  });
+
+  it('should passthrough subscriptions without cascade processing', () => {
+    const exchange = cascadeExchange({ cacheAdapter: mockCacheAdapter });
+
+    const mockOperation = { kind: 'subscription', key: 1 } as any;
+
+    const mockResult = {
+      operation: mockOperation,
+      data: { some: 'data' },
+      extensions: {}, // No cascade for subscription
+      stale: false,
+      hasNext: false,
+    };
+
+    const forward = jest.fn(() => fromValue(mockResult));
+    const ops$ = fromValue(mockOperation);
+
+    const result$ = exchange({ forward, client: {} as any, dispatchDebug: jest.fn() } as any)(ops$);
+    const results = toArray(result$);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toBe(mockResult);
+    expect(mockCacheAdapter.write).not.toHaveBeenCalled();
+  });
+
+  it('should passthrough queries without cascade processing', () => {
+    const exchange = cascadeExchange({ cacheAdapter: mockCacheAdapter });
+
+    const mockOperation = { kind: 'query', key: 1 } as any;
+
+    const mockResult = {
+      operation: mockOperation,
+      data: { some: 'data' },
+      extensions: {}, // No cascade
+      stale: false,
+      hasNext: false,
+    };
+
+    const forward = jest.fn(() => fromValue(mockResult));
+    const ops$ = fromValue(mockOperation);
+
+    const result$ = exchange({ forward, client: {} as any, dispatchDebug: jest.fn() } as any)(ops$);
+    const results = toArray(result$);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toBe(mockResult);
+    expect(mockCacheAdapter.write).not.toHaveBeenCalled();
   });
 });

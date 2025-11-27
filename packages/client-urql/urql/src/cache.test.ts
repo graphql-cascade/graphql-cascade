@@ -345,4 +345,74 @@ describe('InMemoryCascadeCache', () => {
       }).toThrow('Pattern exceeds maximum length of 100 characters');
     });
   });
+
+  describe('additional invalidation edge cases', () => {
+    it('should handle invalidate with EXACT scope when no matching query exists', () => {
+      // No queries stored
+      expect(() => cache.invalidate({
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.EXACT,
+        queryName: 'nonexistent',
+      })).not.toThrow();
+    });
+
+    it('should handle invalidate with PREFIX scope when no matching queries exist', () => {
+      cache.storeQuery('otherQuery', undefined, []);
+      expect(() => cache.invalidate({
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.PREFIX,
+        queryName: 'nonexistent',
+      })).not.toThrow();
+      expect(cache.getQuery('otherQuery')?.isStale).toBe(false);
+    });
+
+    it('should handle invalidate with PATTERN scope when no matching queries exist', () => {
+      cache.storeQuery('otherQuery', undefined, []);
+      expect(() => cache.invalidate({
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.PATTERN,
+        queryPattern: 'nonexistent*',
+      })).not.toThrow();
+      expect(cache.getQuery('otherQuery')?.isStale).toBe(false);
+    });
+
+    it('should handle invalidate with ALL scope when no queries exist', () => {
+      // No queries
+      expect(() => cache.invalidate({
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.ALL,
+      })).not.toThrow();
+    });
+  });
+
+  describe('nested entity writes', () => {
+    it('should write entities with nested data structures', () => {
+      const nestedData = {
+        name: 'John',
+        profile: {
+          age: 30,
+          address: {
+            street: '123 Main St',
+            city: 'Anytown',
+          },
+        },
+      };
+      cache.write('User', '1', nestedData);
+
+      const result = cache.read('User', '1');
+
+      expect(result).toEqual({
+        __typename: 'User',
+        id: '1',
+        ...nestedData,
+      });
+    });
+  });
+
+  describe('cache miss handling', () => {
+    it('should return null gracefully for non-existent query with arguments', () => {
+      const result = cache.getQuery('getUser', { id: 'nonexistent' });
+      expect(result).toBeNull();
+    });
+  });
 });
