@@ -1,245 +1,372 @@
 import { runStandardTests } from './standard';
 import { ServerConformanceOptions } from '../types';
 
-// Mock server responses for testing
-const mockServerResponses = {
-  // Depth control scenarios
-  depth1: {
-    success: true,
-    data: { id: '1', name: 'User 1' },
-    cascade: {
-      updated: [{ __typename: 'User', id: '1', operation: 'CREATED' }],
-      deleted: [],
-      invalidations: [],
-      metadata: { timestamp: '2023-01-01T00:00:00Z', depth: 1, affectedCount: 1 }
-    }
-  },
-  depth2: {
-    success: true,
-    data: { id: '1', name: 'User 1', posts: [{ id: '1', title: 'Post 1' }] },
-    cascade: {
-      updated: [
-        { __typename: 'User', id: '1', operation: 'CREATED' },
-        { __typename: 'Post', id: '1', operation: 'CREATED' }
-      ],
-      deleted: [],
-      invalidations: [],
-      metadata: { timestamp: '2023-01-01T00:00:00Z', depth: 2, affectedCount: 2 }
-    }
-  },
-  depthLimit: {
-    success: true,
-    data: { id: '1', name: 'User 1', posts: [{ id: '1', title: 'Post 1' }] },
-    cascade: {
-      updated: [
-        { __typename: 'User', id: '1', operation: 'CREATED' },
-        { __typename: 'Post', id: '1', operation: 'CREATED' }
-      ],
-      deleted: [],
-      invalidations: [],
-      metadata: { timestamp: '2023-01-01T00:00:00Z', depth: 2, affectedCount: 2 }
-    }
-  },
-  // Relationship traversal scenarios
-  oneToOne: {
-    success: true,
-    data: { id: '1', name: 'User 1', profile: { id: '1', bio: 'Bio' } },
-    cascade: {
-      updated: [
-        { __typename: 'User', id: '1', operation: 'CREATED' },
-        { __typename: 'Profile', id: '1', operation: 'CREATED' }
-      ],
-      deleted: [],
-      invalidations: [],
-      metadata: { timestamp: '2023-01-01T00:00:00Z', depth: 2, affectedCount: 2 }
-    }
-  },
-  oneToMany: {
-    success: true,
-    data: { id: '1', name: 'User 1', posts: [{ id: '1', title: 'Post 1' }, { id: '2', title: 'Post 2' }] },
-    cascade: {
-      updated: [
-        { __typename: 'User', id: '1', operation: 'CREATED' },
-        { __typename: 'Post', id: '1', operation: 'CREATED' },
-        { __typename: 'Post', id: '2', operation: 'CREATED' }
-      ],
-      deleted: [],
-      invalidations: [],
-      metadata: { timestamp: '2023-01-01T00:00:00Z', depth: 2, affectedCount: 3 }
-    }
-  },
-  manyToMany: {
-    success: true,
-    data: { id: '1', name: 'User 1', groups: [{ id: '1', name: 'Group 1' }, { id: '2', name: 'Group 2' }] },
-    cascade: {
-      updated: [
-        { __typename: 'User', id: '1', operation: 'CREATED' },
-        { __typename: 'Group', id: '1', operation: 'CREATED' },
-        { __typename: 'Group', id: '2', operation: 'CREATED' },
-        { __typename: 'UserGroup', id: '1', operation: 'CREATED' },
-        { __typename: 'UserGroup', id: '2', operation: 'CREATED' }
-      ],
-      deleted: [],
-      invalidations: [],
-      metadata: { timestamp: '2023-01-01T00:00:00Z', depth: 3, affectedCount: 5 }
-    }
-  },
-  circularRef: {
-    success: true,
-    data: { id: '1', name: 'User 1', friends: [{ id: '2', name: 'User 2', friends: [{ id: '1', name: 'User 1' }] }] },
-    cascade: {
-      updated: [
-        { __typename: 'User', id: '1', operation: 'CREATED' },
-        { __typename: 'User', id: '2', operation: 'CREATED' }
-      ],
-      deleted: [],
-      invalidations: [],
-      metadata: { timestamp: '2023-01-01T00:00:00Z', depth: 2, affectedCount: 2 }
-    }
-  },
-  selfReferential: {
-    success: true,
-    data: { id: '1', name: 'Category 1', parent: { id: '2', name: 'Category 2', parent: { id: '1', name: 'Category 1' } } },
-    cascade: {
-      updated: [
-        { __typename: 'Category', id: '1', operation: 'CREATED' },
-        { __typename: 'Category', id: '2', operation: 'CREATED' }
-      ],
-      deleted: [],
-      invalidations: [],
-      metadata: { timestamp: '2023-01-01T00:00:00Z', depth: 2, affectedCount: 2 }
-    }
-  },
-  nestedCreate: {
-    success: true,
-    data: { id: '1', name: 'User 1', posts: [{ id: '1', title: 'Post 1', comments: [{ id: '1', text: 'Comment 1' }] }] },
-    cascade: {
-      updated: [
-        { __typename: 'User', id: '1', operation: 'CREATED' },
-        { __typename: 'Post', id: '1', operation: 'CREATED' },
-        { __typename: 'Comment', id: '1', operation: 'CREATED' }
-      ],
-      deleted: [],
-      invalidations: [],
-      metadata: { timestamp: '2023-01-01T00:00:00Z', depth: 3, affectedCount: 3 }
-    }
-  },
-  nestedUpdate: {
-    success: true,
-    data: { id: '1', name: 'Updated User', posts: [{ id: '1', title: 'Updated Post' }] },
-    cascade: {
-      updated: [
-        { __typename: 'User', id: '1', operation: 'UPDATED' },
-        { __typename: 'Post', id: '1', operation: 'UPDATED' }
-      ],
-      deleted: [],
-      invalidations: [],
-      metadata: { timestamp: '2023-01-01T00:00:00Z', depth: 2, affectedCount: 2 }
-    }
-  },
-  cascadeLimit: {
-    success: true,
-    data: { id: '1', name: 'User 1', posts: [{ id: '1', title: 'Post 1' }] },
-    cascade: {
-      updated: [
-        { __typename: 'User', id: '1', operation: 'CREATED' },
-        { __typename: 'Post', id: '1', operation: 'CREATED' }
-      ],
-      deleted: [],
-      invalidations: [],
-      metadata: { timestamp: '2023-01-01T00:00:00Z', depth: 2, affectedCount: 2 }
-    }
-  },
-  // Transaction metadata scenarios
-  transactionId: {
-    success: true,
-    data: { id: '1', name: 'User 1' },
-    cascade: {
-      updated: [{ __typename: 'User', id: '1', operation: 'CREATED' }],
-      deleted: [],
-      invalidations: [],
-      metadata: {
-        timestamp: '2023-01-01T00:00:00Z',
-        depth: 1,
-        affectedCount: 1,
-        transactionId: 'txn-123'
-      }
-    }
-  },
-  transactionConsistent: {
-    success: true,
-    data: { id: '1', name: 'User 1', posts: [{ id: '1', title: 'Post 1' }] },
-    cascade: {
-      updated: [
-        { __typename: 'User', id: '1', operation: 'CREATED' },
-        { __typename: 'Post', id: '1', operation: 'CREATED' }
-      ],
-      deleted: [],
-      invalidations: [],
-      metadata: {
-        timestamp: '2023-01-01T00:00:00Z',
-        depth: 2,
-        affectedCount: 2,
-        transactionId: 'txn-123'
-      }
-    }
-  },
-  rollbackEmpty: {
-    success: false,
-    errors: [{ code: 'VALIDATION_ERROR', message: 'Invalid input' }],
-    cascade: {
-      updated: [],
-      deleted: [],
-      invalidations: [],
-      metadata: {
-        timestamp: '2023-01-01T00:00:00Z',
-        depth: 0,
-        affectedCount: 0,
-        transactionId: 'txn-123'
-      }
-    }
-  },
-  partialSuccess: {
-    success: true,
-    data: { id: '1', name: 'User 1' },
-    cascade: {
-      updated: [{ __typename: 'User', id: '1', operation: 'CREATED' }],
-      deleted: [],
-      invalidations: [],
-      metadata: {
-        timestamp: '2023-01-01T00:00:00Z',
-        depth: 1,
-        affectedCount: 1,
-        transactionId: 'txn-123',
-        partialSuccess: true,
-        warnings: ['Some related entities could not be created']
-      }
-    }
-  }
-};
+// Create a mock server that matches the implementation expectations
+function createMockServer() {
+  let transactionCounter = 0;
 
-// Mock server implementation
-const mockServer = {
-  async execute(mutation: string, variables: any) {
-    // Simple mock logic based on mutation type and variables
-    if (mutation.includes('createUser')) {
-      if (variables.depth === 1) return mockServerResponses.depth1;
-      if (variables.depth === 2) return mockServerResponses.depth2;
-      return mockServerResponses.depth1;
+  return {
+    async execute(mutation: string, variables: any, options: any = {}) {
+      const { depth = 1, maxDepth = 5 } = options;
+      const transactionId = `txn-${++transactionCounter}`;
+
+      // Mock responses based on mutation type
+      if (mutation === 'createUser') {
+        return {
+          success: true,
+          data: { id: '1', name: variables.name, email: variables.email },
+          cascade: {
+            updated: [{ __typename: 'User', id: '1', operation: 'CREATED' }],
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: 1,
+              affectedCount: 1,
+              transactionId
+            }
+          }
+        };
+      }
+
+      if (mutation === 'createUserWithPosts') {
+        const effectiveDepth = Math.min(depth, maxDepth);
+        const updated = [{ __typename: 'User', id: '1', operation: 'CREATED' }];
+
+        if (effectiveDepth >= 2) {
+          variables.posts.forEach((_: any, index: number) => {
+            updated.push({ __typename: 'Post', id: `${index + 1}`, operation: 'CREATED' });
+          });
+        }
+
+        return {
+          success: true,
+          data: {
+            id: '1',
+            name: variables.name,
+            email: variables.email,
+            posts: effectiveDepth >= 2 ? variables.posts.map((p: any, i: number) => ({ id: `${i + 1}`, title: p.title })) : []
+          },
+          cascade: {
+            updated,
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: effectiveDepth,
+              affectedCount: updated.length,
+              transactionId
+            }
+          }
+        };
+      }
+
+      if (mutation === 'createUserWithProfile') {
+        const effectiveDepth = Math.min(depth, maxDepth);
+        const updated = [{ __typename: 'User', id: '1', operation: 'CREATED' }];
+
+        if (effectiveDepth >= 2) {
+          updated.push({ __typename: 'Profile', id: '1', operation: 'CREATED' });
+        }
+
+        return {
+          success: true,
+          data: {
+            id: '1',
+            name: variables.name,
+            email: variables.email,
+            profile: effectiveDepth >= 2 ? { id: '1', bio: variables.profile.bio } : undefined
+          },
+          cascade: {
+            updated,
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: effectiveDepth,
+              affectedCount: updated.length,
+              transactionId
+            }
+          }
+        };
+      }
+
+      if (mutation === 'createUserWithGroups') {
+        const effectiveDepth = Math.min(depth, maxDepth);
+        const updated = [{ __typename: 'User', id: '1', operation: 'CREATED' }];
+
+        if (effectiveDepth >= 2) {
+          variables.groups.forEach((_: any, index: number) => {
+            updated.push({ __typename: 'Group', id: `${index + 1}`, operation: 'CREATED' });
+          });
+        }
+
+        if (effectiveDepth >= 3) {
+          variables.groups.forEach((_: any, index: number) => {
+            updated.push({ __typename: 'UserGroup', id: `${index + 1}`, operation: 'CREATED' });
+          });
+        }
+
+        return {
+          success: true,
+          data: {
+            id: '1',
+            name: variables.name,
+            email: variables.email,
+            groups: effectiveDepth >= 2 ? variables.groups.map((g: any, i: number) => ({ id: `${i + 1}`, name: g.name })) : []
+          },
+          cascade: {
+            updated,
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: effectiveDepth,
+              affectedCount: updated.length,
+              transactionId
+            }
+          }
+        };
+      }
+
+      if (mutation === 'createUsersWithFriends') {
+        const updated = [
+          { __typename: 'User', id: '1', operation: 'CREATED' },
+          { __typename: 'User', id: '2', operation: 'CREATED' }
+        ];
+
+        return {
+          success: true,
+          data: variables.users,
+          cascade: {
+            updated,
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: 2,
+              affectedCount: 2,
+              transactionId
+            }
+          }
+        };
+      }
+
+      if (mutation === 'createCategoryTree') {
+        const updated = [
+          { __typename: 'Category', id: '1', operation: 'CREATED' },
+          { __typename: 'Category', id: '2', operation: 'CREATED' }
+        ];
+
+        return {
+          success: true,
+          data: variables.categories,
+          cascade: {
+            updated,
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: 2,
+              affectedCount: 2,
+              transactionId
+            }
+          }
+        };
+      }
+
+      if (mutation === 'createPostWithComments') {
+        const effectiveDepth = Math.min(depth, maxDepth);
+        const updated = [];
+
+        if (effectiveDepth >= 1) {
+          updated.push({ __typename: 'Post', id: '1', operation: 'CREATED' });
+        }
+
+        if (effectiveDepth >= 2) {
+          updated.push({ __typename: 'User', id: '1', operation: 'CREATED' }); // Author
+        }
+
+        if (effectiveDepth >= 3) {
+          updated.push({ __typename: 'Comment', id: '1', operation: 'CREATED' });
+          updated.push({ __typename: 'Comment', id: '2', operation: 'CREATED' });
+          updated.push({ __typename: 'User', id: '2', operation: 'CREATED' }); // Commenter 1
+          updated.push({ __typename: 'User', id: '3', operation: 'CREATED' }); // Commenter 2
+        }
+
+        // Check for partial success (invalid comment)
+        const hasInvalidComment = variables.comments.some((c: any) => !c.text || !c.author.name);
+        const success = !hasInvalidComment;
+
+        if (hasInvalidComment) {
+          // Remove invalid comment from updates
+          updated.splice(updated.findIndex((u: any) => u.__typename === 'Comment' && u.id === '2'), 1);
+          updated.splice(updated.findIndex((u: any) => u.__typename === 'User' && u.id === '3'), 1);
+        }
+
+        return {
+          success,
+          data: success ? {
+            id: '1',
+            title: variables.title,
+            author: { id: '1', name: variables.author.name },
+            comments: hasInvalidComment ? [variables.comments[0]] : variables.comments
+          } : null,
+          cascade: {
+            updated,
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: effectiveDepth,
+              affectedCount: updated.length,
+              transactionId,
+              partialSuccess: hasInvalidComment,
+              warnings: hasInvalidComment ? ['Some comments could not be created'] : undefined
+            }
+          }
+        };
+      }
+
+      if (mutation === 'updatePostWithComments') {
+        const updated = [
+          { __typename: 'Post', id: variables.id, operation: 'UPDATED' },
+          { __typename: 'Comment', id: 'comment-1', operation: 'UPDATED' },
+          { __typename: 'Comment', id: 'comment-2', operation: 'UPDATED' }
+        ];
+
+        return {
+          success: true,
+          data: variables,
+          cascade: {
+            updated,
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: 2,
+              affectedCount: 3,
+              transactionId
+            }
+          }
+        };
+      }
+
+      if (mutation === 'createDeepNested') {
+        const effectiveDepth = Math.min(depth, maxDepth);
+        const updated = [{ __typename: 'User', id: '1', operation: 'CREATED' }];
+
+        if (effectiveDepth >= 2) {
+          updated.push({ __typename: 'Post', id: '1', operation: 'CREATED' });
+        }
+
+        if (effectiveDepth >= 3) {
+          updated.push({ __typename: 'Comment', id: '1', operation: 'CREATED' });
+        }
+
+        return {
+          success: true,
+          data: variables.user,
+          cascade: {
+            updated,
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: effectiveDepth,
+              affectedCount: updated.length,
+              transactionId
+            }
+          }
+        };
+      }
+
+      if (mutation === 'createDeepCascade') {
+        const effectiveDepth = Math.min(depth, maxDepth);
+        const updated = [{ __typename: 'User', id: '1', operation: 'CREATED' }];
+
+        if (effectiveDepth >= 2) {
+          updated.push({ __typename: 'Post', id: '1', operation: 'CREATED' });
+        }
+
+        if (effectiveDepth >= 3) {
+          updated.push({ __typename: 'Comment', id: '1', operation: 'CREATED' });
+        }
+
+        return {
+          success: true,
+          data: variables.user,
+          cascade: {
+            updated,
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: effectiveDepth,
+              affectedCount: updated.length,
+              transactionId
+            }
+          }
+        };
+      }
+
+      if (mutation === 'createPost') {
+        return {
+          success: true,
+          data: { id: '1', title: variables.title, content: variables.content, authorId: variables.authorId },
+          cascade: {
+            updated: [{ __typename: 'Post', id: '1', operation: 'CREATED' }],
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: 1,
+              affectedCount: 1,
+              transactionId
+            }
+          }
+        };
+      }
+
+      if (mutation === 'createUserWithValidation') {
+        const isValid = variables.name && variables.name.trim().length > 0;
+        return {
+          success: isValid,
+          errors: isValid ? undefined : [{ code: 'VALIDATION_ERROR', message: 'Name is required' }],
+          data: isValid ? { id: '1', name: variables.name, email: variables.email } : null,
+          cascade: {
+            updated: isValid ? [{ __typename: 'User', id: '1', operation: 'CREATED' }] : [],
+            deleted: [],
+            invalidations: [],
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: isValid ? 1 : 0,
+              affectedCount: isValid ? 1 : 0,
+              transactionId
+            }
+          }
+        };
+      }
+
+      // Default response
+      return {
+        success: true,
+        data: { id: '1' },
+        cascade: {
+          updated: [{ __typename: 'Entity', id: '1', operation: 'CREATED' }],
+          deleted: [],
+          invalidations: [],
+          metadata: {
+            timestamp: new Date().toISOString(),
+            depth: 1,
+            affectedCount: 1,
+            transactionId
+          }
+        }
+      };
     }
-    if (mutation.includes('createPost')) {
-      return mockServerResponses.oneToMany;
-    }
-    if (mutation.includes('createComment')) {
-      return mockServerResponses.nestedCreate;
-    }
-    if (mutation.includes('updateUser')) {
-      return mockServerResponses.nestedUpdate;
-    }
-    // Default response
-    return mockServerResponses.depth1;
-  }
-};
+  };
+}
 
 describe('runStandardTests', () => {
   const options: ServerConformanceOptions = {
@@ -279,6 +406,26 @@ describe('runStandardTests', () => {
     expect(totalTests).toBe(18);
   });
 
-  // Individual test validations would go here, but since the implementation
-  // currently returns placeholder results, we'll add them once the logic is implemented
+  it('runs all tests and returns results', async () => {
+    const categories = await runStandardTests(options);
+    const totalTests = categories.reduce((sum, category) => sum + category.tests.length, 0);
+    expect(totalTests).toBe(18);
+
+    // Check that each test has a result (passed or failed with message)
+    categories.forEach(category => {
+      category.tests.forEach(test => {
+        expect(test).toHaveProperty('name');
+        expect(test).toHaveProperty('passed');
+        expect(typeof test.passed).toBe('boolean');
+        expect(test).toHaveProperty('message');
+      });
+    });
+  });
+
+  it('all categories are at standard level', async () => {
+    const categories = await runStandardTests(options);
+    categories.forEach(category => {
+      expect(category.level).toBe('standard');
+    });
+  });
 });

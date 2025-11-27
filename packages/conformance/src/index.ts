@@ -22,6 +22,9 @@ export type {
 export { validateSchema } from './validators/schema';
 export { validateResponse } from './validators/response';
 
+// Export server test runners
+export { runStandardTests } from './server/standard';
+
 // Placeholder exports for runner functions (implemented in later waves)
 import type {
   ConformanceReport,
