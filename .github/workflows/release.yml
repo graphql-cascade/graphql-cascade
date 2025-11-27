@@ -10,6 +10,15 @@ on:
         required: false
         default: 'false'
         type: boolean
+      tag:
+        description: 'Release tag'
+        required: false
+        default: 'latest'
+        type: choice
+        options:
+          - latest
+          - beta
+          - next
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,6 +31,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+      pull-requests: write
       id-token: write
     steps:
       - name: Checkout
@@ -45,6 +55,12 @@ jobs:
       - name: Run tests
         run: npm run test --workspaces --if-present
 
+      - name: Verify packages with publint
+        run: npx publint --strict ./packages/*
+
+      - name: Verify packages with attw
+        run: npx attw --pack ./packages/*
+
       - name: Create Release Pull Request or Publish
         if: ${{ github.event.inputs.dry-run != 'true' }}
         id: changesets
@@ -63,3 +79,18 @@ jobs:
         run: |
           echo "Dry run mode - showing packages that would be published:"
           npx changeset status
+
+      - name: Create GitHub releases
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          published_packages='${{ steps.changesets.outputs.publishedPackages }}'
+          if [ -n "$published_packages" ]; then
+            echo "$published_packages" | jq -c '.[]' | while read -r package; do
+              name=$(echo "$package" | jq -r '.name')
+              version=$(echo "$package" | jq -r '.version')
+              tag="$name@$version"
+              gh release create "$tag" --title "Release $name@$version" --generate-notes
+            done
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

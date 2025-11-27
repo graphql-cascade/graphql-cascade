@@ -60,17 +60,17 @@ jobs:
           npx attw --pack packages/server-node
           npx attw --pack packages/client-core/core
 
-   test:
-     name: Test (${{ matrix.os }}-${{ matrix.node-version }})
-     runs-on: ${{ matrix.os }}
-     strategy:
-       fail-fast: false
-       matrix:
-         os: [ubuntu-latest, macos-latest, windows-latest]
-         node-version: ['18', '20', '22']
-         exclude:
-           - os: windows-latest
-             node-version: '18'
+  test:
+    name: Test (${{ matrix.os }}-${{ matrix.node-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: ['18', '20', '22']
+        exclude:
+          - os: windows-latest
+            node-version: '18'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -181,45 +181,45 @@ jobs:
         with:
           name: docs
           path: docs/.vitepress/dist
-           retention-days: 7
+          retention-days: 7
 
   bundle-size:
-     name: Bundle Size
-     runs-on: ubuntu-latest
-     needs: [build]
-     steps:
-       - name: Checkout
-         uses: actions/checkout@v4
+    name: Bundle Size
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-       - name: Setup Node.js
-         uses: actions/setup-node@v4
-         with:
-           node-version: '20'
-           cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-       - name: Install dependencies
-         run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-       - name: Download build artifacts
-         uses: actions/download-artifact@v4
-         with:
-           name: dist
-           path: packages/
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: packages/
 
-       - name: Check bundle sizes
-         run: |
-           echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
-           for dir in packages/*/dist packages/*/*/dist; do
-             if [ -d "$dir" ]; then
-               size=$(du -sh "$dir" | cut -f1)
-               echo "- $dir: $size" >> $GITHUB_STEP_SUMMARY
-             fi
-           done
+      - name: Check bundle sizes
+        run: |
+          echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
+          for dir in packages/*/dist packages/*/*/dist; do
+            if [ -d "$dir" ]; then
+              size=$(du -sh "$dir" | cut -f1)
+              echo "- $dir: $size" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
 
   ci-success:
-     name: CI Success
-     runs-on: ubuntu-latest
-     needs: [lint, typecheck, test, build, conformance, docs, bundle-size]
-     steps:
-       - name: All checks passed
-         run: echo "All CI checks have passed successfully!"
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test, build, conformance, docs, bundle-size]
+    steps:
+      - name: All checks passed
+        run: echo "All CI checks have passed successfully!"

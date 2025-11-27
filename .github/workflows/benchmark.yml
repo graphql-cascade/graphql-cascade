@@ -1,0 +1,53 @@
+name: Benchmark
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install dependencies
+        run: npm ci
+      - name: Build packages
+        run: npm run build
+      - name: Run benchmarks
+        run: npm run benchmark --workspace=@graphql-cascade/server
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: GraphQL Cascade Benchmarks
+          tool: customSmallerIsBetter
+          output-file-path: benchmark-results.json
+          auto-push: true
+          alert-threshold: 150%
+          comment-on-alert: true
+          alert-comment-cc-users: '@graphql-cascade/maintainers'
+      - name: Comment PR with benchmark results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('benchmark-results.json', 'utf8'));
+            let comment = '## Benchmark Results\n\n| Name | Current | Baseline | Change |\n|------|---------|----------|--------|\n';
+            results.forEach(result => {
+              comment += `| ${result.name} | ${result.current} | ${result.baseline} | ${result.change} |\n`;
+            });
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
