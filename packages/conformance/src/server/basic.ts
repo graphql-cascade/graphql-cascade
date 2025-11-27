@@ -1,6 +1,12 @@
 import type { TestCategory, TestResult, ServerConformanceOptions, ConformanceLevel } from '../types';
 import successResponse from '../../fixtures/responses/success.json';
 import errorResponse from '../../fixtures/responses/error.json';
+import updateResponse from '../../fixtures/responses/update.json';
+import deleteResponse from '../../fixtures/responses/delete.json';
+import multiEntityResponse from '../../fixtures/responses/multi-entity.json';
+import readOnlyResponse from '../../fixtures/responses/read-only.json';
+import relatedUpdateResponse from '../../fixtures/responses/related-update.json';
+import notFoundErrorResponse from '../../fixtures/responses/not-found-error.json';
 
 /**
  * A single basic conformance test case
@@ -86,12 +92,12 @@ function createEntityTrackingTests(): BasicTestCase[] {
       name: 'Updated entity in updated array',
       category: 'Entity Tracking',
       test: () => {
-        // For this test, we'd need an update response fixture
-        // For now, return a passing test since we don't have the fixture
+        const cascade = updateResponse.data.updateUser.cascade;
+        const updatedEntity = cascade.updated.find((entity: any) => entity.operation === 'UPDATED');
         return {
           name: 'Updated entity in updated array',
-          passed: true,
-          message: 'Updated entity tracking test (fixture needed)',
+          passed: !!updatedEntity,
+          message: updatedEntity ? 'Updated entity found in updated array' : 'No updated entity in updated array',
         };
       },
     },
@@ -99,12 +105,13 @@ function createEntityTrackingTests(): BasicTestCase[] {
       name: 'Deleted entity in deleted array',
       category: 'Entity Tracking',
       test: () => {
-        // For this test, we'd need a delete response fixture
-        // For now, return a passing test since we don't have the fixture
+        const cascade = deleteResponse.data.deleteUser.cascade;
+        const deletedEntity = cascade.deleted.find((entity: any) => entity.__typename === 'User');
+        const hasDeletedAt = deletedEntity && deletedEntity.deletedAt;
         return {
           name: 'Deleted entity in deleted array',
-          passed: true,
-          message: 'Deleted entity tracking test (fixture needed)',
+          passed: !!deletedEntity && !!hasDeletedAt,
+          message: deletedEntity ? 'Deleted entity found with deletedAt timestamp' : 'No deleted entity in deleted array',
         };
       },
     },
@@ -172,12 +179,13 @@ function createEntityTrackingTests(): BasicTestCase[] {
       name: 'Multiple entities tracked',
       category: 'Entity Tracking',
       test: () => {
-        // For this test, we'd need a response with multiple entities
-        // For now, return a passing test since we don't have the fixture
+        const cascade = multiEntityResponse.data.batchUpdateUsers.cascade;
+        const multipleTracked = cascade.updated.length > 1;
+        const affectedCountMatches = cascade.metadata.affectedCount === cascade.updated.length;
         return {
           name: 'Multiple entities tracked',
-          passed: true,
-          message: 'Multiple entities tracking test (fixture needed)',
+          passed: multipleTracked && affectedCountMatches,
+          message: multipleTracked ? 'Multiple entities tracked with correct count' : 'Not enough entities tracked',
         };
       },
     },
@@ -185,12 +193,15 @@ function createEntityTrackingTests(): BasicTestCase[] {
       name: 'Empty cascade for read-only',
       category: 'Entity Tracking',
       test: () => {
-        // For this test, we'd need a read-only query response
-        // For now, return a passing test since we don't have the fixture
+        const cascade = readOnlyResponse.data.getUser.cascade;
+        const isEmpty = cascade.updated.length === 0 &&
+                        cascade.deleted.length === 0 &&
+                        cascade.invalidations.length === 0;
+        const zeroAffected = cascade.metadata.affectedCount === 0;
         return {
           name: 'Empty cascade for read-only',
-          passed: true,
-          message: 'Read-only cascade test (fixture needed)',
+          passed: isEmpty && zeroAffected,
+          message: isEmpty ? 'Read-only query has empty cascade' : 'Read-only query has unexpected cascade data',
         };
       },
     },
@@ -219,11 +230,12 @@ function createInvalidationHintsTests(): BasicTestCase[] {
       name: 'Update may invalidate related',
       category: 'Invalidation Hints',
       test: () => {
-        // For this test, we'd need an update response fixture
+        const cascade = relatedUpdateResponse.data.updateUserProfile.cascade;
+        const hasRelatedInvalidations = cascade.invalidations.some((inv: any) => inv.scope === 'RELATED');
         return {
           name: 'Update may invalidate related',
-          passed: true,
-          message: 'Update invalidation test (fixture needed)',
+          passed: hasRelatedInvalidations,
+          message: hasRelatedInvalidations ? 'Update invalidates related queries' : 'No related invalidations found',
         };
       },
     },
@@ -231,11 +243,13 @@ function createInvalidationHintsTests(): BasicTestCase[] {
       name: 'Delete invalidates entity queries',
       category: 'Invalidation Hints',
       test: () => {
-        // For this test, we'd need a delete response fixture
+        const cascade = deleteResponse.data.deleteUser.cascade;
+        const hasRemoveStrategy = cascade.invalidations.some((inv: any) => inv.strategy === 'REMOVE');
+        const hasExactScope = cascade.invalidations.some((inv: any) => inv.scope === 'EXACT');
         return {
           name: 'Delete invalidates entity queries',
-          passed: true,
-          message: 'Delete invalidation test (fixture needed)',
+          passed: hasRemoveStrategy && hasExactScope,
+          message: hasRemoveStrategy && hasExactScope ? 'Delete properly invalidates entity queries' : 'Delete does not properly invalidate entity queries',
         };
       },
     },
@@ -282,11 +296,12 @@ function createInvalidationHintsTests(): BasicTestCase[] {
       name: 'Multiple invalidations',
       category: 'Invalidation Hints',
       test: () => {
-        // For this test, we'd need a response with multiple invalidations
+        const cascade = relatedUpdateResponse.data.updateUserProfile.cascade;
+        const hasMultiple = cascade.invalidations.length > 1;
         return {
           name: 'Multiple invalidations',
-          passed: true,
-          message: 'Multiple invalidations test (fixture needed)',
+          passed: hasMultiple,
+          message: hasMultiple ? `${cascade.invalidations.length} invalidations generated` : 'Only one or zero invalidations',
         };
       },
     },
@@ -423,11 +438,12 @@ function createErrorHandlingTests(): BasicTestCase[] {
       name: 'NOT_FOUND code',
       category: 'Error Handling',
       test: () => {
-        // For this test, we'd need a NOT_FOUND error fixture
+        const errors = notFoundErrorResponse.data.updateUser.errors;
+        const hasNotFound = errors.some((error: any) => error.code === 'NOT_FOUND');
         return {
           name: 'NOT_FOUND code',
-          passed: true,
-          message: 'NOT_FOUND error test (fixture needed)',
+          passed: hasNotFound,
+          message: hasNotFound ? 'Error has NOT_FOUND code' : 'Error missing NOT_FOUND code',
         };
       },
     },
