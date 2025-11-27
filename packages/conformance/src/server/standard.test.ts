@@ -371,7 +371,7 @@ function createMockServer() {
 describe('runStandardTests', () => {
   const options: ServerConformanceOptions = {
     level: 'standard',
-    createServer: () => mockServer
+    createServer: createMockServer
   };
 
   it('returns 3 test categories', async () => {

@@ -23,29 +23,25 @@ export { validateSchema } from './validators/schema';
 export { validateResponse } from './validators/response';
 
 // Export server test runners
-export { runStandardTests } from './server/standard';
+export { runBasicTests, runStandardTests, runCompleteTests } from './server';
 
-// Placeholder exports for runner functions (implemented in later waves)
-import type {
-  ConformanceReport,
-  ServerConformanceOptions,
-  ClientConformanceOptions,
-} from './types';
+// Export client test runners
+export {
+  runClientBasicTests,
+  runClientStandardTests,
+  runClientCompleteTests,
+} from './client';
 
-/**
- * Run server conformance tests
- */
-export async function runServerConformance(
-  _options: ServerConformanceOptions
-): Promise<ConformanceReport> {
-  throw new Error('Not implemented - see Wave 2 implementation');
-}
+// Export main conformance runners
+export { runServerConformance, runClientConformance } from './runner';
 
-/**
- * Run client conformance tests
- */
-export async function runClientConformance(
-  _options: ClientConformanceOptions
-): Promise<ConformanceReport> {
-  throw new Error('Not implemented - see Wave 3 implementation');
-}
+// Export reporter utilities
+export {
+  formatReport,
+  printReport,
+  getExitCode,
+  type ReporterOptions,
+} from './reporter';
+
+// Export CLI utilities
+export { parseArgs, main as runCli } from './cli';

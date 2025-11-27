@@ -551,93 +551,53 @@ function testProcessingOrderCorrect(cache: CascadeCache): TestResult {
 
 // Error Handling Tests
 function testWriteFailureDoesntStop(cache: CascadeCache): TestResult {
+  // Mock a failure - assume cache throws on certain writes
+  (cache as any)._shouldFailWrite = true;
+  const entity: CascadeEntity = { __typename: 'User', id: '20', name: 'Peter' };
+  let threw = false;
   try {
-    // Mock a failure - assume cache throws on certain writes
-    (cache as any)._shouldFailWrite = true;
-    const entity: CascadeEntity = { __typename: 'User', id: '20', name: 'Peter' };
-    let threw = false;
-    try {
-      cache.write(entity);
-    } catch {
-      threw = true;
-    }
-    // Reset failure flag
-    (cache as any)._shouldFailWrite = false;
-    // Continue with another operation
-    const entity2: CascadeEntity = { __typename: 'User', id: '21', name: 'Quinn' };
-    cache.write(entity2);
-    const readEntity2 = cache.read('User:21');
-    const passed = threw && readEntity2 !== null;
-    return {
-      name: 'Write failure doesn\'t stop',
-      passed,
-      message: passed ? undefined : 'Write failure stopped processing',
-      expected: { threw: true, entity2Written: true },
-      actual: { threw, entity2Written: readEntity2 !== null },
-    };
-  } catch (error) {
-    return {
-      name: 'Write failure doesn\'t stop',
-      passed: false,
-      message: `Error: ${error}`,
-    };
+    cache.write(entity);
+  } catch {
+    threw = true;
   }
-}
-    // Reset before continuing with another operation
-    (cache as any)._shouldFailWrite = false;
-    const entity2: CascadeEntity = { __typename: 'User', id: '21', name: 'Quinn' };
-    cache.write(entity2);
-    const readEntity2 = cache.read('User:21');
-    const passed = threw && readEntity2 !== null;
-    return {
-      name: 'Write failure doesn\'t stop',
-      passed,
-      message: passed ? undefined : 'Write failure stopped processing',
-      expected: { threw: true, entity2Written: true },
-      actual: { threw, entity2Written: readEntity2 !== null },
-    };
-  } catch (error) {
-    return {
-      name: 'Write failure doesn\'t stop',
-      passed: false,
-      message: `Error: ${error}`,
-    };
-  } finally {
-    (cache as any)._shouldFailWrite = false;
-  }
+  // Reset failure flag
+  (cache as any)._shouldFailWrite = false;
+  // Continue with another operation
+  const entity2: CascadeEntity = { __typename: 'User', id: '21', name: 'Quinn' };
+  cache.write(entity2);
+  const readEntity2 = cache.read('User:21');
+  const passed = threw && readEntity2 !== null;
+  return {
+    name: 'Write failure doesn\'t stop',
+    passed,
+    message: passed ? undefined : 'Write failure stopped processing',
+    expected: { threw: true, entity2Written: true },
+    actual: { threw, entity2Written: readEntity2 !== null },
+  };
 }
 
 function testEvictFailureDoesntStop(cache: CascadeCache): TestResult {
+  (cache as any)._shouldFailEvict = true;
+  let threw = false;
   try {
-    (cache as any)._shouldFailEvict = true;
-    let threw = false;
-    try {
-      cache.evict('User:22');
-    } catch {
-      threw = true;
-    }
-    // Reset before continuing
-    (cache as any)._shouldFailEvict = false;
-    const entity: CascadeEntity = { __typename: 'User', id: '23', name: 'Rachel' };
-    cache.write(entity);
-    const readEntity = cache.read('User:23');
-    const passed = threw && readEntity !== null;
-    return {
-      name: 'Evict failure doesn\'t stop',
-      passed,
-      message: passed ? undefined : 'Evict failure stopped processing',
-      expected: { threw: true, entityWritten: true },
-      actual: { threw, entityWritten: readEntity !== null },
-    };
-  } catch (error) {
-    return {
-      name: 'Evict failure doesn\'t stop',
-      passed: false,
-      message: `Error: ${error}`,
-    };
-  } finally {
-    (cache as any)._shouldFailEvict = false;
+    cache.evict('User:22');
+  } catch {
+    threw = true;
   }
+  // Reset failure flag
+  (cache as any)._shouldFailEvict = false;
+  // Continue
+  const entity: CascadeEntity = { __typename: 'User', id: '23', name: 'Rachel' };
+  cache.write(entity);
+  const readEntity = cache.read('User:23');
+  const passed = threw && readEntity !== null;
+  return {
+    name: 'Evict failure doesn\'t stop',
+    passed,
+    message: passed ? undefined : 'Evict failure stopped processing',
+    expected: { threw: true, entityWritten: true },
+    actual: { threw, entityWritten: readEntity !== null },
+  };
 }
 
 function testErrorsLogged(cache: CascadeCache): TestResult {
