@@ -17,8 +17,8 @@ export const resolvers = {
   },
 
   Mutation: {
-    sendMessage: (_: any, { content, channelId, senderId }: { content: string; channelId: string; senderId: string }) => {
-      const message = createMessage(content, senderId, channelId);
+    sendMessage: (_: any, { content, channelId, authorId }: { content: string; channelId: string; authorId: string }) => {
+      const message = createMessage(content, authorId, channelId);
       const messageWithSender = getMessagesWithAuthors(channelId).find(m => m.id === message.id);
       if (!messageWithSender) {
         throw new Error('Failed to create message');
@@ -57,7 +57,7 @@ export const resolvers = {
   },
 
   Message: {
-    sender: (message: Message) => getUserById(message.senderId)!,
+    sender: (message: Message) => getUserById(message.authorId)!,
     channel: (message: Message) => getChannelById(message.channelId)!,
   },
 };
