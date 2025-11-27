@@ -1,5 +1,5 @@
 import { ApolloCache, gql } from '@apollo/client';
-import { CascadeCache, QueryInvalidation } from '@graphql-cascade/client';
+import { CascadeCache, QueryInvalidation, InvalidationScope } from '@graphql-cascade/client';
 
 // Counter for generating unique fragment names
 let fragmentCounter = 0;
@@ -68,8 +68,21 @@ export class ApolloCascadeCache implements CascadeCache {
   }
 
   invalidate(invalidation: QueryInvalidation): void {
-    // Apollo doesn't have direct invalidation API
-    // Queries will refetch on next access based on cache policies
+    switch (invalidation.scope) {
+      case 'EXACT':
+        if (invalidation.queryName) {
+          this.cache.evict({ fieldName: invalidation.queryName });
+          this.cache.gc();
+        }
+        break;
+      case 'PREFIX':
+      case 'PATTERN':
+        console.warn(`Apollo cache does not support ${invalidation.scope} scope invalidation. Only EXACT scope is supported.`);
+        break;
+      case 'ALL':
+        this.cache.gc();
+        break;
+    }
   }
 
   async refetch(invalidation: QueryInvalidation): Promise<void> {
@@ -79,8 +92,21 @@ export class ApolloCascadeCache implements CascadeCache {
   }
 
   remove(invalidation: QueryInvalidation): void {
-    // For removal strategy, would need query tracking
-    // which is beyond the scope of this cache adapter
+    switch (invalidation.scope) {
+      case 'EXACT':
+        if (invalidation.queryName) {
+          this.cache.evict({ fieldName: invalidation.queryName });
+          this.cache.gc();
+        }
+        break;
+      case 'PREFIX':
+      case 'PATTERN':
+        console.warn(`Apollo cache does not support ${invalidation.scope} scope removal. Only EXACT scope is supported.`);
+        break;
+      case 'ALL':
+        this.cache.gc();
+        break;
+    }
   }
 
   identify(entity: any): string {
