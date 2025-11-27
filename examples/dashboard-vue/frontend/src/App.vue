@@ -56,9 +56,24 @@ const { executeMutation } = useMutation(UPDATE_METRIC);
       <p>Real-time analytics with cascade updates</p>
     </header>
 
+    <nav class="tabs">
+      <button
+        :class="{ active: activeTab === 'metrics' }"
+        @click="activeTab = 'metrics'"
+      >
+        Metrics
+      </button>
+      <button
+        :class="{ active: activeTab === 'data' }"
+        @click="activeTab = 'data'"
+      >
+        Data Table
+      </button>
+    </nav>
+
     <main>
-      <FilterPanel />
-      <div class="dashboard-grid">
+      <FilterPanel v-if="activeTab === 'metrics'" />
+      <div v-if="activeTab === 'metrics'" class="dashboard-grid">
         <MetricsCard
           v-for="metric in data?.metrics"
           :key="metric.id"
@@ -66,7 +81,7 @@ const { executeMutation } = useMutation(UPDATE_METRIC);
           :update-mutation="executeMutation"
         />
       </div>
-      <DataTable :data="data?.metrics" />
+      <DataTable v-if="activeTab === 'data'" />
     </main>
   </div>
 </template>
@@ -91,6 +106,32 @@ header h1 {
 
 header p {
   color: #666;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tabs button {
+  padding: 10px 20px;
+  border: none;
+  background: #e0e0e0;
+  color: #333;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.tabs button:hover {
+  background: #d0d0d0;
+}
+
+.tabs button.active {
+  background: #4f46e5;
+  color: white;
 }
 
 .dashboard-grid {
