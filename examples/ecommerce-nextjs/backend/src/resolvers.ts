@@ -1,4 +1,4 @@
-import { CascadeBuilder } from '@graphql-cascade/server';
+import { buildSuccessResponse, buildErrorResponse } from '@graphql-cascade/server';
 import {
   getProducts,
   getProduct,
@@ -16,8 +16,6 @@ import {
   type Order,
 } from './db';
 
-const cascadeBuilder = new CascadeBuilder();
-
 export const resolvers = {
   Query: {
     products: (): Product[] => getProducts(),
@@ -27,100 +25,76 @@ export const resolvers = {
     order: (_: any, { id }: { id: string }): Order | undefined => getOrder(id),
   },
   Mutation: {
-    addToCart: (_: any, { productId, quantity }: { productId: string; quantity: number }) => {
+    addToCart: (_: any, { productId, quantity }: { productId: string; quantity: number }, context: any) => {
       const cartItem = addToCart(productId, quantity);
       if (!cartItem) {
-        return cascadeBuilder.buildErrorResponse('Product not found or insufficient inventory');
+        return buildErrorResponse(context.cascadeTracker, [{ message: 'Product not found or insufficient inventory', code: 'INSUFFICIENT_INVENTORY' }]);
       }
-      return cascadeBuilder.buildSuccessResponse(cartItem, {
-        operation: 'CREATE',
-        entityType: 'CartItem',
-        entityId: cartItem.id,
-        // Cascade update for product inventory
-        cascade: {
-          invalidate: [
-            {
-              entityType: 'Product',
-              entityId: productId,
-            },
-          ],
-        },
-      });
+      context.cascadeTracker.trackCreate(cartItem);
+      // Also track the product update for inventory
+      const product = getProduct(productId);
+      if (product) {
+        context.cascadeTracker.trackUpdate(product);
+      }
+      return buildSuccessResponse(context.cascadeTracker, undefined, cartItem);
     },
-    updateCartItem: (_: any, { id, quantity }: { id: string; quantity: number }) => {
+    updateCartItem: (_: any, { id, quantity }: { id: string; quantity: number }, context: any) => {
       const cartItem = updateCartItem(id, quantity);
       if (!cartItem) {
-        return cascadeBuilder.buildErrorResponse('Cart item not found or insufficient inventory');
+        return buildErrorResponse(context.cascadeTracker, [{ message: 'Cart item not found or insufficient inventory', code: 'INSUFFICIENT_INVENTORY' }]);
       }
-      return cascadeBuilder.buildSuccessResponse(cartItem, {
-        operation: 'UPDATE',
-        entityType: 'CartItem',
-        entityId: id,
-        // Cascade update for product inventory
-        cascade: {
-          invalidate: [
-            {
-              entityType: 'Product',
-              entityId: cartItem.productId,
-            },
-          ],
-        },
-      });
+      context.cascadeTracker.trackUpdate(cartItem);
+      // Also track the product update for inventory
+      const product = getProduct(cartItem.productId);
+      if (product) {
+        context.cascadeTracker.trackUpdate(product);
+      }
+      return buildSuccessResponse(context.cascadeTracker, undefined, cartItem);
     },
-    removeFromCart: (_: any, { id }: { id: string }) => {
+    removeFromCart: (_: any, { id }: { id: string }, context: any) => {
       const cartItem = getCartItem(id);
       if (!cartItem) {
-        return cascadeBuilder.buildErrorResponse('Cart item not found');
+        return buildErrorResponse(context.cascadeTracker, [{ message: 'Cart item not found', code: 'NOT_FOUND' }]);
       }
       const success = removeFromCart(id);
-      return cascadeBuilder.buildSuccessResponse(cartItem, {
-        operation: 'DELETE',
-        entityType: 'CartItem',
-        entityId: id,
-        // Cascade update for product inventory
-        cascade: {
-          invalidate: [
-            {
-              entityType: 'Product',
-              entityId: cartItem.productId,
-            },
-          ],
-        },
-      });
+      context.cascadeTracker.trackDelete('CartItem', id);
+      // Also track the product update for inventory
+      const product = getProduct(cartItem.productId);
+      if (product) {
+        context.cascadeTracker.trackUpdate(product);
+      }
+      return buildSuccessResponse(context.cascadeTracker, undefined, cartItem);
     },
-    checkout: () => {
+    checkout: (_: any, __: any, context: any) => {
       const cartItems = getCartItems();
       if (cartItems.length === 0) {
-        return cascadeBuilder.buildErrorResponse('Cart is empty');
+        return buildErrorResponse(context.cascadeTracker, [{ message: 'Cart is empty', code: 'EMPTY_CART' }]);
       }
 
       // Check inventory for all items
       for (const item of cartItems) {
         if (item.product.inventory < item.quantity) {
-          return cascadeBuilder.buildErrorResponse(
-            `Insufficient inventory for ${item.product.name}`
-          );
+          return buildErrorResponse(context.cascadeTracker, [{ message: `Insufficient inventory for ${item.product.name}`, code: 'INSUFFICIENT_INVENTORY' }]);
         }
       }
 
       const order = createOrder(cartItems);
       clearCart();
 
-      return cascadeBuilder.buildSuccessResponse(order, {
-        operation: 'CREATE',
-        entityType: 'Order',
-        entityId: order.id,
-        // Cascade updates for all affected products and clear cart
-        cascade: {
-          invalidate: [
-            ...cartItems.map(item => ({
-              entityType: 'Product' as const,
-              entityId: item.productId,
-            })),
-            { entityType: 'CartItem', entityId: '*' }, // Clear all cart items
-          ],
-        },
+      context.cascadeTracker.trackCreate(order);
+      // Track all cart items as deleted
+      cartItems.forEach(item => {
+        context.cascadeTracker.trackDelete('CartItem', item.id);
       });
+      // Track all products as updated (inventory changes)
+      cartItems.forEach(item => {
+        const product = getProduct(item.productId);
+        if (product) {
+          context.cascadeTracker.trackUpdate(product);
+        }
+      });
+
+      return buildSuccessResponse(context.cascadeTracker, undefined, order);
     },
   },
 };

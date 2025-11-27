@@ -1,6 +1,6 @@
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { createCascadePlugin } from '@graphql-cascade/server';
+import { createCascadePlugin, CascadeTracker } from '@graphql-cascade/server';
 import { typeDefs } from './schema';
 import { resolvers } from './resolvers';
 
@@ -10,6 +10,11 @@ const server = new ApolloServer({
   plugins: [createCascadePlugin()],
 });
 
-startStandaloneServer(server, { listen: { port: 4000 } }).then(({ url }) => {
+startStandaloneServer(server, {
+  listen: { port: 4000 },
+  context: async () => ({
+    cascadeTracker: new CascadeTracker(),
+  }),
+}).then(({ url }) => {
   console.log('🚀 E-commerce server ready at', url);
 });
