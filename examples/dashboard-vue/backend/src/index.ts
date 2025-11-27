@@ -21,6 +21,10 @@ app.use(
   createHandler({
     schema,
     rootValue: resolvers,
+    context: (req: any) => ({
+      cascadeTracker: req.cascadeTracker,
+      cascadeBuilder: req.cascadeBuilder,
+    }),
   })
 );
 

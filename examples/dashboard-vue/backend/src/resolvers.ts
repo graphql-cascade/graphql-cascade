@@ -1,4 +1,4 @@
-import { buildSuccessResponse, CascadeBuilder } from '@graphql-cascade/server';
+import { CascadeTracker } from '@graphql-cascade/server';
 import { db, Metric, DataRow } from './db';
 
 interface FilterInput {
@@ -11,7 +11,7 @@ export const resolvers = {
   // Queries
   metrics: () => db.getMetrics(),
 
-  dataRows: ({ filter }: { filter?: FilterInput }) => {
+  dataRows: (_: any, { filter }: { filter?: FilterInput }) => {
     let dataRows = db.getDataRows();
 
     if (filter) {
@@ -45,13 +45,18 @@ export const resolvers = {
       };
     }
 
-    return buildSuccessResponse(metric, (builder: CascadeBuilder) => {
-      builder.updated('Metric', metric);
-    });
+    return {
+      success: true,
+      data: metric,
+      cascade: {
+        updated: [{ __typename: 'Metric', id: metric.id }],
+        deleted: [],
+        invalidations: [],
+      },
+    };
   },
 
   refreshData: () => {
-    // Simulate data refresh - just return cascade invalidations
     return {
       success: true,
       cascade: {
