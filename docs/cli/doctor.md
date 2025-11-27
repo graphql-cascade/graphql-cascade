@@ -10,7 +10,7 @@ cascade doctor [options]
 
 ## Options
 
-- `--endpoint <url>` - GraphQL endpoint to analyze (default: http://localhost:4000/graphql)
+- `--endpoint <url>` - GraphQL endpoint to analyze (default: `http://localhost:4000/graphql`)
 - `--mutations <mutation1,mutation2>` - Test specific mutations
 - `--output <json|text>` - Output format (default: text)
 

@@ -4,8 +4,6 @@ export default defineConfig({
   title: 'GraphQL Cascade',
   description: 'Automatic cache updates for GraphQL',
 
-  ignoreDeadLinks: true,
-
   head: [
     ['link', { rel: 'icon', href: '/favicon.ico' }]
   ],
