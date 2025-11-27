@@ -1,0 +1,62 @@
+TASK: Create backend src files for chat-realtime example
+
+CONTEXT:
+- Project: GraphQL Cascade monorepo
+- Location: /home/lionel/code/graphql-cascade/examples/chat-realtime/backend/src/
+- Backend: Apollo Server with WebSocket subscriptions
+
+OBJECTIVE:
+Create the backend source files for the chat-realtime example.
+
+FILES TO CREATE:
+1. /home/lionel/code/graphql-cascade/examples/chat-realtime/backend/src/index.ts - Apollo Server with WebSocket
+2. /home/lionel/code/graphql-cascade/examples/chat-realtime/backend/src/schema.ts
+3. /home/lionel/code/graphql-cascade/examples/chat-realtime/backend/src/resolvers.ts
+4. /home/lionel/code/graphql-cascade/examples/chat-realtime/backend/src/pubsub.ts - PubSub for subscriptions
+5. /home/lionel/code/graphql-cascade/examples/chat-realtime/backend/src/db.ts
+
+SCHEMA:
+```graphql
+type Message {
+  id: ID!
+  content: String!
+  sender: User!
+  channel: Channel!
+  createdAt: DateTime!
+}
+
+type Channel {
+  id: ID!
+  name: String!
+  messages: [Message!]!
+}
+
+type Subscription {
+  messageAdded(channelId: ID!): MessageAddedPayload!
+}
+
+type MessageAddedPayload {
+  message: Message!
+  cascade: CascadeData!
+}
+```
+
+BACKEND IMPLEMENTATION:
+```typescript
+// src/index.ts - Apollo Server with WebSocket
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@apollo/server/express4';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+import { useServer } from 'graphql-ws/lib/use/ws';
+```
+
+VERIFICATION:
+- ls -la /home/lionel/code/graphql-cascade/examples/chat-realtime/backend/src/
+
+ACCEPTANCE CRITERIA:
+- [ ] WebSocket server setup in backend
+- [ ] Subscription resolver with cascade data
+
+DO NOT:
+- Skip WebSocket setup
