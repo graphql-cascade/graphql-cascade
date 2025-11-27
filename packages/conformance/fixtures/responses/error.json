@@ -1,0 +1,26 @@
+{
+  "data": {
+    "createUser": {
+      "success": false,
+      "errors": [
+        {
+          "code": "VALIDATION_ERROR",
+          "message": "Email is already in use",
+          "field": "email",
+          "path": ["input", "email"]
+        }
+      ],
+      "data": null,
+      "cascade": {
+        "updated": [],
+        "deleted": [],
+        "invalidations": [],
+        "metadata": {
+          "timestamp": "2023-11-27T10:00:00Z",
+          "depth": 0,
+          "affectedCount": 0
+        }
+      }
+    }
+  }
+}

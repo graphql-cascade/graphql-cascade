@@ -9,6 +9,7 @@
     "packages/client-relay/relay",
     "packages/client-urql/urql",
     "packages/cli",
+    "packages/conformance",
     "packages/server-node"
   ],
   "scripts": {
