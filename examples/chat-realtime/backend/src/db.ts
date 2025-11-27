@@ -6,8 +6,6 @@ export interface User {
 export interface Channel {
   id: string;
   name: string;
-  description?: string;
-  createdAt: Date;
 }
 
 export interface Message {
@@ -29,14 +27,10 @@ export const channels: Channel[] = [
   {
     id: '1',
     name: 'general',
-    description: 'General discussion',
-    createdAt: new Date('2023-01-01'),
   },
   {
     id: '2',
     name: 'random',
-    description: 'Random chat',
-    createdAt: new Date('2023-01-01'),
   },
 ];
 
@@ -76,37 +70,7 @@ export function createMessage(content: string, senderId: string, channelId: stri
 }
 
 // Additional helper functions for resolvers
-export const getUsers = (): User[] => users;
 export const getChannels = (): Channel[] => channels;
-export const getMessages = (): Message[] => messages;
-
-export const createUser = (name: string, email: string): User => {
-  const user: User = { id: (users.length + 1).toString(), name, email };
-  users.push(user);
-  return user;
-};
-
-export const createChannel = (name: string, description?: string): Channel => {
-  const channel: Channel = {
-    id: (channels.length + 1).toString(),
-    name,
-    description,
-    createdAt: new Date(),
-  };
-  channels.push(channel);
-  return channel;
-};
-
-// Helper function to get message with populated sender
-export const getMessageWithSender = (id: string): (Message & { sender: User }) | undefined => {
-  const message = messages.find(m => m.id === id);
-  if (!message) return undefined;
-
-  const sender = getUserById(message.senderId);
-  if (!sender) return undefined;
-
-  return { ...message, sender };
-};
 
 // Helper function to get messages with populated senders
 export const getMessagesWithSenders = (channelId?: string): (Message & { sender: User })[] => {

@@ -1,51 +1,58 @@
+import { CascadeBuilder } from '@graphql-cascade/server';
 import {
+  getUsers,
   getChannels,
   getChannelById,
-  getMessagesWithSenders,
+  getMessagesWithAuthors,
   createMessage,
-  getUserById,
-  getMessagesByChannelId,
+  createChannel,
   Message,
   Channel,
 } from './db';
-import { pubsub, MESSAGE_ADDED } from './pubsub';
+import { pubsub, MESSAGE_ADDED, CHANNEL_UPDATED } from './pubsub';
+
+const cascadeBuilder = new CascadeBuilder();
 
 export const resolvers = {
   Query: {
+    users: () => getUsers(),
     channels: () => getChannels(),
     channel: (_: any, { id }: { id: string }) => getChannelById(id),
+    messages: (_: any, { channelId }: { channelId: string }) =>
+      getMessagesWithAuthors(channelId),
   },
 
   Mutation: {
-    sendMessage: (_: any, { content, channelId, senderId }: { content: string; channelId: string; senderId: string }) => {
-      const message = createMessage(content, senderId, channelId);
-      const messageWithSender = getMessagesWithSenders(channelId).find(m => m.id === message.id);
-      if (!messageWithSender) {
-        throw new Error('Failed to create message');
+    createMessage: (_: any, { content, channelId, authorId }: { content: string; channelId: string; authorId: string }) => {
+      const message = createMessage(content, authorId, channelId);
+      const messageWithAuthor = getMessagesWithAuthors(channelId).find(m => m.id === message.id);
+      if (!messageWithAuthor) {
+        return cascadeBuilder.buildErrorResponse('Failed to create message');
       }
 
-      // Create cascade data for real-time updates
-      const cascade = {
-        invalidate: [`Channel:${channelId}`],
-        update: JSON.stringify({
-          [`Channel:${channelId}`]: {
-            messages: getMessagesWithSenders(channelId),
-          },
-        }),
-      };
-
-      // Publish to subscriptions with cascade data
+      // Publish to subscriptions
       pubsub.publish(`${MESSAGE_ADDED}_${channelId}`, {
-        messageAdded: {
-          message: messageWithSender,
-          cascade,
-        },
+        messageAdded: messageWithAuthor,
       });
 
-      return {
-        message: messageWithSender,
-        cascade,
-      };
+      return cascadeBuilder.buildSuccessResponse(messageWithAuthor, {
+        operation: 'CREATE',
+        entityType: 'Message',
+        entityId: message.id,
+      });
+    },
+
+    createChannel: (_: any, { name, description }: { name: string; description?: string }) => {
+      const channel = createChannel(name, description);
+
+      // Publish to subscriptions
+      pubsub.publish(CHANNEL_UPDATED, { channelUpdated: channel });
+
+      return cascadeBuilder.buildSuccessResponse(channel, {
+        operation: 'CREATE',
+        entityType: 'Channel',
+        entityId: channel.id,
+      });
     },
   },
 
@@ -54,14 +61,22 @@ export const resolvers = {
       subscribe: (_: any, { channelId }: { channelId: string }) =>
         pubsub.asyncIterator([`${MESSAGE_ADDED}_${channelId}`]),
     },
+    channelUpdated: {
+      subscribe: () => pubsub.asyncIterator([CHANNEL_UPDATED]),
+    },
   },
 
   Channel: {
-    messages: (channel: Channel) => getMessagesWithSenders(channel.id),
+    messages: (channel: Channel) => getMessagesWithAuthors(channel.id),
   },
 
   Message: {
-    sender: (message: Message) => getUserById(message.senderId)!,
+    author: (message: Message) => {
+      const users = getUsers();
+      const author = users.find(u => u.id === message.authorId);
+      if (!author) throw new Error(`Author not found for message ${message.id}`);
+      return author;
+    },
     channel: (message: Message) => getChannelById(message.channelId)!,
   },
 };
