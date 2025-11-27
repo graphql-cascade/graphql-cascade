@@ -1,45 +1,43 @@
  import { gql } from 'graphql-tag';
 
 export const typeDefs = gql`
-  type Message {
+  type User {
     id: ID!
-    content: String!
-    sender: User!
-    channel: Channel!
-    createdAt: String!
+    name: String!
+    email: String!
   }
 
   type Channel {
     id: ID!
     name: String!
+    description: String
+    createdAt: String!
     messages: [Message!]!
   }
 
-  type User {
+  type Message {
     id: ID!
-    name: String!
-  }
-
-  type Subscription {
-    messageAdded(channelId: ID!): MessageAddedPayload!
-  }
-
-  type MessageAddedPayload {
-    message: Message!
-    cascade: CascadeData!
-  }
-
-  type CascadeData {
-    invalidate: [String!]!
-    update: String
-  }
-
-  type Mutation {
-    sendMessage(channelId: ID!, content: String!, senderId: ID!): MessageAddedPayload!
+    content: String!
+    author: User!
+    channel: Channel!
+    createdAt: String!
+    updatedAt: String!
   }
 
   type Query {
+    users: [User!]!
     channels: [Channel!]!
     channel(id: ID!): Channel
+    messages(channelId: ID!): [Message!]!
+  }
+
+  type Mutation {
+    createMessage(content: String!, channelId: ID!): Message!
+    createChannel(name: String!, description: String): Channel!
+  }
+
+  type Subscription {
+    messageAdded(channelId: ID!): Message!
+    channelUpdated: Channel!
   }
 `;
