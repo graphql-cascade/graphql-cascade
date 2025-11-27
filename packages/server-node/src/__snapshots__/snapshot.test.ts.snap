@@ -1,0 +1,414 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Cascade Response Snapshots Create Response should match create response snapshot 1`] = `
+{
+  "cascade": {
+    "deleted": [],
+    "invalidations": [],
+    "metadata": {
+      "affectedCount": 1,
+      "constructionTime": 0,
+      "depth": 1,
+      "timestamp": "NORMALIZED_TIMESTAMP",
+      "trackingTime": 0,
+      "transactionId": "NORMALIZED_TRANSACTION_ID",
+      "truncatedUpdated": false,
+    },
+    "updated": [
+      {
+        "__typename": "User",
+        "entity": {
+          "email": "test@example.com",
+          "id": "1",
+          "name": "Test User",
+        },
+        "id": "1",
+        "operation": "CREATED",
+      },
+    ],
+  },
+  "data": {
+    "id": "1",
+    "name": "Test User",
+  },
+  "errors": [],
+  "success": true,
+}
+`;
+
+exports[`Cascade Response Snapshots Create Response should match multiple creates response snapshot 1`] = `
+{
+  "cascade": {
+    "deleted": [],
+    "invalidations": [],
+    "metadata": {
+      "affectedCount": 3,
+      "constructionTime": 0,
+      "depth": 1,
+      "timestamp": "NORMALIZED_TIMESTAMP",
+      "trackingTime": 0,
+      "transactionId": "NORMALIZED_TRANSACTION_ID",
+      "truncatedUpdated": false,
+    },
+    "updated": [
+      {
+        "__typename": "User",
+        "entity": {
+          "id": "1",
+          "name": "User 1",
+        },
+        "id": "1",
+        "operation": "CREATED",
+      },
+      {
+        "__typename": "Post",
+        "entity": {
+          "authorId": "1",
+          "id": "101",
+          "title": "Post 1",
+        },
+        "id": "101",
+        "operation": "CREATED",
+      },
+      {
+        "__typename": "Comment",
+        "entity": {
+          "id": "1001",
+          "postId": "101",
+          "text": "Comment",
+        },
+        "id": "1001",
+        "operation": "CREATED",
+      },
+    ],
+  },
+  "data": null,
+  "errors": [],
+  "success": true,
+}
+`;
+
+exports[`Cascade Response Snapshots Delete Response should match delete response snapshot 1`] = `
+{
+  "cascade": {
+    "deleted": [
+      {
+        "__typename": "User",
+        "deletedAt": "NORMALIZED_DELETED_AT",
+        "id": "1",
+      },
+    ],
+    "invalidations": [],
+    "metadata": {
+      "affectedCount": 1,
+      "constructionTime": 0,
+      "depth": 0,
+      "timestamp": "NORMALIZED_TIMESTAMP",
+      "trackingTime": 0,
+      "transactionId": "NORMALIZED_TRANSACTION_ID",
+      "truncatedUpdated": false,
+    },
+    "updated": [],
+  },
+  "data": {
+    "deleted": true,
+  },
+  "errors": [],
+  "success": true,
+}
+`;
+
+exports[`Cascade Response Snapshots Delete Response should match multiple deletes response snapshot 1`] = `
+{
+  "cascade": {
+    "deleted": [
+      {
+        "__typename": "Post",
+        "deletedAt": "NORMALIZED_DELETED_AT",
+        "id": "101",
+      },
+      {
+        "__typename": "Post",
+        "deletedAt": "NORMALIZED_DELETED_AT",
+        "id": "102",
+      },
+      {
+        "__typename": "Comment",
+        "deletedAt": "NORMALIZED_DELETED_AT",
+        "id": "1001",
+      },
+    ],
+    "invalidations": [],
+    "metadata": {
+      "affectedCount": 3,
+      "constructionTime": 0,
+      "depth": 0,
+      "timestamp": "NORMALIZED_TIMESTAMP",
+      "trackingTime": 0,
+      "transactionId": "NORMALIZED_TRANSACTION_ID",
+      "truncatedUpdated": false,
+    },
+    "updated": [],
+  },
+  "data": {
+    "deletedCount": 3,
+  },
+  "errors": [],
+  "success": true,
+}
+`;
+
+exports[`Cascade Response Snapshots Empty Response should match empty cascade response snapshot 1`] = `
+{
+  "cascade": {
+    "deleted": [],
+    "invalidations": [],
+    "metadata": {
+      "affectedCount": 0,
+      "constructionTime": 0,
+      "depth": 0,
+      "timestamp": "NORMALIZED_TIMESTAMP",
+      "trackingTime": 0,
+      "transactionId": "NORMALIZED_TRANSACTION_ID",
+      "truncatedUpdated": false,
+    },
+    "updated": [],
+  },
+  "data": null,
+  "errors": [],
+  "success": true,
+}
+`;
+
+exports[`Cascade Response Snapshots Error Response should match error response snapshot 1`] = `
+{
+  "cascade": {
+    "deleted": [],
+    "metadata": {
+      "affectedCount": 0,
+      "constructionTime": 0,
+      "depth": 0,
+      "timestamp": "NORMALIZED_TIMESTAMP",
+      "trackingTime": 0,
+      "transactionId": "NORMALIZED_TRANSACTION_ID",
+    },
+    "updated": [],
+  },
+  "data": null,
+  "errors": [
+    {
+      "code": "VALIDATION_ERROR",
+      "field": "email",
+      "message": "Validation failed",
+    },
+  ],
+  "success": false,
+}
+`;
+
+exports[`Cascade Response Snapshots Error Response should match multiple errors response snapshot 1`] = `
+{
+  "cascade": {
+    "deleted": [],
+    "metadata": {
+      "affectedCount": 0,
+      "constructionTime": 0,
+      "depth": 0,
+      "timestamp": "NORMALIZED_TIMESTAMP",
+      "trackingTime": 0,
+      "transactionId": "NORMALIZED_TRANSACTION_ID",
+    },
+    "updated": [],
+  },
+  "data": null,
+  "errors": [
+    {
+      "code": "VALIDATION_ERROR",
+      "field": "email",
+      "message": "Email is required",
+    },
+    {
+      "code": "VALIDATION_ERROR",
+      "field": "name",
+      "message": "Name is too short",
+    },
+  ],
+  "success": false,
+}
+`;
+
+exports[`Cascade Response Snapshots Mixed Operations Response should match mixed operations response snapshot 1`] = `
+{
+  "cascade": {
+    "deleted": [
+      {
+        "__typename": "Post",
+        "deletedAt": "NORMALIZED_DELETED_AT",
+        "id": "100",
+      },
+    ],
+    "invalidations": [],
+    "metadata": {
+      "affectedCount": 3,
+      "constructionTime": 0,
+      "depth": 1,
+      "timestamp": "NORMALIZED_TIMESTAMP",
+      "trackingTime": 0,
+      "transactionId": "NORMALIZED_TRANSACTION_ID",
+      "truncatedUpdated": false,
+    },
+    "updated": [
+      {
+        "__typename": "User",
+        "entity": {
+          "id": "2",
+          "name": "New User",
+        },
+        "id": "2",
+        "operation": "CREATED",
+      },
+      {
+        "__typename": "User",
+        "entity": {
+          "id": "1",
+          "name": "Updated User",
+        },
+        "id": "1",
+        "operation": "UPDATED",
+      },
+    ],
+  },
+  "data": null,
+  "errors": [],
+  "success": true,
+}
+`;
+
+exports[`Cascade Response Snapshots Streaming Response should match streaming response snapshot 1`] = `
+{
+  "cascade": {
+    "deleted": [],
+    "invalidations": [],
+    "metadata": {
+      "affectedCount": 2,
+      "constructionTime": 0,
+      "depth": 0,
+      "streaming": true,
+      "timestamp": "NORMALIZED_TIMESTAMP",
+      "trackingTime": 0,
+      "transactionId": "NORMALIZED_TRANSACTION_ID",
+    },
+    "updated": [
+      {
+        "__typename": "User",
+        "entity": {
+          "id": "1",
+          "name": "User 1",
+        },
+        "id": "1",
+        "operation": "CREATED",
+      },
+      {
+        "__typename": "Post",
+        "entity": {
+          "id": "101",
+          "title": "Post 1",
+        },
+        "id": "101",
+        "operation": "CREATED",
+      },
+    ],
+  },
+  "data": {
+    "id": "1",
+  },
+  "errors": [],
+  "success": true,
+}
+`;
+
+exports[`Cascade Response Snapshots Truncated Response should match truncated response snapshot 1`] = `
+{
+  "cascade": {
+    "deleted": [],
+    "invalidations": [],
+    "metadata": {
+      "affectedCount": 3,
+      "constructionTime": 0,
+      "depth": 0,
+      "timestamp": "NORMALIZED_TIMESTAMP",
+      "trackingTime": 0,
+      "transactionId": "NORMALIZED_TRANSACTION_ID",
+      "truncatedUpdated": true,
+    },
+    "updated": [
+      {
+        "__typename": "User",
+        "entity": {
+          "id": "0",
+          "name": "User 0",
+        },
+        "id": "0",
+        "operation": "CREATED",
+      },
+      {
+        "__typename": "User",
+        "entity": {
+          "id": "1",
+          "name": "User 1",
+        },
+        "id": "1",
+        "operation": "CREATED",
+      },
+      {
+        "__typename": "User",
+        "entity": {
+          "id": "2",
+          "name": "User 2",
+        },
+        "id": "2",
+        "operation": "CREATED",
+      },
+    ],
+  },
+  "data": null,
+  "errors": [],
+  "success": true,
+}
+`;
+
+exports[`Cascade Response Snapshots Update Response should match update response snapshot 1`] = `
+{
+  "cascade": {
+    "deleted": [],
+    "invalidations": [],
+    "metadata": {
+      "affectedCount": 1,
+      "constructionTime": 0,
+      "depth": 1,
+      "timestamp": "NORMALIZED_TIMESTAMP",
+      "trackingTime": 0,
+      "transactionId": "NORMALIZED_TRANSACTION_ID",
+      "truncatedUpdated": false,
+    },
+    "updated": [
+      {
+        "__typename": "User",
+        "entity": {
+          "email": "updated@example.com",
+          "id": "1",
+          "name": "Updated Name",
+        },
+        "id": "1",
+        "operation": "UPDATED",
+      },
+    ],
+  },
+  "data": {
+    "id": "1",
+    "name": "Updated Name",
+  },
+  "errors": [],
+  "success": true,
+}
+`;

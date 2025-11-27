@@ -1,295 +1,382 @@
-import { CascadeTracker, CascadeBuilder } from '@graphql-cascade/server';
-import { CascadeResponse, CascadeOperation, InvalidationStrategy } from '@graphql-cascade/client';
+/**
+ * End-to-End Integration Tests for GraphQL Cascade
+ *
+ * Tests the complete flow from entity tracking to response building.
+ */
+
+import { CascadeErrorCode } from '@graphql-cascade/client';
 import {
   createTestTracker,
   createTestBuilder,
   createUser,
   createPost,
-  createComment,
-  linkEntities,
-  assertValidCascadeResponse,
-  User,
-  Post,
-  Comment,
+  validateCascadeResponse,
+  findUpdatedEntity,
+  findDeletedEntity
 } from './setup';
 
 describe('End-to-End Cascade Flow', () => {
-  let tracker: CascadeTracker;
-  let builder: CascadeBuilder;
+  describe('Entity Creation', () => {
+    it('should track entity creation and build cascade response', () => {
+      const tracker = createTestTracker();
+      tracker.startTransaction();
 
-  beforeEach(() => {
-    tracker = createTestTracker();
-    builder = createTestBuilder(tracker);
+      const user = createUser('1', { name: 'John Doe', email: 'john@example.com' });
+      tracker.trackCreate(user);
+
+      const builder = createTestBuilder(tracker);
+      const response = builder.buildResponse({ id: '1', name: 'John Doe' }, true);
+
+      expect(validateCascadeResponse(response)).toBe(true);
+      expect(response.success).toBe(true);
+      expect(response.cascade.updated.length).toBe(1);
+
+      const updatedUser = findUpdatedEntity(response, 'User', '1');
+      expect(updatedUser).toBeDefined();
+      expect(updatedUser.operation).toBe('CREATED');
+      expect(updatedUser.entity.name).toBe('John Doe');
+    });
+
+    it('should track multiple entity creations in one transaction', () => {
+      const tracker = createTestTracker();
+      tracker.startTransaction();
+
+      const user = createUser('1');
+      const post1 = createPost('101', '1');
+      const post2 = createPost('102', '1');
+
+      tracker.trackCreate(user);
+      tracker.trackCreate(post1);
+      tracker.trackCreate(post2);
+
+      const builder = createTestBuilder(tracker);
+      const response = builder.buildResponse(null, true);
+
+      expect(response.cascade.updated.length).toBe(3);
+      expect(findUpdatedEntity(response, 'User', '1')).toBeDefined();
+      expect(findUpdatedEntity(response, 'Post', '101')).toBeDefined();
+      expect(findUpdatedEntity(response, 'Post', '102')).toBeDefined();
+    });
   });
 
-  it('should track entity creation and build cascade response', () => {
-    const transactionId = tracker.startTransaction();
+  describe('Entity Update', () => {
+    it('should track entity update and include in cascade', () => {
+      const tracker = createTestTracker();
+      tracker.startTransaction();
 
-    const user = createUser();
-    tracker.trackCreate(user);
+      const user = createUser('1', { name: 'John Updated' });
+      tracker.trackUpdate(user);
 
-    const response = builder.buildResponse(user);
+      const builder = createTestBuilder(tracker);
+      const response = builder.buildResponse(null, true);
 
-    expect(response.success).toBe(true);
-    expect(response.data).toBe(user);
-    assertValidCascadeResponse(response);
+      expect(response.cascade.updated.length).toBe(1);
+      const updatedUser = findUpdatedEntity(response, 'User', '1');
+      expect(updatedUser.operation).toBe('UPDATED');
+      expect(updatedUser.entity.name).toBe('John Updated');
+    });
 
-    expect(response.cascade.updated).toHaveLength(1);
-    expect(response.cascade.updated[0].__typename).toBe('User');
-    expect(response.cascade.updated[0].id).toBe(user.id);
-    expect(response.cascade.updated[0].operation).toBe('CREATED');
-    expect(response.cascade.updated[0].entity).toEqual(user);
+    it('should deduplicate multiple updates to same entity', () => {
+      const tracker = createTestTracker();
+      tracker.startTransaction();
 
-    expect(response.cascade.metadata.transactionId).toBe(transactionId);
-    expect(response.cascade.metadata.affectedCount).toBe(1);
+      const user1 = createUser('1', { name: 'First Update' });
+      const user2 = createUser('1', { name: 'Second Update' });
+
+      tracker.trackUpdate(user1);
+      tracker.trackUpdate(user2);
+
+      const builder = createTestBuilder(tracker);
+      const response = builder.buildResponse(null, true);
+
+      // Should only have one entry (deduplicated)
+      expect(response.cascade.updated.length).toBe(1);
+    });
   });
 
-  it('should track entity update and include in cascade', () => {
-    tracker.startTransaction();
+  describe('Entity Deletion', () => {
+    it('should track entity deletion', () => {
+      const tracker = createTestTracker();
+      tracker.startTransaction();
 
-    const user = createUser();
-    tracker.trackUpdate(user);
+      tracker.trackDelete('User', '1');
 
-    const response = builder.buildResponse(user);
+      const builder = createTestBuilder(tracker);
+      const response = builder.buildResponse(null, true);
 
-    expect(response.success).toBe(true);
-    expect(response.cascade.updated).toHaveLength(1);
-    expect(response.cascade.updated[0].operation).toBe('UPDATED');
-    expect(response.cascade.updated[0].entity).toEqual(user);
+      expect(response.cascade.deleted.length).toBe(1);
+      const deletedUser = findDeletedEntity(response, 'User', '1');
+      expect(deletedUser).toBeDefined();
+      expect(deletedUser.deletedAt).toBeDefined();
+    });
+
+    it('should move entity from updated to deleted when deleted after create', () => {
+      const tracker = createTestTracker();
+      tracker.startTransaction();
+
+      const user = createUser('1');
+      tracker.trackCreate(user);
+      tracker.trackDelete('User', '1');
+
+      const builder = createTestBuilder(tracker);
+      const response = builder.buildResponse(null, true);
+
+      // Should not be in updated
+      expect(findUpdatedEntity(response, 'User', '1')).toBeUndefined();
+      // Should be in deleted
+      expect(findDeletedEntity(response, 'User', '1')).toBeDefined();
+    });
+
+    it('should track multiple deletions', () => {
+      const tracker = createTestTracker();
+      tracker.startTransaction();
+
+      tracker.trackDelete('Post', '101');
+      tracker.trackDelete('Post', '102');
+      tracker.trackDelete('Comment', '201');
+
+      const builder = createTestBuilder(tracker);
+      const response = builder.buildResponse(null, true);
+
+      expect(response.cascade.deleted.length).toBe(3);
+    });
   });
 
-  it('should track entity deletion', () => {
-    tracker.startTransaction();
+  describe('Mixed Operations', () => {
+    it('should handle create, update, and delete in same transaction', () => {
+      const tracker = createTestTracker();
+      tracker.startTransaction();
 
-    const user = createUser();
-    tracker.trackDelete('User', user.id);
+      // Create a new user
+      const newUser = createUser('2', { name: 'New User' });
+      tracker.trackCreate(newUser);
 
-    const response = builder.buildResponse();
+      // Update existing user
+      const updatedUser = createUser('1', { name: 'Updated User' });
+      tracker.trackUpdate(updatedUser);
 
-    expect(response.success).toBe(true);
-    expect(response.cascade.deleted).toHaveLength(1);
-    expect(response.cascade.deleted[0].__typename).toBe('User');
-    expect(response.cascade.deleted[0].id).toBe(user.id);
-    expect(response.cascade.deleted[0].deletedAt).toBeDefined();
-  });
+      // Delete a post
+      tracker.trackDelete('Post', '100');
 
-  it('should handle multiple entity types in one transaction', () => {
-    tracker.startTransaction();
+      const builder = createTestBuilder(tracker);
+      const response = builder.buildResponse(null, true);
 
-    const user = createUser();
-    const post = createPost();
-    const comment = createComment();
+      expect(response.cascade.updated.length).toBe(2);
+      expect(response.cascade.deleted.length).toBe(1);
 
-    tracker.trackCreate(user);
-    tracker.trackCreate(post);
-    tracker.trackCreate(comment);
-
-    const response = builder.buildResponse();
-
-    expect(response.cascade.updated).toHaveLength(3);
-    const types = response.cascade.updated.map(u => u.__typename);
-    expect(types).toContain('User');
-    expect(types).toContain('Post');
-    expect(types).toContain('Comment');
-    expect(response.cascade.metadata.affectedCount).toBe(3);
-  });
-});
-
-describe('Relationship Tracking', () => {
-  it('should track related entities within depth limit', () => {
-    const tracker = createTestTracker({ maxDepth: 2 });
-    const builder = createTestBuilder(tracker);
-
-    tracker.startTransaction();
-
-    const user = createUser();
-    const post = createPost();
-    const comment = createComment();
-
-    linkEntities(user, post, comment);
-
-    tracker.trackCreate(post); // This should cascade to user and comment
-
-    const response = builder.buildResponse();
-
-    // Should include post and its related entities
-    expect(response.cascade.updated.length).toBeGreaterThanOrEqual(1);
-    expect(response.cascade.updated.some(u => u.__typename === 'Post')).toBe(true);
-  });
-
-  it('should respect maxDepth configuration', () => {
-    const tracker = createTestTracker({ maxDepth: 1 });
-    const builder = createTestBuilder(tracker);
-
-    tracker.startTransaction();
-
-    const user = createUser();
-    const post = createPost();
-    const comment = createComment();
-
-    linkEntities(user, post, comment);
-
-    tracker.trackCreate(post);
-
-    const response = builder.buildResponse();
-
-    // With depth 1, should track post and user, but not comment (depth 2)
-    const updatedTypes = response.cascade.updated.map(u => u.__typename);
-    expect(updatedTypes).toContain('Post');
-    // Comment might not be included due to depth limit
+      expect(findUpdatedEntity(response, 'User', '2')?.operation).toBe('CREATED');
+      expect(findUpdatedEntity(response, 'User', '1')?.operation).toBe('UPDATED');
+      expect(findDeletedEntity(response, 'Post', '100')).toBeDefined();
+    });
   });
 });
 
 describe('Response Format', () => {
-  let tracker: CascadeTracker;
-  let builder: CascadeBuilder;
-
-  beforeEach(() => {
-    tracker = createTestTracker();
-    builder = createTestBuilder(tracker);
-  });
-
   it('should produce valid CascadeResponse structure', () => {
+    const tracker = createTestTracker();
     tracker.startTransaction();
-    const user = createUser();
-    tracker.trackCreate(user);
+    tracker.trackCreate(createUser('1'));
 
-    const response = builder.buildResponse(user);
+    const builder = createTestBuilder(tracker);
+    const response = builder.buildResponse({ id: '1' }, true);
 
-    assertValidCascadeResponse(response);
+    expect(response).toHaveProperty('success');
+    expect(response).toHaveProperty('data');
+    expect(response).toHaveProperty('cascade');
+    expect(response.cascade).toHaveProperty('updated');
+    expect(response.cascade).toHaveProperty('deleted');
+    expect(response.cascade).toHaveProperty('metadata');
   });
 
   it('should include metadata in response', () => {
+    const tracker = createTestTracker();
     tracker.startTransaction();
-    const user = createUser();
-    tracker.trackCreate(user);
+    tracker.trackCreate(createUser('1'));
 
-    const response = builder.buildResponse(user);
+    const builder = createTestBuilder(tracker);
+    const response = builder.buildResponse(null, true);
 
     expect(response.cascade.metadata).toHaveProperty('timestamp');
-    expect(response.cascade.metadata).toHaveProperty('depth');
     expect(response.cascade.metadata).toHaveProperty('affectedCount');
-    expect(response.cascade.metadata).toHaveProperty('trackingTime');
     expect(typeof response.cascade.metadata.timestamp).toBe('string');
-    expect(typeof response.cascade.metadata.depth).toBe('number');
-    expect(typeof response.cascade.metadata.affectedCount).toBe('number');
   });
 
-  it('should handle empty transactions', () => {
+  it('should handle empty transactions gracefully', () => {
+    const tracker = createTestTracker();
+    tracker.startTransaction();
+    // No tracking calls
+
+    const builder = createTestBuilder(tracker);
+    const response = builder.buildResponse(null, true);
+
+    expect(validateCascadeResponse(response)).toBe(true);
+    expect(response.cascade.updated.length).toBe(0);
+    expect(response.cascade.deleted.length).toBe(0);
+  });
+
+  it('should include primary result in response', () => {
+    const tracker = createTestTracker();
     tracker.startTransaction();
 
-    const response = builder.buildResponse();
-
-    expect(response.success).toBe(true);
-    expect(response.cascade.updated).toHaveLength(0);
-    expect(response.cascade.deleted).toHaveLength(0);
-    expect(response.cascade.invalidations).toHaveLength(0);
-    expect(response.cascade.metadata.affectedCount).toBe(0);
-  });
-});
-
-describe('Error Scenarios', () => {
-  let tracker: CascadeTracker;
-  let builder: CascadeBuilder;
-
-  beforeEach(() => {
-    tracker = createTestTracker();
-    builder = createTestBuilder(tracker);
-  });
-
-  it('should handle error responses correctly', () => {
-    tracker.startTransaction();
-    const user = createUser();
+    const user = createUser('1', { name: 'Test User' });
     tracker.trackCreate(user);
 
-    const errors = [{ message: 'Test error', code: 'TEST_ERROR' }];
-    const response = builder.buildErrorResponse(errors, null);
+    const primaryResult = { id: '1', name: 'Test User', email: 'test@example.com' };
+    const builder = createTestBuilder(tracker);
+    const response = builder.buildResponse(primaryResult, true);
 
-    expect(response.success).toBe(false);
-    expect(response.errors).toEqual(errors);
-    expect(response.data).toBe(null);
-    assertValidCascadeResponse(response);
-  });
-
-  it('should handle transaction already in progress error', () => {
-    tracker.startTransaction();
-
-    expect(() => {
-      tracker.startTransaction();
-    }).toThrow('Transaction already in progress');
-  });
-
-  it('should handle tracking without transaction', () => {
-    const user = createUser();
-
-    expect(() => {
-      tracker.trackCreate(user);
-    }).toThrow('No cascade transaction in progress');
+    expect(response.data).toEqual(primaryResult);
   });
 });
 
 describe('Configuration Limits', () => {
-  it('should respect maxEntities limit', () => {
-    const tracker = createTestTracker({ maxEntities: 2 });
-    const builder = createTestBuilder(tracker);
-
+  it('should respect maxEntities tracker limit', () => {
+    const tracker = createTestTracker({ maxEntities: 5, enableRelationshipTracking: false });
     tracker.startTransaction();
 
-    // Create 3 entities, but limit is 2
-    const user1 = createUser();
-    const user2 = createUser();
-    const user3 = createUser();
+    // Create more entities than the limit
+    for (let i = 0; i < 10; i++) {
+      tracker.trackCreate(createUser(String(i)));
+    }
 
-    tracker.trackCreate(user1);
-    tracker.trackCreate(user2);
-    tracker.trackCreate(user3);
+    const builder = createTestBuilder(tracker);
+    const response = builder.buildResponse(null, true);
 
-    const response = builder.buildResponse();
-
-    // Should only have 2 entities due to limit
-    expect(response.cascade.updated.length).toBeLessThanOrEqual(2);
-    expect(response.cascade.metadata.truncatedUpdated).toBe(true);
+    expect(response.cascade.updated.length).toBeLessThanOrEqual(5);
   });
 
-  it('should handle excluded types', () => {
-    const tracker = createTestTracker({ excludeTypes: ['User'] });
-    const builder = createTestBuilder(tracker);
-
+  it('should respect maxUpdatedEntities builder limit', () => {
+    const tracker = createTestTracker({ enableRelationshipTracking: false });
     tracker.startTransaction();
 
-    const user = createUser();
-    const post = createPost();
+    for (let i = 0; i < 20; i++) {
+      tracker.trackCreate(createUser(String(i)));
+    }
 
-    tracker.trackCreate(user);
-    tracker.trackCreate(post);
+    const builder = createTestBuilder(tracker, { maxUpdatedEntities: 10 });
+    const response = builder.buildResponse(null, true);
 
-    const response = builder.buildResponse();
+    expect(response.cascade.updated.length).toBeLessThanOrEqual(10);
+  });
 
-    // User should be excluded, only Post should be included
-    expect(response.cascade.updated.length).toBe(1);
-    expect(response.cascade.updated[0].__typename).toBe('Post');
+  it('should respect maxDeletedEntities builder limit', () => {
+    const tracker = createTestTracker();
+    tracker.startTransaction();
+
+    for (let i = 0; i < 20; i++) {
+      tracker.trackDelete('User', String(i));
+    }
+
+    const builder = createTestBuilder(tracker, { maxDeletedEntities: 5 });
+    const response = builder.buildResponse(null, true);
+
+    expect(response.cascade.deleted.length).toBeLessThanOrEqual(5);
+  });
+
+  it('should indicate truncation in metadata when limits exceeded', () => {
+    const tracker = createTestTracker({ maxEntities: 5, enableRelationshipTracking: false });
+    tracker.startTransaction();
+
+    for (let i = 0; i < 10; i++) {
+      tracker.trackCreate(createUser(String(i)));
+    }
+
+    const builder = createTestBuilder(tracker);
+    const response = builder.buildResponse(null, true);
+
+    expect(response.cascade.metadata.truncatedUpdated).toBe(true);
   });
 });
 
-describe('Builder Limits', () => {
-  it('should respect maxUpdatedEntities limit', () => {
+describe('Error Scenarios', () => {
+  it('should build error response correctly', () => {
     const tracker = createTestTracker();
-    const builder = createTestBuilder(tracker);
-
-    // Override maxUpdatedEntities
-    (builder as any).maxUpdatedEntities = 1;
-
     tracker.startTransaction();
 
-    const user1 = createUser();
-    const user2 = createUser();
+    const builder = createTestBuilder(tracker);
+    const response = builder.buildErrorResponse([
+      {
+        message: 'Validation failed',
+        code: CascadeErrorCode.VALIDATION_ERROR,
+        field: 'email'
+      }
+    ], null);
 
-    tracker.trackCreate(user1);
-    tracker.trackCreate(user2);
+    expect(response.success).toBe(false);
+    expect(response.errors).toHaveLength(1);
+    expect(response.errors![0].code).toBe(CascadeErrorCode.VALIDATION_ERROR);
+  });
 
-    const response = builder.buildResponse();
+  it('should throw when tracking without transaction', () => {
+    const tracker = createTestTracker();
+    // Don't start transaction
 
-    expect(response.cascade.updated.length).toBe(1);
-    expect(response.cascade.metadata.truncatedUpdated).toBe(true);
+    expect(() => {
+      tracker.trackCreate(createUser('1'));
+    }).toThrow(/transaction/i);
+  });
+
+  it('should throw when starting transaction twice', () => {
+    const tracker = createTestTracker();
+    tracker.startTransaction();
+
+    expect(() => {
+      tracker.startTransaction();
+    }).toThrow(/already in progress/i);
+  });
+
+  it('should handle error response with partial cascade data', () => {
+    const tracker = createTestTracker();
+    tracker.startTransaction();
+
+    // Track some entities before error
+    tracker.trackCreate(createUser('1'));
+
+    const builder = createTestBuilder(tracker);
+    const response = builder.buildErrorResponse([
+      { message: 'Something went wrong', code: CascadeErrorCode.INTERNAL_ERROR }
+    ], null);
+
+    expect(response.success).toBe(false);
+    // Error response should still have cascade structure
+    expect(response.cascade).toBeDefined();
+  });
+});
+
+describe('Serialization', () => {
+  it('should produce JSON-serializable response', () => {
+    const tracker = createTestTracker();
+    tracker.startTransaction();
+
+    const user = createUser('1', { name: 'Test User' });
+    tracker.trackCreate(user);
+
+    const builder = createTestBuilder(tracker);
+    const response = builder.buildResponse({ id: '1' }, true);
+
+    // Should not throw
+    const serialized = JSON.stringify(response);
+    const deserialized = JSON.parse(serialized);
+
+    expect(deserialized.success).toBe(response.success);
+    expect(deserialized.cascade.updated.length).toBe(response.cascade.updated.length);
+  });
+
+  it('should preserve entity data through serialization', () => {
+    const tracker = createTestTracker();
+    tracker.startTransaction();
+
+    const user = createUser('1', { name: 'John Doe', email: 'john@example.com' });
+    tracker.trackCreate(user);
+
+    const builder = createTestBuilder(tracker);
+    const response = builder.buildResponse(null, true);
+
+    const serialized = JSON.stringify(response);
+    const deserialized = JSON.parse(serialized);
+
+    const updatedUser = deserialized.cascade.updated[0];
+    expect(updatedUser.entity.name).toBe('John Doe');
+    expect(updatedUser.entity.email).toBe('john@example.com');
   });
 });

@@ -5,7 +5,6 @@
  */
 
 import { CascadeTracker, CascadeBuilder, CascadeTrackerConfig, CascadeBuilderConfig } from '@graphql-cascade/server';
-import { CascadeResponse, CascadeOperation } from '@graphql-cascade/client';
 
 /**
  * Create a test tracker with optional configuration.
@@ -34,37 +33,17 @@ export function createTestBuilder(
 }
 
 /**
- * Entity factory types.
+ * Entity type definitions.
  */
-export interface TestUser {
-  __typename: 'User';
+export type TestEntity = Record<string, unknown> & {
+  __typename: string;
   id: string;
-  name: string;
-  email: string;
-  posts?: TestPost[];
-}
-
-export interface TestPost {
-  __typename: 'Post';
-  id: string;
-  title: string;
-  content: string;
-  authorId: string;
-  comments?: TestComment[];
-}
-
-export interface TestComment {
-  __typename: 'Comment';
-  id: string;
-  text: string;
-  postId: string;
-  authorId: string;
-}
+};
 
 /**
- * Entity factories.
+ * Entity factories - return plain objects compatible with tracker.
  */
-export function createUser(id: string, overrides: Partial<Omit<TestUser, '__typename' | 'id'>> = {}): TestUser {
+export function createUser(id: string, overrides: Record<string, unknown> = {}): TestEntity {
   return {
     __typename: 'User',
     id,
@@ -74,7 +53,7 @@ export function createUser(id: string, overrides: Partial<Omit<TestUser, '__type
   };
 }
 
-export function createPost(id: string, authorId: string, overrides: Partial<Omit<TestPost, '__typename' | 'id' | 'authorId'>> = {}): TestPost {
+export function createPost(id: string, authorId: string, overrides: Record<string, unknown> = {}): TestEntity {
   return {
     __typename: 'Post',
     id,
@@ -85,7 +64,7 @@ export function createPost(id: string, authorId: string, overrides: Partial<Omit
   };
 }
 
-export function createComment(id: string, postId: string, authorId: string, overrides: Partial<Omit<TestComment, '__typename' | 'id' | 'postId' | 'authorId'>> = {}): TestComment {
+export function createComment(id: string, postId: string, authorId: string, overrides: Record<string, unknown> = {}): TestEntity {
   return {
     __typename: 'Comment',
     id,
@@ -99,7 +78,7 @@ export function createComment(id: string, postId: string, authorId: string, over
 /**
  * Validate that a response matches the CascadeResponse structure.
  */
-export function validateCascadeResponse(response: any): response is CascadeResponse {
+export function validateCascadeResponse(response: any): boolean {
   return (
     typeof response === 'object' &&
     typeof response.success === 'boolean' &&
@@ -114,7 +93,7 @@ export function validateCascadeResponse(response: any): response is CascadeRespo
 /**
  * Check if an entity is in the updated list.
  */
-export function findUpdatedEntity(response: CascadeResponse, typename: string, id: string): any | undefined {
+export function findUpdatedEntity(response: any, typename: string, id: string): any | undefined {
   return response.cascade.updated.find(
     (e: any) => e.__typename === typename && e.id === id
   );
@@ -123,7 +102,7 @@ export function findUpdatedEntity(response: CascadeResponse, typename: string, i
 /**
  * Check if an entity is in the deleted list.
  */
-export function findDeletedEntity(response: CascadeResponse, typename: string, id: string): any | undefined {
+export function findDeletedEntity(response: any, typename: string, id: string): any | undefined {
   return response.cascade.deleted.find(
     (e: any) => e.__typename === typename && e.id === id
   );
