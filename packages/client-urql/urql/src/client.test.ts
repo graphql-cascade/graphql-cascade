@@ -161,6 +161,41 @@ describe('URQLCascadeClient', () => {
       expect(result.error).toBe(error);
       expect(result.data).toBeNull();
     });
+
+    it('should handle timeout errors in mutation', async () => {
+      const timeoutError = new Error('Request timeout') as CombinedError;
+      mockClient = {
+        mutation: jest.fn().mockReturnValue({
+          toPromise: jest.fn().mockRejectedValue(timeoutError),
+        }),
+      } as unknown as Client;
+      client = new URQLCascadeClient(mockClient, cache);
+
+      await expect(client.mutate({} as any, {})).rejects.toThrow('Request timeout');
+    });
+
+    it('should handle network errors in mutation', async () => {
+      const networkError = new Error('Network error') as CombinedError;
+      mockClient = createMockClient({ error: networkError, data: null });
+      client = new URQLCascadeClient(mockClient, cache);
+
+      const result = await client.mutate({} as any, {});
+
+      expect(result.error).toBe(networkError);
+      expect(result.data).toBeNull();
+      expect(result.cascade).toBeNull();
+    });
+
+    it('should handle GraphQL validation errors in mutation', async () => {
+      const validationError = new Error('GraphQL validation error') as CombinedError;
+      mockClient = createMockClient({ error: validationError, data: null });
+      client = new URQLCascadeClient(mockClient, cache);
+
+      const result = await client.mutate({} as any, {});
+
+      expect(result.error).toBe(validationError);
+      expect(result.data).toBeNull();
+    });
   });
 
   describe('mutateOptimistic', () => {

@@ -479,4 +479,215 @@ describe('CascadeTracker', () => {
       expect(result.metadata.depth).toBeGreaterThanOrEqual(1);
     });
   });
+
+  describe('Edge Cases', () => {
+    it('should detect and prevent circular references (A → B → A)', () => {
+      tracker.startTransaction();
+
+      const entityA = new MockEntity(1, 'Entity A');
+      const entityB = new MockEntity(2, 'Entity B');
+
+      // Create circular reference: A → B → A
+      entityA.relatedEntity = entityB;
+      entityB.relatedEntity = entityA;
+
+      tracker.trackUpdate(entityA);
+
+      const result = tracker.endTransaction();
+      // Should track both entities once each, no infinite loop
+      expect(result.updated).toHaveLength(2);
+      expect(result.updated.map((u: any) => u.id)).toEqual(expect.arrayContaining(['1', '2']));
+    });
+
+    it('should detect and prevent deep cycles (A → B → C → A)', () => {
+      tracker.startTransaction();
+
+      const entityA = new MockEntity(1, 'Entity A');
+      const entityB = new MockEntity(2, 'Entity B');
+      const entityC = new MockEntity(3, 'Entity C');
+
+      // Create deep cycle: A → B → C → A
+      entityA.relatedEntity = entityB;
+      entityB.relatedEntity = entityC;
+      entityC.relatedEntity = entityA;
+
+      tracker.trackUpdate(entityA);
+
+      const result = tracker.endTransaction();
+      // Should track all three entities once each, no infinite loop
+      expect(result.updated).toHaveLength(3);
+      expect(result.updated.map((u: any) => u.id)).toEqual(expect.arrayContaining(['1', '2', '3']));
+    });
+
+    it('should handle self-referential entities', () => {
+      tracker.startTransaction();
+
+      const entity = new MockEntity(1, 'Self Referential');
+      entity.relatedEntity = entity; // Points to itself
+
+      tracker.trackUpdate(entity);
+
+      const result = tracker.endTransaction();
+      // Should track the entity once, no infinite loop
+      expect(result.updated).toHaveLength(1);
+      expect(result.updated[0].id).toBe('1');
+    });
+
+    it('should enforce entity limit for very large graphs', () => {
+      const limitedTracker = new CascadeTracker({ maxEntities: 5, maxDepth: 10 });
+      limitedTracker.startTransaction();
+
+      // Create a chain of 10 entities
+      const entities: MockEntity[] = [];
+      for (let i = 1; i <= 10; i++) {
+        entities.push(new MockEntity(i, `Entity ${i}`));
+      }
+
+      // Link them in a chain: 1 → 2 → 3 → ... → 10
+      for (let i = 0; i < 9; i++) {
+        entities[i].relatedEntity = entities[i + 1];
+      }
+
+      limitedTracker.trackUpdate(entities[0]);
+
+      const result = limitedTracker.endTransaction();
+      // Should only track up to the limit
+      expect(result.updated).toHaveLength(5);
+      expect(result.metadata.truncatedUpdated).toBe(true);
+    });
+
+    it('should handle concurrent tracking operations', async () => {
+      const tracker1 = new CascadeTracker();
+      const tracker2 = new CascadeTracker();
+
+      tracker1.startTransaction();
+      tracker2.startTransaction();
+
+      const entity1 = new MockEntity(1, 'Entity 1');
+      const entity2 = new MockEntity(2, 'Entity 2');
+
+      // Track simultaneously
+      tracker1.trackUpdate(entity1);
+      tracker2.trackUpdate(entity2);
+
+      const result1 = tracker1.endTransaction();
+      const result2 = tracker2.endTransaction();
+
+      expect(result1.updated).toHaveLength(1);
+      expect(result1.updated[0].id).toBe('1');
+      expect(result2.updated).toHaveLength(1);
+      expect(result2.updated[0].id).toBe('2');
+    });
+
+    it('should track entity with null fields', () => {
+      tracker.startTransaction();
+
+      const entity = {
+        id: 1,
+        __typename: 'EntityWithNulls',
+        name: 'Test',
+        nullField: null,
+        anotherField: 'value'
+      };
+
+      tracker.trackUpdate(entity);
+
+      const result = tracker.endTransaction();
+      expect(result.updated).toHaveLength(1);
+      expect(result.updated[0].entity.nullField).toBe(null);
+      expect(result.updated[0].entity.anotherField).toBe('value');
+    });
+
+    it('should track entity with undefined fields', () => {
+      tracker.startTransaction();
+
+      const entity = {
+        id: 1,
+        __typename: 'EntityWithUndefined',
+        name: 'Test',
+        undefinedField: undefined,
+        anotherField: 'value'
+      };
+
+      tracker.trackUpdate(entity);
+
+      const result = tracker.endTransaction();
+      expect(result.updated).toHaveLength(1);
+      expect(result.updated[0].entity.undefinedField).toBeNull();
+      expect(result.updated[0].entity.anotherField).toBe('value');
+    });
+
+    it('should track entity with empty arrays', () => {
+      tracker.startTransaction();
+
+      const entity = {
+        id: 1,
+        __typename: 'EntityWithEmptyArrays',
+        name: 'Test',
+        emptyArray: [],
+        anotherField: 'value'
+      };
+
+      tracker.trackUpdate(entity);
+
+      const result = tracker.endTransaction();
+      expect(result.updated).toHaveLength(1);
+      expect(result.updated[0].entity.emptyArray).toEqual([]);
+      expect(result.updated[0].entity.anotherField).toBe('value');
+    });
+
+    it('should clear all state when reset', () => {
+      tracker.startTransaction();
+      const entity = new MockEntity(1, 'Test');
+
+      tracker.trackUpdate(entity);
+      tracker.trackDelete('MockEntity', 2);
+
+      // Verify state is set by checking cascade data
+      const dataBeforeReset = tracker.getCascadeData();
+      expect(dataBeforeReset.updated).toHaveLength(1);
+      expect(dataBeforeReset.deleted).toHaveLength(1);
+      expect(tracker.inTransaction).toBe(true);
+
+      // Reset
+      tracker.resetTransactionState();
+
+      // Verify all state is cleared - should be able to start new transaction
+      tracker.startTransaction();
+      const entity2 = new MockEntity(3, 'Test 2');
+      tracker.trackUpdate(entity2);
+
+      const dataAfterReset = tracker.endTransaction();
+      expect(dataAfterReset.updated).toHaveLength(1);
+      expect(dataAfterReset.updated[0].id).toBe('3');
+      expect(dataAfterReset.deleted).toHaveLength(0); // Previous deletes should be gone
+    });
+
+    it('should not interfere between multiple tracker instances', () => {
+      const tracker1 = new CascadeTracker();
+      const tracker2 = new CascadeTracker();
+
+      tracker1.startTransaction();
+      tracker2.startTransaction();
+
+      const entity1 = new MockEntity(1, 'Entity 1');
+      const entity2 = new MockEntity(2, 'Entity 2');
+
+      tracker1.trackUpdate(entity1);
+      tracker2.trackUpdate(entity2);
+
+      const result1 = tracker1.endTransaction();
+      const result2 = tracker2.endTransaction();
+
+      // Each tracker should only have its own entities
+      expect(result1.updated).toHaveLength(1);
+      expect(result1.updated[0].id).toBe('1');
+      expect(result2.updated).toHaveLength(1);
+      expect(result2.updated[0].id).toBe('2');
+
+      // No cross-contamination
+      expect(result1.updated.find((u: any) => u.id === '2')).toBeUndefined();
+      expect(result2.updated.find((u: any) => u.id === '1')).toBeUndefined();
+    });
+  });
 });
