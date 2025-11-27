@@ -1,0 +1,19 @@
+{
+  "data": {
+    "updateUser": {
+      "success": true,
+      "data": { "id": "user-1", "name": "Updated Name", "email": "john@example.com", "__typename": "User" },
+      "cascade": {
+        "updated": [
+          { "__typename": "UpdatedEntity", "id": "user-1", "operation": "UPDATED", "entity": { "id": "user-1", "name": "Updated Name", "email": "john@example.com", "__typename": "User" } }
+        ],
+        "deleted": [],
+        "invalidations": [
+          { "queryName": "user", "strategy": "INVALIDATE", "scope": "EXACT", "arguments": { "id": "user-1" } }
+        ],
+        "metadata": { "timestamp": "2024-01-01T00:00:00.000Z", "depth": 1, "affectedCount": 1 }
+      },
+      "errors": []
+    }
+  }
+}

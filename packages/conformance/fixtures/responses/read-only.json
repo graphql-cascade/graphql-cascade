@@ -1,0 +1,15 @@
+{
+  "data": {
+    "getUser": {
+      "success": true,
+      "data": { "id": "user-1", "name": "John Doe", "email": "john@example.com", "__typename": "User" },
+      "cascade": {
+        "updated": [],
+        "deleted": [],
+        "invalidations": [],
+        "metadata": { "timestamp": "2024-01-01T00:00:00.000Z", "depth": 0, "affectedCount": 0 }
+      },
+      "errors": []
+    }
+  }
+}
