@@ -5,9 +5,15 @@ Build your first GraphQL Cascade application in 5 minutes.
 ## 1. Initialize a New Project
 
 ```bash
-npx @graphql-cascade/cli init my-cascade-app
-cd my-cascade-app
-npm install
+# Create a new project directory
+mkdir my-cascade-app && cd my-cascade-app
+npm init -y
+
+# Initialize Cascade
+npx @graphql-cascade/cli init
+
+# Or if CLI is installed globally
+# cascade init
 ```
 
 ## 2. Server Setup
@@ -18,7 +24,7 @@ Create a GraphQL server with Cascade support:
 // server.ts
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { createCascadeContext, CascadePlugin } from '@graphql-cascade/server-node';
+import { createCascadeContext, CascadePlugin } from '@graphql-cascade/server';
 
 const typeDefs = `#graphql
   type Todo {

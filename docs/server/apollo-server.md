@@ -1,18 +1,18 @@
-# Apollo Server Plugin
+# Apollo Server Integration
 
-Drop-in plugin for Apollo Server with automatic cascade support.
+Use GraphQL Cascade with Apollo Server.
 
 ## Installation
 
 ```bash
-npm install @graphql-cascade/apollo-server-plugin
+npm install @graphql-cascade/server
 ```
 
 ## Quick Setup
 
 ```typescript
 import { ApolloServer } from '@apollo/server';
-import { CascadePlugin } from '@graphql-cascade/apollo-server-plugin';
+import { CascadePlugin } from '@graphql-cascade/server';
 
 const server = new ApolloServer({
   typeDefs,

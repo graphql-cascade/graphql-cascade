@@ -5,13 +5,13 @@ Complete guide to implementing GraphQL Cascade in Node.js/TypeScript servers.
 ## Installation
 
 ```bash
-npm install @graphql-cascade/server-node
+npm install @graphql-cascade/server
 ```
 
 ## Basic Setup
 
 ```typescript
-import { createCascadeContext } from '@graphql-cascade/server-node';
+import { createCascadeContext } from '@graphql-cascade/server';
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 
@@ -35,7 +35,7 @@ console.log(`Server ready at ${url}`);
 ### Creating a Context
 
 ```typescript
-import { createCascadeContext, CascadeContext } from '@graphql-cascade/server-node';
+import { createCascadeContext, CascadeContext } from '@graphql-cascade/server';
 
 const cascade: CascadeContext = createCascadeContext({
   maxDepth: 2, // Relationship traversal depth
@@ -75,7 +75,7 @@ const result = cascade.getCascade();
 ## Complete Example
 
 ```typescript
-import { createCascadeContext } from '@graphql-cascade/server-node';
+import { createCascadeContext } from '@graphql-cascade/server';
 
 const typeDefs = `
   type Todo {
@@ -244,7 +244,7 @@ class CustomCascadeContext extends CascadeContext {
 Full type safety:
 
 ```typescript
-import { CascadeContext, Cascade, EntityRef } from '@graphql-cascade/server-node';
+import { CascadeContext, Cascade, EntityRef } from '@graphql-cascade/server';
 
 interface Context {
   cascade: CascadeContext;
@@ -266,7 +266,7 @@ type Resolvers = {
 ## Testing
 
 ```typescript
-import { createCascadeContext } from '@graphql-cascade/server-node';
+import { createCascadeContext } from '@graphql-cascade/server';
 
 describe('createTodo resolver', () => {
   test('tracks created entity', async () => {

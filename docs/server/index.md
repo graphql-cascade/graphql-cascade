@@ -11,7 +11,7 @@ GraphQL Cascade servers track entity changes during mutation execution and inclu
 ### Node.js/TypeScript
 Pure Node.js implementation for any GraphQL server.
 
-- **Package**: `@graphql-cascade/server-node`
+- **Package**: `@graphql-cascade/server`
 - **Setup time**: 10 minutes
 - **Features**: Complete cascade tracking, transaction support
 - **[Get Started →](/server/node)**
@@ -19,7 +19,7 @@ Pure Node.js implementation for any GraphQL server.
 ### Apollo Server Plugin
 Drop-in plugin for Apollo Server.
 
-- **Package**: `@graphql-cascade/apollo-server-plugin`
+- **Package**: `@graphql-cascade/server`
 - **Setup time**: 5 minutes
 - **Features**: Automatic context injection, schema extension
 - **[Get Started →](/server/apollo-server)**
@@ -37,13 +37,13 @@ First-class NestJS integration.
 ### 1. Install Package
 
 ```bash
-npm install @graphql-cascade/server-node
+npm install @graphql-cascade/server
 ```
 
 ### 2. Add to Your Server
 
 ```typescript
-import { createCascadeContext, CascadePlugin } from '@graphql-cascade/server-node';
+import { createCascadeContext, CascadePlugin } from '@graphql-cascade/server';
 import { ApolloServer } from '@apollo/server';
 
 const server = new ApolloServer({

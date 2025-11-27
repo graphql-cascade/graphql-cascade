@@ -8,11 +8,15 @@ Command-line tools for GraphQL Cascade development.
 npm install -g @graphql-cascade/cli
 ```
 
-Or use with npx:
+Or use with npx (without global installation):
 
 ```bash
-npx @graphql-cascade/cli [command]
+npx @graphql-cascade/cli init
+npx @graphql-cascade/cli validate schema.graphql
+npx @graphql-cascade/cli doctor
 ```
+
+After global installation, use the `cascade` command directly:
 
 ## Available Commands
 

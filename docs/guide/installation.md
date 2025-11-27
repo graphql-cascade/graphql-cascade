@@ -41,14 +41,10 @@ npm install @graphql-cascade/client-urql
 ### Node.js/TypeScript
 
 ```bash
-npm install @graphql-cascade/server-node
+npm install @graphql-cascade/server
 ```
 
-### Apollo Server Plugin
 
-```bash
-npm install @graphql-cascade/apollo-server-plugin
-```
 
 ## CLI Tools
 
@@ -58,10 +54,18 @@ Install the Cascade CLI for project initialization and validation:
 npm install -g @graphql-cascade/cli
 ```
 
-Or use with npx:
+Or use with npx (without global installation):
 
 ```bash
 npx @graphql-cascade/cli init
+```
+
+After installation, use the `cascade` command:
+
+```bash
+cascade init
+cascade validate
+cascade doctor
 ```
 
 ## Verify Installation
@@ -78,7 +82,7 @@ console.log('Cascade installed successfully!');
 ### Server
 
 ```typescript
-import { createCascadeContext } from '@graphql-cascade/server-node';
+import { createCascadeContext } from '@graphql-cascade/server';
 
 // If this imports without errors, installation was successful
 console.log('Cascade server installed successfully!');

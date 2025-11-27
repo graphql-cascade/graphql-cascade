@@ -31,15 +31,12 @@ URQL integration.
 
 ## Server Libraries
 
-### @graphql-cascade/server-node
+### @graphql-cascade/server
 Node.js/TypeScript server implementation.
 
 **[View API →](/api/server-node)**
 
-### @graphql-cascade/apollo-server-plugin
-Apollo Server plugin.
 
-**Documentation**: [Server Guide](/server/apollo-server)
 
 ### @graphql-cascade/nestjs
 NestJS module.
@@ -58,7 +55,7 @@ Command-line tools.
 All packages include full TypeScript definitions.
 
 ```typescript
-import type { Cascade, EntityRef, CascadeContext } from '@graphql-cascade/server-node';
+import type { Cascade, EntityRef, CascadeContext } from '@graphql-cascade/server';
 import type { CascadeLink } from '@graphql-cascade/client-apollo';
 ```
 

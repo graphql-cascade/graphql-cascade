@@ -39,7 +39,7 @@ type User {
 ## Implementation
 
 ```typescript
-import { cascadeDirectives } from '@graphql-cascade/server-node';
+import { cascadeDirectives } from '@graphql-cascade/server';
 
 const schema = makeExecutableSchema({
   typeDefs: [cascadeDirectives, yourTypeDefs],

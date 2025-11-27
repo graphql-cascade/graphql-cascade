@@ -12,9 +12,6 @@ hero:
     - theme: alt
       text: View Specification
       link: /specification/
-    - theme: alt
-      text: GitHub
-      link: https://github.com/graphql-cascade/graphql-cascade
 
 features:
   - icon: 🚀

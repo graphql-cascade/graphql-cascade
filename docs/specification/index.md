@@ -114,15 +114,14 @@ The full specification is maintained in the repository:
 - **Version History**: `VERSIONING.md`
 
 View the source specification files:
-- [GitHub Repository](https://github.com/graphql-cascade/graphql-cascade)
 - [Full Specification](/specification/full)
 
 ## Contributing
 
 To contribute to the specification:
 
-1. Read the [Contributing Guide](https://github.com/graphql-cascade/graphql-cascade/blob/main/CONTRIBUTING.md)
-2. Review the [Design Documents](https://github.com/graphql-cascade/graphql-cascade/tree/main/design)
+1. Read the [Contributing Guide](../../CONTRIBUTING.md)
+2. Review the [Design Documents](../../design/)
 3. Propose changes via GitHub Issues
 4. Submit PRs for specification updates
 
