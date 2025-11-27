@@ -1,5 +1,13 @@
 import { RecordSourceSelectorProxy } from 'relay-runtime';
-import { CascadeUpdates, UpdatedEntity, DeletedEntity, CascadeOperation } from '@graphql-cascade/client';
+import {
+  CascadeUpdates,
+  UpdatedEntity,
+  DeletedEntity,
+  CascadeOperation,
+  QueryInvalidation,
+  InvalidationStrategy,
+  InvalidationScope
+} from '@graphql-cascade/client';
 import { CascadeStoreUpdater } from './types';
 
 /**
@@ -8,7 +16,7 @@ import { CascadeStoreUpdater } from './types';
  * This function handles:
  * - Updated entities: writes new data to the store
  * - Deleted entities: removes records from the store
- * - Invalidations: handled through Relay's query invalidation mechanisms
+ * - Invalidations: marks records as stale via invalidateRecord()
  */
 export function createCascadeUpdater(cascade: CascadeUpdates): CascadeStoreUpdater {
   return (store: RecordSourceSelectorProxy) => {
@@ -22,8 +30,12 @@ export function createCascadeUpdater(cascade: CascadeUpdates): CascadeStoreUpdat
       applyEntityDeletion(store, entity);
     });
 
-    // Note: Invalidations are typically handled at the query level in Relay
-    // through refetch strategies rather than direct store manipulation
+    // Apply invalidations
+    // Note: Relay doesn't have query-level invalidation like other clients
+    // We can invalidate records if the invalidation specifies entities
+    cascade.invalidations.forEach(invalidation => {
+      applyInvalidation(store, invalidation);
+    });
   };
 }
 
@@ -77,6 +89,54 @@ function applyEntityDeletion(store: RecordSourceSelectorProxy, entity: DeletedEn
 
     // Optionally remove from connections
     // This would require additional connection-specific logic
+  }
+}
+
+/**
+ * Apply an invalidation to the Relay store.
+ *
+ * Note: Relay's invalidation model is entity-based, not query-based.
+ * - For INVALIDATE strategy, we can invalidate the root Query record
+ * - For REFETCH strategy, the application should handle refetching separately
+ * - For REMOVE strategy, we can delete records (similar to eviction)
+ */
+function applyInvalidation(store: RecordSourceSelectorProxy, invalidation: QueryInvalidation): void {
+  // Relay doesn't have direct query invalidation like Apollo or React Query
+  // However, we can invalidate the root Query record or specific field records
+
+  switch (invalidation.strategy) {
+    case InvalidationStrategy.INVALIDATE:
+      // Invalidate the root Query to trigger re-fetches
+      if (invalidation.scope === InvalidationScope.ALL) {
+        const root = store.getRoot();
+        if (root) {
+          root.invalidateRecord();
+        }
+      } else if (invalidation.queryName) {
+        // For specific queries, we can mark a sentinel field
+        // This is a workaround since Relay doesn't have query-level invalidation
+        const root = store.getRoot();
+        if (root) {
+          root.setValue(Date.now(), `__invalidated_${invalidation.queryName}`);
+        }
+      }
+      break;
+
+    case InvalidationStrategy.REFETCH:
+      // Refetch needs to be handled at the application level
+      // We can set a marker to indicate refetch is needed
+      if (invalidation.queryName) {
+        const root = store.getRoot();
+        if (root) {
+          root.setValue(Date.now(), `__refetch_${invalidation.queryName}`);
+        }
+      }
+      break;
+
+    case InvalidationStrategy.REMOVE:
+      // For remove, we can only remove specific records if we know their IDs
+      // Query removal isn't directly supported in Relay's normalized store
+      break;
   }
 }
 

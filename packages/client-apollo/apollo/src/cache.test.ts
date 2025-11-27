@@ -49,15 +49,67 @@ describe('ApolloCascadeCache', () => {
   });
 
   describe('invalidate', () => {
-    it('should invalidate queries by field name', () => {
-      // Apollo cache invalidation is limited, this mainly tests the interface
+    it('should invalidate queries by field name for EXACT scope', () => {
+      const evictSpy = jest.spyOn(apolloCache, 'evict');
+      const gcSpy = jest.spyOn(apolloCache, 'gc');
+
       const invalidation: QueryInvalidation = {
         queryName: 'getUsers',
         strategy: InvalidationStrategy.INVALIDATE,
         scope: InvalidationScope.EXACT
       };
 
-      expect(() => cache.invalidate(invalidation)).not.toThrow();
+      cache.invalidate(invalidation);
+
+      expect(evictSpy).toHaveBeenCalledWith({ fieldName: 'getUsers' });
+      expect(gcSpy).toHaveBeenCalled();
+    });
+
+    it('should warn for PREFIX scope (not supported)', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const invalidation: QueryInvalidation = {
+        queryName: 'get',
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.PREFIX
+      };
+
+      cache.invalidate(invalidation);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Apollo cache does not support PREFIX scope invalidation. Only EXACT scope is supported.'
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('should warn for PATTERN scope (not supported)', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const invalidation: QueryInvalidation = {
+        queryPattern: 'get.*',
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.PATTERN
+      };
+
+      cache.invalidate(invalidation);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Apollo cache does not support PATTERN scope invalidation. Only EXACT scope is supported.'
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('should call gc() for ALL scope', () => {
+      const gcSpy = jest.spyOn(apolloCache, 'gc');
+
+      const invalidation: QueryInvalidation = {
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.ALL
+      };
+
+      cache.invalidate(invalidation);
+
+      expect(gcSpy).toHaveBeenCalled();
     });
   });
 
@@ -76,14 +128,50 @@ describe('ApolloCascadeCache', () => {
   });
 
   describe('remove', () => {
-    it('should delegate to invalidate for remove', () => {
+    it('should remove queries by field name for EXACT scope', () => {
+      const evictSpy = jest.spyOn(apolloCache, 'evict');
+      const gcSpy = jest.spyOn(apolloCache, 'gc');
+
       const invalidation: QueryInvalidation = {
         queryName: 'getUsers',
         strategy: InvalidationStrategy.REMOVE,
         scope: InvalidationScope.EXACT
       };
 
-      expect(() => cache.remove(invalidation)).not.toThrow();
+      cache.remove(invalidation);
+
+      expect(evictSpy).toHaveBeenCalledWith({ fieldName: 'getUsers' });
+      expect(gcSpy).toHaveBeenCalled();
+    });
+
+    it('should warn for PREFIX scope (not supported)', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const invalidation: QueryInvalidation = {
+        queryName: 'get',
+        strategy: InvalidationStrategy.REMOVE,
+        scope: InvalidationScope.PREFIX
+      };
+
+      cache.remove(invalidation);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Apollo cache does not support PREFIX scope removal. Only EXACT scope is supported.'
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('should call gc() for ALL scope', () => {
+      const gcSpy = jest.spyOn(apolloCache, 'gc');
+
+      const invalidation: QueryInvalidation = {
+        strategy: InvalidationStrategy.REMOVE,
+        scope: InvalidationScope.ALL
+      };
+
+      cache.remove(invalidation);
+
+      expect(gcSpy).toHaveBeenCalled();
     });
   });
 

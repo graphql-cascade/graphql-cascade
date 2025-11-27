@@ -69,17 +69,17 @@ export class ApolloCascadeCache implements CascadeCache {
 
   invalidate(invalidation: QueryInvalidation): void {
     switch (invalidation.scope) {
-      case 'EXACT':
+      case InvalidationScope.EXACT:
         if (invalidation.queryName) {
           this.cache.evict({ fieldName: invalidation.queryName });
           this.cache.gc();
         }
         break;
-      case 'PREFIX':
-      case 'PATTERN':
+      case InvalidationScope.PREFIX:
+      case InvalidationScope.PATTERN:
         console.warn(`Apollo cache does not support ${invalidation.scope} scope invalidation. Only EXACT scope is supported.`);
         break;
-      case 'ALL':
+      case InvalidationScope.ALL:
         this.cache.gc();
         break;
     }
@@ -93,17 +93,17 @@ export class ApolloCascadeCache implements CascadeCache {
 
   remove(invalidation: QueryInvalidation): void {
     switch (invalidation.scope) {
-      case 'EXACT':
+      case InvalidationScope.EXACT:
         if (invalidation.queryName) {
           this.cache.evict({ fieldName: invalidation.queryName });
           this.cache.gc();
         }
         break;
-      case 'PREFIX':
-      case 'PATTERN':
+      case InvalidationScope.PREFIX:
+      case InvalidationScope.PATTERN:
         console.warn(`Apollo cache does not support ${invalidation.scope} scope removal. Only EXACT scope is supported.`);
         break;
-      case 'ALL':
+      case InvalidationScope.ALL:
         this.cache.gc();
         break;
     }

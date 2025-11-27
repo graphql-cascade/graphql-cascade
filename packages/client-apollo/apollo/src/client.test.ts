@@ -65,6 +65,23 @@ describe('ApolloCascadeClient', () => {
     });
   });
 
+  describe('trackQuery and untrackQuery', () => {
+    it('should track a query', () => {
+      const query = {} as any;
+      client.trackQuery('getUsers', query, { limit: 10 });
+      // Tracking is internal, we test via invalidation
+      expect(client.getApolloClient()).toBe(apolloClient);
+    });
+
+    it('should untrack a query', () => {
+      const query = {} as any;
+      client.trackQuery('getUsers', query);
+      client.untrackQuery('getUsers');
+      // Untracking is internal, we test via invalidation
+      expect(client.getApolloClient()).toBe(apolloClient);
+    });
+  });
+
   describe('refetch', () => {
     it('should refetch exact query', async () => {
       const invalidation: QueryInvalidation = {
@@ -96,6 +113,149 @@ describe('ApolloCascadeClient', () => {
       expect(apolloClient.refetchQueries).toHaveBeenCalledWith({
         include: 'active'
       });
+    });
+
+    it('should refetch queries matching PREFIX scope', async () => {
+      const query = {} as any;
+      client.trackQuery('getUsersList', query);
+      client.trackQuery('getUsersDetails', query);
+      client.trackQuery('getOrders', query);
+
+      jest.spyOn(apolloClient, 'refetchQueries').mockResolvedValue([]);
+
+      const invalidation: QueryInvalidation = {
+        queryName: 'getUsers',
+        strategy: InvalidationStrategy.REFETCH,
+        scope: InvalidationScope.PREFIX
+      };
+
+      await client.refetch(invalidation);
+
+      expect(apolloClient.refetchQueries).toHaveBeenCalledWith({
+        include: ['getUsersList', 'getUsersDetails']
+      });
+    });
+
+    it('should refetch queries matching PATTERN scope', async () => {
+      const query = {} as any;
+      client.trackQuery('getUsers', query);
+      client.trackQuery('listUsers', query);
+      client.trackQuery('getOrders', query);
+
+      jest.spyOn(apolloClient, 'refetchQueries').mockResolvedValue([]);
+
+      const invalidation: QueryInvalidation = {
+        queryPattern: '.*Users.*',
+        strategy: InvalidationStrategy.REFETCH,
+        scope: InvalidationScope.PATTERN
+      };
+
+      await client.refetch(invalidation);
+
+      expect(apolloClient.refetchQueries).toHaveBeenCalledWith({
+        include: ['getUsers', 'listUsers']
+      });
+    });
+  });
+
+  describe('invalidateQueries', () => {
+    it('should evict queries by field name for EXACT scope', () => {
+      const evictSpy = jest.spyOn(apolloClient.cache, 'evict');
+      const gcSpy = jest.spyOn(apolloClient.cache, 'gc');
+
+      const invalidation: QueryInvalidation = {
+        queryName: 'getUsers',
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.EXACT
+      };
+
+      client.invalidateQueries(invalidation);
+
+      expect(evictSpy).toHaveBeenCalledWith({ fieldName: 'getUsers' });
+      expect(gcSpy).toHaveBeenCalled();
+    });
+
+    it('should evict queries matching PREFIX scope from tracked queries', () => {
+      const query = {} as any;
+      client.trackQuery('getUsersList', query);
+      client.trackQuery('getUsersDetails', query);
+      client.trackQuery('getOrders', query);
+
+      const evictSpy = jest.spyOn(apolloClient.cache, 'evict');
+
+      const invalidation: QueryInvalidation = {
+        queryName: 'getUsers',
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.PREFIX
+      };
+
+      client.invalidateQueries(invalidation);
+
+      expect(evictSpy).toHaveBeenCalledWith({ fieldName: 'getUsersList' });
+      expect(evictSpy).toHaveBeenCalledWith({ fieldName: 'getUsersDetails' });
+      expect(evictSpy).not.toHaveBeenCalledWith({ fieldName: 'getOrders' });
+    });
+  });
+
+  describe('removeQueries', () => {
+    it('should evict queries by field name for EXACT scope', () => {
+      const evictSpy = jest.spyOn(apolloClient.cache, 'evict');
+      const gcSpy = jest.spyOn(apolloClient.cache, 'gc');
+
+      const invalidation: QueryInvalidation = {
+        queryName: 'getUsers',
+        strategy: InvalidationStrategy.REMOVE,
+        scope: InvalidationScope.EXACT
+      };
+
+      client.removeQueries(invalidation);
+
+      expect(evictSpy).toHaveBeenCalledWith({ fieldName: 'getUsers' });
+      expect(gcSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('handleInvalidation', () => {
+    it('should call invalidateQueries for INVALIDATE strategy', async () => {
+      const invalidateQueriesSpy = jest.spyOn(client, 'invalidateQueries');
+
+      const invalidation: QueryInvalidation = {
+        queryName: 'getUsers',
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.EXACT
+      };
+
+      await client.handleInvalidation(invalidation);
+
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith(invalidation);
+    });
+
+    it('should call refetch for REFETCH strategy', async () => {
+      jest.spyOn(apolloClient, 'refetchQueries').mockResolvedValue([]);
+
+      const invalidation: QueryInvalidation = {
+        queryName: 'getUsers',
+        strategy: InvalidationStrategy.REFETCH,
+        scope: InvalidationScope.EXACT
+      };
+
+      await client.handleInvalidation(invalidation);
+
+      expect(apolloClient.refetchQueries).toHaveBeenCalled();
+    });
+
+    it('should call removeQueries for REMOVE strategy', async () => {
+      const removeQueriesSpy = jest.spyOn(client, 'removeQueries');
+
+      const invalidation: QueryInvalidation = {
+        queryName: 'getUsers',
+        strategy: InvalidationStrategy.REMOVE,
+        scope: InvalidationScope.EXACT
+      };
+
+      await client.handleInvalidation(invalidation);
+
+      expect(removeQueriesSpy).toHaveBeenCalledWith(invalidation);
     });
   });
 
