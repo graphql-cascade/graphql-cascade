@@ -57,7 +57,7 @@ export const resolvers = {
   },
 
   Message: {
-    sender: (message: Message) => getUserById(message.authorId)!,
+    author: (message: Message) => getUserById(message.authorId)!,
     channel: (message: Message) => getChannelById(message.channelId)!,
   },
 };
