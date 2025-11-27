@@ -150,38 +150,67 @@ const updateUser = async (userId, updates) => {
 
 ## Quick Start
 
-### Server (Python)
+### Server (TypeScript/Node.js)
 
 ```bash
-pip install graphql-cascade
+npm install @graphql-cascade/server
 ```
 
-### Client (TypeScript)
+```typescript
+import { CascadeTracker, CascadeBuilder } from '@graphql-cascade/server';
+
+// Create tracker and builder
+const tracker = new CascadeTracker();
+const builder = new CascadeBuilder(tracker);
+
+// In your mutation resolver
+const transactionId = tracker.startTransaction();
+tracker.trackUpdate({ id: userId, __typename: 'User', name: 'John' });
+const response = builder.buildResponse(mutationResult);
+// Response includes cascade data for automatic cache updates
+```
+
+### Client (Apollo)
 
 ```bash
-npm install @graphql-cascade/client
-# Or with Apollo
-npm install @graphql-cascade/client @graphql-cascade/client-apollo
+npm install @graphql-cascade/client-apollo @apollo/client
 ```
 
-## Getting Started
+```typescript
+import { ApolloClient, InMemoryCache } from '@apollo/client';
+import { ApolloCascadeClient } from '@graphql-cascade/client-apollo';
 
-- **[Quick Start Guide](./docs/getting-started/quick-start.md)** - 5-minute setup
-- **[Concepts](./docs/getting-started/concepts.md)** - Core concepts explained
-- **[First Cascade](./docs/getting-started/first-cascade.md)** - Build your first implementation
+const client = new ApolloClient({
+  uri: 'http://localhost:4000/graphql',
+  cache: new InMemoryCache()
+});
+
+const cascade = new ApolloCascadeClient(client);
+
+// Mutations automatically update the cache!
+const result = await cascade.mutate(UPDATE_USER, { id: '123', name: 'John' });
+```
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| [@graphql-cascade/server](./packages/server-node) | Server implementation for Node.js/TypeScript |
+| [@graphql-cascade/client-apollo](./packages/client-apollo) | Apollo Client integration |
+| [@graphql-cascade/client-react-query](./packages/client-react-query) | React Query integration |
+| [@graphql-cascade/client-relay](./packages/client-relay) | Relay Modern integration |
+| [@graphql-cascade/client-urql](./packages/client-urql) | URQL integration |
+| [@graphql-cascade/cli](./packages/cli) | CLI tools for development and debugging |
+| [@graphql-cascade/conformance](./packages/conformance) | Conformance test suite |
 
 ## Documentation
 
-- **[Specification](./specification/)** - Complete technical specification
-- **[Guides](./docs/guides/)** - Implementation guides for different frameworks
+- **[Guide](./docs/guide/)** - Getting started and core concepts
+- **[Server Documentation](./docs/server/)** - Server implementation guides
+- **[Client Documentation](./docs/clients/)** - Client library guides
+- **[CLI Documentation](./docs/cli/)** - Command-line tools
+- **[Specification](./docs/specification/)** - Technical specification
 - **[API Reference](./docs/api/)** - Complete API documentation
-- **[Examples](./examples/)** - Working examples for different use cases
-
-## Examples
-
-- **[Todo App](./examples/todo-app/)** - Simple CRUD with cascades
-- **[Blog Platform](./examples/blog-platform/)** - Complex relationships
-- **[Real-time Collaboration](./examples/real-time-collab/)** - Subscriptions with cascades
 
 ## Community
 
@@ -190,13 +219,14 @@ npm install @graphql-cascade/client @graphql-cascade/client-apollo
 
 ## Status
 
-🚧 **Early Development** - Specification and reference implementations available. Production-ready packages coming soon.
-
 - ✅ Core specification complete
-- ✅ Python/FraiseQL server implementation
+- ✅ TypeScript server implementation
 - ✅ Apollo Client integration
-- 🚧 React Query integration (in progress)
-- 🚧 Relay integration (planned)
+- ✅ React Query integration
+- ✅ Relay integration
+- ✅ URQL integration
+- ✅ CLI tools
+- ✅ Conformance test suite
 
 ## License
 
