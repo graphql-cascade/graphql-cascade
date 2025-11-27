@@ -7,6 +7,7 @@
 
 import { pipe, tap } from 'wonka';
 import type { Exchange } from '@urql/core';
+import { createScopedLogger } from '@graphql-cascade/client';
 import {
   CascadeExchangeOptions,
   CascadeUpdates,
@@ -14,6 +15,8 @@ import {
   InvalidationStrategy,
   CascadeApplyResult,
 } from './types';
+
+const logger = createScopedLogger('[Cascade:URQL]');
 
 /**
  * Creates a URQL exchange for processing GraphQL Cascade responses.
@@ -54,7 +57,7 @@ export const cascadeExchange = (options: CascadeExchangeOptions = {}): Exchange 
         }
 
         if (debug) {
-          console.log('[Cascade] Received cascade data:', cascade);
+          logger.debug('Received cascade data:', cascade);
         }
 
         // Invoke callback if provided
@@ -69,7 +72,7 @@ export const cascadeExchange = (options: CascadeExchangeOptions = {}): Exchange 
           });
 
           if (debug) {
-            console.log('[Cascade] Applied updates:', applyResult);
+            logger.debug('Applied updates:', applyResult);
           }
         }
       })
@@ -111,7 +114,7 @@ function applyCascadeUpdates(
     } catch (error) {
       result.errors.push(error instanceof Error ? error : new Error(String(error)));
       if (options.debug) {
-        console.error('[Cascade] Error applying update:', error);
+        logger.error('Error applying update:', error);
       }
     }
   }
@@ -125,7 +128,7 @@ function applyCascadeUpdates(
     } catch (error) {
       result.errors.push(error instanceof Error ? error : new Error(String(error)));
       if (options.debug) {
-        console.error('[Cascade] Error applying deletion:', error);
+        logger.error('Error applying deletion:', error);
       }
     }
   }
@@ -141,7 +144,7 @@ function applyCascadeUpdates(
           // Refetch is async, we don't await here
           cacheAdapter.refetch(invalidation).catch((error) => {
             if (options.debug) {
-              console.error('[Cascade] Error refetching:', error);
+              logger.error('Error refetching:', error);
             }
           });
           break;
@@ -153,7 +156,7 @@ function applyCascadeUpdates(
     } catch (error) {
       result.errors.push(error instanceof Error ? error : new Error(String(error)));
       if (options.debug) {
-        console.error('[Cascade] Error applying invalidation:', error);
+        logger.error('Error applying invalidation:', error);
       }
     }
   }

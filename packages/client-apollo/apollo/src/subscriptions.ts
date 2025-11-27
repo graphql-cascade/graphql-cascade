@@ -391,7 +391,7 @@ export class CascadeSubscriptionManager {
    * Generate a unique subscription ID.
    */
   private generateSubscriptionId(): string {
-    return `cascade_sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `cascade_sub_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 }
 

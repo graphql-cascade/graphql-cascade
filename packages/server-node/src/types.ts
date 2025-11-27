@@ -138,6 +138,10 @@ export interface CascadeTrackerConfig {
   excludeTypes?: string[];
   /** Whether to enable relationship tracking */
   enableRelationshipTracking?: boolean;
+  /** Maximum total entities to track (prevents memory exhaustion) */
+  maxEntities?: number;
+  /** Maximum related entities to traverse per entity (breadth limit) */
+  maxRelatedPerEntity?: number;
 }
 
 /**

@@ -202,9 +202,20 @@ export class InMemoryCascadeCache implements CascadeCache {
   }
 
   /**
+   * Maximum length for query patterns to prevent ReDoS attacks.
+   */
+  private static readonly MAX_PATTERN_LENGTH = 100;
+
+  /**
    * Convert a simple glob pattern to regex.
+   * @throws Error if pattern exceeds maximum length
    */
   private patternToRegex(pattern: string): RegExp {
+    // Validate pattern length to prevent ReDoS attacks
+    if (pattern.length > InMemoryCascadeCache.MAX_PATTERN_LENGTH) {
+      throw new Error(`Pattern exceeds maximum length of ${InMemoryCascadeCache.MAX_PATTERN_LENGTH} characters`);
+    }
+
     const escaped = pattern
       .replace(/[.+^${}()|[\]\\]/g, '\\$&')
       .replace(/\*/g, '.*')

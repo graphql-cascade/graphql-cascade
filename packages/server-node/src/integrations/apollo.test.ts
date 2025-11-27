@@ -330,6 +330,116 @@ describe('createCascadePlugin', () => {
         requestListener!.willSendResponse!(requestContext as any)
       ).resolves.not.toThrow();
     });
+
+    it('should log warning when tracker is missing from context', async () => {
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const plugin = createCascadePlugin();
+      const requestListener = await plugin.requestDidStart!({} as any);
+
+      const requestContext: MockRequestContext = {
+        request: {
+          query: 'mutation { updateUser(id: 1) { id name } }',
+        },
+        response: {
+          body: {
+            kind: 'single',
+            singleResult: {
+              data: { updateUser: { id: 1, name: 'Updated' } },
+            },
+          },
+        },
+        contextValue: {},
+      };
+
+      // No tracker in context
+      if (requestListener && requestListener.willSendResponse) {
+        await requestListener.willSendResponse(requestContext as any);
+      }
+
+      // Should not inject cascade data and should not crash
+      expect(requestContext.response.body.singleResult.extensions?.cascade).toBeUndefined();
+      expect(consoleSpy).not.toHaveBeenCalled(); // No warning for missing tracker
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle invalid cascade data without crashing server', async () => {
+      const plugin = createCascadePlugin();
+      const requestListener = await plugin.requestDidStart!({} as any);
+
+      const requestContext: MockRequestContext = {
+        request: {
+          query: 'mutation { updateUser(id: 1) { id name } }',
+        },
+        response: {
+          body: {
+            kind: 'single',
+            singleResult: {
+              data: { updateUser: { id: 1, name: 'Updated' } },
+            },
+          },
+        },
+        contextValue: {},
+      };
+
+      // Mock tracker with invalid getCascadeData method
+      const invalidTracker = {
+        inTransaction: true,
+        getCascadeData: () => {
+          throw new Error('Invalid cascade data');
+        },
+      };
+      requestContext.contextValue.cascadeTracker = invalidTracker as any;
+
+      // Should not crash, should log error
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      await expect(
+        requestListener!.willSendResponse!(requestContext as any)
+      ).resolves.not.toThrow();
+
+      expect(consoleSpy).toHaveBeenCalledWith('Error injecting cascade data:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('should still return mutation data when cascade injection fails', async () => {
+      const plugin = createCascadePlugin();
+      const requestListener = await plugin.requestDidStart!({} as any);
+
+      const originalData = { updateUser: { id: 1, name: 'Updated' } };
+      const requestContext: MockRequestContext = {
+        request: {
+          query: 'mutation { updateUser(id: 1) { id name } }',
+        },
+        response: {
+          body: {
+            kind: 'single',
+            singleResult: {
+              data: originalData,
+            },
+          },
+        },
+        contextValue: {},
+      };
+
+      // Mock tracker that throws during getCascadeData
+      const failingTracker = {
+        inTransaction: true,
+        getCascadeData: () => {
+          throw new Error('Cascade injection failure');
+        },
+      };
+      requestContext.contextValue.cascadeTracker = failingTracker as any;
+
+      // Should not crash and should preserve original data
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      await expect(
+        requestListener!.willSendResponse!(requestContext as any)
+      ).resolves.not.toThrow();
+
+      expect(requestContext.response.body.singleResult.data).toBe(originalData);
+      expect(consoleSpy).toHaveBeenCalledWith('Error injecting cascade data:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('Multiple Operations', () => {

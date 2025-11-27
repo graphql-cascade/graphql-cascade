@@ -52,6 +52,8 @@ export class CascadeTracker implements EntityChangeIterator {
   private maxDepth: number;
   private excludeTypes: Set<string>;
   private enableRelationshipTracking: boolean;
+  private maxEntities: number;
+  private maxRelatedPerEntity: number;
 
   // Transaction state
   public inTransaction: boolean = false;
@@ -64,6 +66,7 @@ export class CascadeTracker implements EntityChangeIterator {
   private visitedEntities: Set<string> = new Set();
   public currentDepth: number = 0;
   private maxDepthReached: number = 0;
+  private entityLimitReached: boolean = false;
 
   // Performance tracking
   private trackingStartTime?: number;
@@ -88,12 +91,15 @@ export class CascadeTracker implements EntityChangeIterator {
     this.visitedEntities.clear();
     this.currentDepth = 0;
     this.maxDepthReached = 0;
+    this.entityLimitReached = false;
   }
 
   constructor(config: CascadeTrackerConfig = {}) {
     this.maxDepth = config.maxDepth ?? 3;
     this.excludeTypes = new Set(config.excludeTypes ?? []);
     this.enableRelationshipTracking = config.enableRelationshipTracking ?? true;
+    this.maxEntities = config.maxEntities ?? 1000;
+    this.maxRelatedPerEntity = config.maxRelatedPerEntity ?? 100;
   }
 
   /**
@@ -106,7 +112,7 @@ export class CascadeTracker implements EntityChangeIterator {
 
     this.inTransaction = true;
     this.transactionStartTime = Date.now();
-    this.transactionId = `cascade_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.transactionId = `cascade_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     this.trackingStartTime = Date.now();
 
     // Reset tracking state
@@ -127,18 +133,20 @@ export class CascadeTracker implements EntityChangeIterator {
     }
 
     const trackingTime = Date.now() - (this.getTrackingStartTime() ?? 0);
+    const wasLimitReached = this.entityLimitReached;
 
-     const cascadeData = {
-       updated: this.buildUpdatedEntities(),
-       deleted: this.buildDeletedEntities(),
-       metadata: {
-         transactionId: this.transactionId,
-         timestamp: new Date().toISOString(),
-         depth: this.maxDepthReached,
-         affectedCount: this.updatedEntities.size + this.deletedEntities.size,
-         trackingTime,
-       },
-     };
+    const cascadeData = {
+      updated: this.buildUpdatedEntities(),
+      deleted: this.buildDeletedEntities(),
+      metadata: {
+        transactionId: this.transactionId,
+        timestamp: new Date().toISOString(),
+        depth: this.maxDepthReached,
+        affectedCount: this.updatedEntities.size + this.deletedEntities.size,
+        trackingTime,
+        truncatedUpdated: wasLimitReached,
+      },
+    };
 
     // Reset state
     this.resetTransactionState();
@@ -167,6 +175,7 @@ export class CascadeTracker implements EntityChangeIterator {
         depth: this.maxDepthReached,
         affectedCount: this.updatedEntities.size + this.deletedEntities.size,
         trackingTime,
+        truncatedUpdated: this.entityLimitReached,
       },
     };
   }
@@ -204,6 +213,12 @@ export class CascadeTracker implements EntityChangeIterator {
    * Internal entity tracking with relationship traversal.
    */
   private trackEntity(entity: any, operation: 'CREATED' | 'UPDATED' | 'DELETED'): void {
+    // Check entity limit to prevent memory exhaustion
+    if (this.updatedEntities.size >= this.maxEntities) {
+      this.entityLimitReached = true;
+      return;
+    }
+
     const typename = this.getEntityType(entity);
     const entityId = this.getEntityId(entity);
     const key = `${typename}:${entityId}`;
@@ -237,14 +252,22 @@ export class CascadeTracker implements EntityChangeIterator {
    * Traverse entity relationships to find cascade effects.
    */
   private traverseRelationships(entity: any, operation: 'CREATED' | 'UPDATED' | 'DELETED'): void {
+    // Stop if entity limit already reached
+    if (this.entityLimitReached) {
+      return;
+    }
+
     this.currentDepth += 1;
     this.maxDepthReached = Math.max(this.maxDepthReached, this.currentDepth);
 
     try {
       const relatedEntities = this.getRelatedEntities(entity);
 
-      for (const relatedEntity of relatedEntities) {
-        if (relatedEntity != null) {
+      // Apply breadth limit per entity
+      const limitedRelated = relatedEntities.slice(0, this.maxRelatedPerEntity);
+
+      for (const relatedEntity of limitedRelated) {
+        if (relatedEntity != null && !this.entityLimitReached) {
           // Related entities are typically UPDATED
           this.trackEntity(relatedEntity, 'UPDATED');
         }

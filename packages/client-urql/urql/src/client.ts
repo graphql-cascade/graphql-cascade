@@ -114,12 +114,12 @@ export class URQLCascadeClient {
     const optimisticResponse = optimistic.optimisticResponse(variables);
     const optimisticCascade = optimistic.optimisticCascade?.(variables, optimisticResponse);
 
+    // Capture rollback data BEFORE applying optimistic updates
+    const rollbackData = this.captureRollbackData(optimisticCascade);
+
     if (optimisticCascade && this.config.autoApply) {
       this.applyCascade(optimisticCascade);
     }
-
-    // Store rollback data
-    const rollbackData = this.captureRollbackData(optimisticCascade);
 
     try {
       // Execute actual mutation

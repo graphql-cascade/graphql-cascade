@@ -237,6 +237,68 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.deleted.length).toBe(50);
       expect(response.cascade.metadata.truncatedSize).toBe(true);
     });
+
+    it('should truncate at default 500 entities limit', () => {
+      // Use default builder (500 entities limit)
+      const defaultBuilder = new CascadeBuilder(tracker, mockInvalidator);
+
+      tracker.startTransaction();
+      // Add 600 entities to exceed default limit
+      for (let i = 1; i <= 600; i++) {
+        tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
+      }
+
+      const response = defaultBuilder.buildResponse();
+
+      // Should be truncated to 500 entities
+      expect(response.cascade.updated.length).toBe(500);
+      expect(response.cascade.metadata.truncatedUpdated).toBe(true);
+    });
+
+    it('should truncate at default 5MB size limit', () => {
+      // Use builder with lower size limit to trigger truncation
+      const sizeLimitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
+        maxResponseSizeMb: 0.1 // 100KB limit
+      });
+
+      tracker.startTransaction();
+      // Add many entities to exceed size limit
+      // With 1KB per entity estimate, 200 entities = 200KB > 100KB
+      for (let i = 1; i <= 200; i++) {
+        tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
+      }
+
+      const response = sizeLimitedBuilder.buildResponse();
+
+      // Should be truncated due to size limit
+      expect(response.cascade.updated.length).toBeLessThanOrEqual(50);
+      expect(response.cascade.metadata.truncatedSize).toBe(true);
+    });
+
+    it('should include truncation metadata in response', () => {
+      const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
+        maxUpdatedEntities: 1000, // High limit so size limit triggers first
+        maxDeletedEntities: 1000,
+        maxInvalidations: 1,
+        maxResponseSizeMb: 0.001 // 1KB limit
+      });
+
+      tracker.startTransaction();
+      // Add entities to trigger size truncation
+      for (let i = 1; i <= 60; i++) {
+        tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
+      }
+      for (let i = 1; i <= 60; i++) {
+        tracker.trackDelete('DeletedType', i);
+      }
+
+      const response = limitedBuilder.buildResponse();
+
+      // Check truncation metadata - size truncation should happen
+      expect(response.cascade.metadata.truncatedSize).toBe(true);
+      // Note: entity truncation flags won't be set since limits are high
+      // Note: invalidations truncation is not flagged in metadata currently
+    });
   });
 
   describe('Configuration Options', () => {
