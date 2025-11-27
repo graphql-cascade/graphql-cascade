@@ -1,7 +1,6 @@
 export interface User {
   id: string;
   name: string;
-  email: string;
 }
 
 export interface Channel {
@@ -14,10 +13,9 @@ export interface Channel {
 export interface Message {
   id: string;
   content: string;
-  authorId: string;
+  senderId: string;
   channelId: string;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 // In-memory database
@@ -46,10 +44,9 @@ export const messages: Message[] = [
   {
     id: '1',
     content: 'Welcome to the chat!',
-    authorId: '1',
+    senderId: '1',
     channelId: '1',
     createdAt: new Date('2023-01-01T10:00:00Z'),
-    updatedAt: new Date('2023-01-01T10:00:00Z'),
   },
 ];
 
@@ -66,14 +63,13 @@ export function getMessagesByChannelId(channelId: string): Message[] {
   return messages.filter(message => message.channelId === channelId);
 }
 
-export function createMessage(content: string, authorId: string, channelId: string): Message {
+export function createMessage(content: string, senderId: string, channelId: string): Message {
   const message: Message = {
     id: (messages.length + 1).toString(),
     content,
-    authorId,
+    senderId,
     channelId,
     createdAt: new Date(),
-    updatedAt: new Date(),
   };
   messages.push(message);
   return message;
@@ -101,27 +97,27 @@ export const createChannel = (name: string, description?: string): Channel => {
   return channel;
 };
 
-// Helper function to get message with populated author
-export const getMessageWithAuthor = (id: string): (Message & { author: User }) | undefined => {
+// Helper function to get message with populated sender
+export const getMessageWithSender = (id: string): (Message & { sender: User }) | undefined => {
   const message = messages.find(m => m.id === id);
   if (!message) return undefined;
 
-  const author = getUserById(message.authorId);
-  if (!author) return undefined;
+  const sender = getUserById(message.senderId);
+  if (!sender) return undefined;
 
-  return { ...message, author };
+  return { ...message, sender };
 };
 
-// Helper function to get messages with populated authors
-export const getMessagesWithAuthors = (channelId?: string): (Message & { author: User })[] => {
+// Helper function to get messages with populated senders
+export const getMessagesWithSenders = (channelId?: string): (Message & { sender: User })[] => {
   let msgs = messages;
   if (channelId) {
     msgs = msgs.filter(m => m.channelId === channelId);
   }
 
   return msgs.map(msg => {
-    const author = getUserById(msg.authorId);
-    if (!author) throw new Error(`Author not found for message ${msg.id}`);
-    return { ...msg, author };
+    const sender = getUserById(msg.senderId);
+    if (!sender) throw new Error(`Sender not found for message ${msg.id}`);
+    return { ...msg, sender };
   }).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 };

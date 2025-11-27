@@ -1,4 +1,3 @@
-import { CascadeBuilder } from '@graphql-cascade/server';
 import {
   getChannels,
   getChannelById,
@@ -8,8 +7,8 @@ import {
   getMessagesByChannelId,
   Message,
   Channel,
-} from './db.js';
-import { pubsub, MESSAGE_ADDED, CHANNEL_UPDATED } from './pubsub.js';
+} from './db';
+import { pubsub, MESSAGE_ADDED } from './pubsub';
 
 export const resolvers = {
   Query: {
@@ -25,13 +24,11 @@ export const resolvers = {
         throw new Error('Failed to create message');
       }
 
-      // Use CascadeBuilder for proper cascade data
-      const cascade = cascadeBuilder
-        .invalidate(`Channel:${channelId}`)
-        .update(`Channel:${channelId}`, {
-          messages: getMessagesWithSenders(channelId),
-        })
-        .build();
+      // Create cascade data for real-time updates
+      const cascade = {
+        invalidate: [`Channel:${channelId}`],
+        update: `Channel:${channelId}`,
+      };
 
       // Publish to subscriptions with cascade data
       pubsub.publish(`${MESSAGE_ADDED}_${channelId}`, {
