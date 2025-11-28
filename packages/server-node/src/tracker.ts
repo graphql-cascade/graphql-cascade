@@ -4,9 +4,10 @@
  * Tracks entity changes during GraphQL mutations for cascade response construction.
  */
 
-import { EntityChange, CascadeTrackerConfig, GraphQLEntity, EntityChangeIterator, TrackedEntity, CascadeLoggerInterface } from './types';
+import { EntityChange, CascadeTrackerConfig, GraphQLEntity, EntityChangeIterator, TrackedEntity, CascadeLoggerInterface, TrackerCascadeData, CascadeMetadata } from './types';
 import { CascadeError, CascadeErrorCode } from './errors';
 import { silentLogger, createScopedLogger } from './logger';
+import type { MetricsCollector } from './metrics';
 
 /**
  * Context manager for cascade transaction tracking.
@@ -28,13 +29,13 @@ export class CascadeTransaction {
   /**
    * End the transaction.
    */
-  exit(excType?: any, excValue?: any, excTb?: any): void {
+  exit(excType?: unknown, excValue?: unknown, excTb?: unknown): void {
     if (excType === undefined || excType === null) {
       // Normal exit - mark as not in transaction but keep data
       this.tracker.inTransaction = false;
       this.tracker.transactionId = undefined;
       this.tracker.transactionStartTime = undefined;
-      (this.tracker as any).trackingStartTime = undefined;
+      (this.tracker as unknown as { trackingStartTime?: number }).trackingStartTime = undefined;
     } else {
       // Exception occurred - reset state
       this.tracker.resetTransactionState();
@@ -58,6 +59,14 @@ export class CascadeTracker implements EntityChangeIterator {
   private maxRelatedPerEntity: number;
   private onSerializationError?: (entity: unknown, error: Error) => void;
   private log: CascadeLoggerInterface;
+  private metrics?: MetricsCollector;
+  private activeTransactionCount: number = 0;
+
+  // Security filters
+  private fieldFilter?: (typename: string, fieldName: string, value: unknown) => boolean;
+  private entityFilter?: (typename: string, id: string, entity: Record<string, unknown>) => boolean;
+  private validateEntity?: (typename: string, id: string, entity: Record<string, unknown>) => void;
+  private transformEntity?: (typename: string, id: string, entity: Record<string, unknown>) => Record<string, unknown>;
 
   // Transaction state
   public inTransaction: boolean = false;
@@ -85,8 +94,21 @@ export class CascadeTracker implements EntityChangeIterator {
 
   /**
    * Reset transaction state (public for builder access).
+   * This is called on error/abort and records a failed transaction.
    */
   resetTransactionState(): void {
+    this.resetTransactionStateInternal(true);
+  }
+
+  /**
+   * Internal reset with optional failure tracking.
+   */
+  private resetTransactionStateInternal(recordFailure: boolean): void {
+    if (recordFailure && this.inTransaction) {
+      this.metrics?.increment('transactionsFailed');
+      this.activeTransactionCount = Math.max(0, this.activeTransactionCount - 1);
+      this.metrics?.gauge('activeTransactions', this.activeTransactionCount);
+    }
     this.inTransaction = false;
     this.transactionStartTime = undefined;
     this.transactionId = undefined;
@@ -107,6 +129,13 @@ export class CascadeTracker implements EntityChangeIterator {
     this.maxEntities = config.maxEntities ?? 1000;
     this.maxRelatedPerEntity = config.maxRelatedPerEntity ?? 100;
     this.onSerializationError = config.onSerializationError;
+    this.metrics = config.metrics;
+
+    // Initialize security filters
+    this.fieldFilter = config.fieldFilter;
+    this.entityFilter = config.entityFilter;
+    this.validateEntity = config.validateEntity;
+    this.transformEntity = config.transformEntity;
 
     // Initialize logger: use provided logger, create debug logger if debug=true, or use silent logger
     if (config.logger) {
@@ -142,6 +171,11 @@ export class CascadeTracker implements EntityChangeIterator {
     this.visitedEntities.clear();
     this.currentDepth = 0;
 
+    // Metrics instrumentation
+    this.metrics?.increment('transactionsStarted');
+    this.activeTransactionCount++;
+    this.metrics?.gauge('activeTransactions', this.activeTransactionCount);
+
     this.log.debug('Transaction started', { transactionId: this.transactionId });
 
     return this.transactionId;
@@ -150,7 +184,7 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * End the current transaction and return cascade data.
    */
-  endTransaction(): Record<string, any> {
+  endTransaction(): TrackerCascadeData {
     if (!this.inTransaction && this.updatedEntities.size === 0 && this.deletedEntities.size === 0) {
       throw new CascadeError(
         'No transaction in progress',
@@ -165,25 +199,33 @@ export class CascadeTracker implements EntityChangeIterator {
     const updatedEntities = this.buildUpdatedEntities();
     const deletedEntities = this.buildDeletedEntities();
     const errorCount = this.serializationErrorCount;
+    const cascadeSize = updatedEntities.length + deletedEntities.length;
 
-    const metadata: Record<string, unknown> = {
+    const metadata: CascadeMetadata = {
       transactionId: this.transactionId,
       timestamp: new Date().toISOString(),
       depth: this.maxDepthReached,
       affectedCount: this.updatedEntities.size + this.deletedEntities.size,
       trackingTime,
       truncatedUpdated: wasLimitReached,
+      serializationErrors: errorCount > 0 ? errorCount : undefined,
     };
-
-    if (errorCount > 0) {
-      metadata.serializationErrors = errorCount;
-    }
 
     const cascadeData = {
       updated: updatedEntities,
       deleted: deletedEntities,
       metadata,
     };
+
+    // Metrics instrumentation for successful completion
+    this.metrics?.increment('transactionsCompleted');
+    this.metrics?.histogram('trackingTimeMs', trackingTime);
+    this.metrics?.histogram('cascadeSize', cascadeSize);
+    if (wasLimitReached) {
+      this.metrics?.increment('entitiesTruncated');
+    }
+    this.activeTransactionCount = Math.max(0, this.activeTransactionCount - 1);
+    this.metrics?.gauge('activeTransactions', this.activeTransactionCount);
 
     this.log.debug('Transaction ended', {
       transactionId: this.transactionId,
@@ -192,8 +234,8 @@ export class CascadeTracker implements EntityChangeIterator {
       trackingTime,
     });
 
-    // Reset state
-    this.resetTransactionState();
+    // Reset state (without triggering failed metrics)
+    this.resetTransactionStateInternal(false);
 
     return cascadeData;
   }
@@ -203,7 +245,7 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * Get cascade data without ending the transaction.
    */
-  getCascadeData(): Record<string, any> {
+  getCascadeData(): TrackerCascadeData {
     if (!this.inTransaction) {
       throw new Error('No transaction in progress');
     }
@@ -212,18 +254,15 @@ export class CascadeTracker implements EntityChangeIterator {
     const updatedEntities = this.buildUpdatedEntities();
     const deletedEntities = this.buildDeletedEntities();
 
-    const metadata: Record<string, unknown> = {
+    const metadata: CascadeMetadata = {
       transactionId: this.transactionId,
       timestamp: new Date().toISOString(),
       depth: this.maxDepthReached,
       affectedCount: this.updatedEntities.size + this.deletedEntities.size,
       trackingTime,
       truncatedUpdated: this.entityLimitReached,
+      serializationErrors: this.serializationErrorCount > 0 ? this.serializationErrorCount : undefined,
     };
-
-    if (this.serializationErrorCount > 0) {
-      metadata.serializationErrors = this.serializationErrorCount;
-    }
 
     return {
       updated: updatedEntities,
@@ -289,6 +328,16 @@ export class CascadeTracker implements EntityChangeIterator {
       return;
     }
 
+    // Apply entity filter if configured (before adding to tracked entities)
+    if (this.entityFilter && !this.entityFilter(typename, entityId, entity as Record<string, unknown>)) {
+      return;
+    }
+
+    // Validate entity if configured (throws on validation failure)
+    if (this.validateEntity) {
+      this.validateEntity(typename, entityId, entity as Record<string, unknown>);
+    }
+
     // Skip if already visited
     if (this.visitedEntities.has(key)) {
       return;
@@ -303,6 +352,9 @@ export class CascadeTracker implements EntityChangeIterator {
       timestamp: Date.now(),
     });
 
+    // Track entity metric
+    this.metrics?.increment('entitiesTracked');
+
     // Traverse relationships if enabled and within depth
     if (this.enableRelationshipTracking && this.currentDepth < this.maxDepth) {
       this.traverseRelationships(entity, operation);
@@ -312,7 +364,7 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * Traverse entity relationships to find cascade effects.
    */
-  private traverseRelationships(entity: any, operation: 'CREATED' | 'UPDATED' | 'DELETED'): void {
+  private traverseRelationships(entity: TrackedEntity | Record<string, unknown>, operation: 'CREATED' | 'UPDATED' | 'DELETED'): void {
     // Stop if entity limit already reached
     if (this.entityLimitReached) {
       return;
@@ -341,8 +393,8 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * Get related entities for an entity.
    */
-  private getRelatedEntities(entity: any): any[] {
-    const related: any[] = [];
+  private getRelatedEntities(entity: Record<string, unknown>): (TrackedEntity | Record<string, unknown>)[] {
+    const related: (TrackedEntity | Record<string, unknown>)[] = [];
 
     // Try different methods to get related entities
     if (typeof entity.getRelatedEntities === 'function') {
@@ -374,18 +426,19 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * Check if an object is a domain entity.
    */
-  private isEntity(obj: any): boolean {
+  private isEntity(obj: unknown): obj is TrackedEntity {
     if (obj == null || typeof obj !== 'object') {
       return false;
     }
 
+    const record = obj as Record<string, unknown>;
+
     // Check for entity characteristics
-    const hasId = obj.id !== undefined;
-    const hasTypename = obj.__typename !== undefined || obj._typename !== undefined;
+    const hasId = record.id !== undefined;
+    const hasTypename = record.__typename !== undefined || record._typename !== undefined;
 
     // Exclude basic types and collections
-    if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean' ||
-        obj instanceof Date || Array.isArray(obj) || obj.constructor === Object) {
+    if (obj instanceof Date || Array.isArray(obj) || obj.constructor === Object) {
       return false;
     }
 
@@ -395,20 +448,20 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * Get the type name of an entity.
    */
-  private getEntityType(entity: any): string {
-    if (entity.__typename) {
+  private getEntityType(entity: TrackedEntity | Record<string, unknown>): string {
+    if ('__typename' in entity && typeof entity.__typename === 'string') {
       return entity.__typename;
-    } else if (entity._typename) {
+    } else if ('_typename' in entity && typeof entity._typename === 'string') {
       return entity._typename;
     } else {
-      return entity.constructor?.name ?? 'Unknown';
+      return (entity as { constructor?: { name?: string } }).constructor?.name ?? 'Unknown';
     }
   }
 
   /**
    * Get the ID of an entity.
    */
-  private getEntityId(entity: any): string {
+  private getEntityId(entity: TrackedEntity | Record<string, unknown>): string {
     if (entity.id !== undefined) {
       return String(entity.id);
     } else {
@@ -438,15 +491,24 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * Build the updated entities list for cascade response.
    */
-  private buildUpdatedEntities(): Record<string, any>[] {
-    const updated: Record<string, any>[] = [];
+  private buildUpdatedEntities(): TrackerCascadeData['updated'] {
+    const updated: TrackerCascadeData['updated'] = [];
 
     for (const change of this.updatedEntities.values()) {
       try {
-        const entityDict = this.entityToDict(change.entity);
+        let entity = change.entity;
+        const typename = this.getEntityType(entity);
+        const entityId = this.getEntityId(entity);
+
+        // Apply transform if configured
+        if (this.transformEntity) {
+          entity = this.transformEntity(typename, entityId, entity as Record<string, unknown>);
+        }
+
+        const entityDict = this.entityToDict(entity);
         updated.push({
-          __typename: this.getEntityType(change.entity),
-          id: this.getEntityId(change.entity),
+          __typename: typename,
+          id: entityId,
           operation: change.operation,
           entity: entityDict,
         });
@@ -465,8 +527,8 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * Build the deleted entities list for cascade response.
    */
-  private buildDeletedEntities(): Record<string, any>[] {
-    const deleted: Record<string, any>[] = [];
+  private buildDeletedEntities(): TrackerCascadeData['deleted'] {
+    const deleted: TrackerCascadeData['deleted'] = [];
 
     for (const key of this.deletedEntities) {
       const [typename, entityId] = key.split(':');
@@ -483,14 +545,31 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * Convert entity to dictionary.
    */
-  private entityToDict(entity: any): Record<string, any> {
-    if (typeof entity.toDict === 'function') {
-      return entity.toDict();
+  private entityToDict(entity: TrackedEntity | Record<string, unknown>): Record<string, unknown> {
+    if (typeof (entity as { toDict?: () => Record<string, unknown> }).toDict === 'function') {
+      const dict = (entity as { toDict: () => Record<string, unknown> }).toDict();
+      // Apply field filter to toDict result if configured
+      if (this.fieldFilter) {
+        const typename = this.getEntityType(entity);
+        const filtered: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(dict)) {
+          if (this.fieldFilter(typename, key, value)) {
+            filtered[key] = value;
+          }
+        }
+        return filtered;
+      }
+      return dict;
     } else if (entity && typeof entity === 'object') {
       // Basic object serialization
-      const result: Record<string, any> = {};
+      const result: Record<string, unknown> = {};
+      const typename = this.getEntityType(entity);
       for (const [key, value] of Object.entries(entity)) {
         if (!key.startsWith('_')) { // Skip private properties
+          // Apply field filter if configured
+          if (this.fieldFilter && !this.fieldFilter(typename, key, value)) {
+            continue;
+          }
           result[key] = this.serializeValue(value);
         }
       }
@@ -508,7 +587,7 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * Serialize a value for JSON.
    */
-  private serializeValue(value: any): any {
+  private serializeValue(value: unknown): unknown {
     if (value == null) {
       return null;
     } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
@@ -517,9 +596,9 @@ export class CascadeTracker implements EntityChangeIterator {
       return value.toISOString();
     } else if (Array.isArray(value)) {
       return value.map(item => this.serializeValue(item));
-    } else if (typeof value === 'object' && value.constructor === Object) {
-      const result: Record<string, any> = {};
-      for (const [k, v] of Object.entries(value)) {
+    } else if (typeof value === 'object' && value !== null && value.constructor === Object) {
+      const result: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
         result[k] = this.serializeValue(v);
       }
       return result;
@@ -536,7 +615,7 @@ export class CascadeTracker implements EntityChangeIterator {
   }
 
   // Iterator methods for streaming
-  *getUpdatedStream(): IterableIterator<[any, string]> {
+  *getUpdatedStream(): IterableIterator<[TrackedEntity | Record<string, unknown>, string]> {
     for (const change of this.updatedEntities.values()) {
       yield [change.entity, change.operation];
     }

@@ -19,7 +19,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "clean": "rm -rf packages/*/dist packages/**/node_modules node_modules",
     "version": "changeset version",
-    "release": "npm run build && changeset publish"
+    "release": "npm run build && changeset publish",
+    "sbom": "pnpm dlx @cyclonedx/cyclonedx-npm --output sbom.json --package-lock-only"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.0",

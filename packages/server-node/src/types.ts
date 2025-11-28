@@ -101,6 +101,29 @@ export interface CascadeData {
 }
 
 /**
+ * Partial cascade data returned by CascadeTracker (without invalidations).
+ * Uses Record<string, unknown> since the tracker builds these dynamically.
+ * Invalidations are computed later by CascadeBuilder.
+ */
+export interface TrackerCascadeData {
+  /** List of updated entities */
+  updated: Array<{
+    __typename: string;
+    id: string;
+    operation: 'CREATED' | 'UPDATED' | 'DELETED';
+    entity: Record<string, unknown>;
+  }>;
+  /** List of deleted entities */
+  deleted: Array<{
+    __typename: string;
+    id: string;
+    deletedAt: string;
+  }>;
+  /** Metadata about the cascade operation */
+  metadata: CascadeMetadata;
+}
+
+/**
  * GraphQL Cascade response structure.
  */
 export interface CascadeResponse {
@@ -141,6 +164,11 @@ export interface CascadeLoggerInterface {
 }
 
 /**
+ * Metrics collector interface (re-exported from metrics.ts).
+ */
+export type { MetricsCollector } from './metrics';
+
+/**
  * Configuration options for CascadeTracker.
  */
 export interface CascadeTrackerConfig {
@@ -160,6 +188,16 @@ export interface CascadeTrackerConfig {
   logger?: CascadeLoggerInterface;
   /** Enable debug logging (shorthand for setting logger to console logger) */
   debug?: boolean;
+  /** Optional metrics collector for observability */
+  metrics?: import('./metrics').MetricsCollector;
+  /** Filter which fields are included in entity data */
+  fieldFilter?: (typename: string, fieldName: string, value: unknown) => boolean;
+  /** Filter which entities are included in the cascade */
+  entityFilter?: (typename: string, id: string, entity: Record<string, unknown>) => boolean;
+  /** Validate entity before tracking - throw to reject */
+  validateEntity?: (typename: string, id: string, entity: Record<string, unknown>) => void;
+  /** Transform entity data before including in response */
+  transformEntity?: (typename: string, id: string, entity: Record<string, unknown>) => Record<string, unknown>;
 }
 
 /**

@@ -74,7 +74,8 @@ describe('OptimisticCascadeClient', () => {
 
   describe('mutateOptimistic', () => {
     it('should apply optimistic update immediately', async () => {
-      const optimisticResponse: CascadeResponse = {
+      interface User { __typename: string; id: string; name: string; }
+      const optimisticResponse: CascadeResponse<User> = {
         success: true,
         data: { __typename: 'User', id: '1', name: 'Optimistic John' },
         cascade: {
@@ -87,7 +88,7 @@ describe('OptimisticCascadeClient', () => {
         }
       };
 
-      const serverResponse: CascadeResponse = {
+      const serverResponse: CascadeResponse<User> = {
         success: true,
         data: { __typename: 'User', id: '1', name: 'Server John' },
         cascade: {
@@ -104,7 +105,7 @@ describe('OptimisticCascadeClient', () => {
         data: { updateUser: serverResponse }
       });
 
-      const result = await client.mutateOptimistic({} as any, {}, optimisticResponse);
+      const result = await client.mutateOptimistic<User>({} as any, {}, optimisticResponse);
 
       // Verify optimistic was applied first, then server response
       expect(cache.written.length).toBeGreaterThanOrEqual(2);

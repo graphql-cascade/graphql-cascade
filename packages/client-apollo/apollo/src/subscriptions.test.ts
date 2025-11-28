@@ -25,7 +25,7 @@ describe('CascadeSubscriptionManager', () => {
   beforeEach(() => {
     apolloClient = new ApolloClient({
       cache: new InMemoryCache(),
-      connectToDevTools: false
+      devtools: { enabled: false }
     });
 
     cascadeClient = new ApolloCascadeClient(apolloClient as ApolloClient<any>);
@@ -451,7 +451,7 @@ describe('Subscription Edge Cases', () => {
   beforeEach(() => {
     apolloClient = new ApolloClient({
       cache: new InMemoryCache(),
-      connectToDevTools: false
+      devtools: { enabled: false }
     });
 
     cascadeClient = new ApolloCascadeClient(apolloClient as ApolloClient<any>);
@@ -725,7 +725,7 @@ describe('createUseCascadeSubscription', () => {
   it('should create hook factory', () => {
     const apolloClient = new ApolloClient({
       cache: new InMemoryCache(),
-      connectToDevTools: false
+      devtools: { enabled: false }
     });
 
     const cascadeClient = new ApolloCascadeClient(apolloClient as ApolloClient<any>);
@@ -745,7 +745,7 @@ describe('Subscription Edge Cases', () => {
   beforeEach(() => {
     apolloClient = new ApolloClient({
       cache: new InMemoryCache(),
-      connectToDevTools: false
+      devtools: { enabled: false }
     });
 
     cascadeClient = new ApolloCascadeClient(apolloClient as ApolloClient<any>);

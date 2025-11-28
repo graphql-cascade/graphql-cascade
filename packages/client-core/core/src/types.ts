@@ -5,7 +5,7 @@
 /**
  * GraphQL Cascade response structure.
  */
-export interface CascadeResponse<T = any> {
+export interface CascadeResponse<T = unknown> {
   success: boolean;
   errors?: CascadeError[];
   data: T;
@@ -35,11 +35,11 @@ export interface CascadeMetadata {
 /**
  * An entity that was updated in the cascade.
  */
-export interface UpdatedEntity {
+export interface UpdatedEntity<T = Record<string, unknown>> {
   __typename: string;
   id: string;
   operation: CascadeOperation;
-  entity: any;
+  entity: T;
 }
 
 /**
@@ -68,7 +68,7 @@ export interface CascadeError {
   code: CascadeErrorCode;
   field?: string;
   path?: string[];
-  extensions?: any;
+  extensions?: Record<string, unknown>;
 }
 
 /**
@@ -90,7 +90,7 @@ export enum CascadeErrorCode {
 export interface QueryInvalidation {
   queryName?: string;
   queryHash?: string;
-  arguments?: Record<string, any>;
+  arguments?: Record<string, unknown>;
   queryPattern?: string;
   strategy: InvalidationStrategy;
   scope: InvalidationScope;
@@ -119,16 +119,16 @@ export enum InvalidationScope {
  * Generic cache interface for GraphQL Cascade.
  * Implement this interface to integrate with any cache system.
  */
-export interface CascadeCache {
+export interface CascadeCache<T = Record<string, unknown>> {
   /**
    * Write an entity to the cache.
    */
-  write(typename: string, id: string, data: any): void;
+  write(typename: string, id: string, data: T): void;
 
   /**
    * Read an entity from the cache.
    */
-  read(typename: string, id: string): any | null;
+  read(typename: string, id: string): T | null;
 
   /**
    * Evict (remove) an entity from the cache.
@@ -153,7 +153,7 @@ export interface CascadeCache {
   /**
    * Identify an entity (get cache key).
    */
-  identify(entity: any): string;
+  identify(entity: T): string;
 }
 
 /**
@@ -162,7 +162,7 @@ export interface CascadeCache {
 export interface ConflictDetection {
   hasConflict: boolean;
   conflictType?: 'VERSION_MISMATCH' | 'TIMESTAMP_MISMATCH' | 'FIELD_CONFLICT';
-  localEntity?: any;
-  serverEntity?: any;
+  localEntity?: Record<string, unknown>;
+  serverEntity?: Record<string, unknown>;
   conflictingFields?: string[];
 }
