@@ -6,3 +6,6 @@ export * from './subscriptions';
 export * from './fragments';
 export * from './persistence';
 export * from './errors';
+
+// Version
+export const VERSION = '0.1.0';

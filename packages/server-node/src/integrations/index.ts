@@ -24,3 +24,13 @@ export {
   buildCascadeResponse,
   CascadeMiddlewareOptions,
 } from './express';
+
+// OpenTelemetry Integration
+export {
+  OpenTelemetryMetricsCollector,
+  type OpenTelemetryConfig,
+  type OTelMeter,
+  type OTelCounter,
+  type OTelHistogram,
+  type OTelUpDownCounter,
+} from './opentelemetry';

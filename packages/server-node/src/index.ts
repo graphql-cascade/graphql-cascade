@@ -19,6 +19,23 @@ export {
 } from './logger';
 export type { LogLevel, CascadeLogger, LoggerConfig } from './logger';
 
+// Metrics
+export {
+  DefaultMetricsCollector,
+  exportPrometheusMetrics,
+} from './metrics';
+export type {
+  MetricsCollector,
+  CascadeMetricsSnapshot,
+  CounterMetric,
+  GaugeMetric,
+  HistogramMetric,
+} from './metrics';
+
+// Health Check
+export { createHealthCheck, getHealthStatusCode } from './health';
+export type { CascadeHealthStatus, HealthCheckConfig } from './health';
+
 // Convenience functions
 export {
   buildSuccessResponse,
@@ -54,6 +71,14 @@ export {
   getCascadeData,
   buildCascadeResponse,
   CascadeMiddlewareOptions,
+  OpenTelemetryMetricsCollector,
+} from './integrations';
+export type {
+  OpenTelemetryConfig,
+  OTelMeter,
+  OTelCounter,
+  OTelHistogram,
+  OTelUpDownCounter,
 } from './integrations';
 
 // Version
