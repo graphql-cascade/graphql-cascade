@@ -224,6 +224,9 @@ enum CascadeErrorCode {
   CONFLICT            # Version conflict or unique constraint violation
   INTERNAL_ERROR      # Server error
   TRANSACTION_FAILED  # Database transaction failed
+  TIMEOUT             # Operation timed out
+  RATE_LIMITED        # Rate limit exceeded
+  SERVICE_UNAVAILABLE # Service temporarily unavailable
 }
 ```
 
