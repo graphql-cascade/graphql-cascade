@@ -21,7 +21,10 @@
         "FORBIDDEN",
         "CONFLICT",
         "INTERNAL_ERROR",
-        "TRANSACTION_FAILED"
+        "TRANSACTION_FAILED",
+        "TIMEOUT",
+        "RATE_LIMITED",
+        "SERVICE_UNAVAILABLE"
       ]
     },
     "field": {
@@ -77,6 +80,41 @@
       "field": "email",
       "path": ["createUser", "input", "email"],
       "extensions": null
+    },
+    {
+      "message": "Payment provider did not respond within 30 seconds",
+      "code": "TIMEOUT",
+      "field": null,
+      "path": ["createOrder"],
+      "extensions": {
+        "timeoutMs": 30000,
+        "service": "payment-gateway",
+        "retryable": true
+      }
+    },
+    {
+      "message": "Rate limit exceeded: 100 requests per minute",
+      "code": "RATE_LIMITED",
+      "field": null,
+      "path": ["sendEmail"],
+      "extensions": {
+        "retryAfter": 45,
+        "limit": 100,
+        "window": "1m",
+        "remaining": 0,
+        "resetAt": "2023-11-11T10:01:00Z"
+      }
+    },
+    {
+      "message": "Email service temporarily unavailable",
+      "code": "SERVICE_UNAVAILABLE",
+      "field": null,
+      "path": ["createUser"],
+      "extensions": {
+        "service": "email-provider",
+        "retryable": true,
+        "retryAfter": 60
+      }
     }
   ]
 }
