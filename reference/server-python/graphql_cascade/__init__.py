@@ -4,7 +4,7 @@ GraphQL Cascade - Server Reference Implementation
 Automatic cache updates for GraphQL mutations.
 """
 
-__version__ = "0.1.0"
+__version__ = "1.1.0"
 
 from .builder import (
     CascadeBuilder,
@@ -24,6 +24,7 @@ from .config import (
     production_config,
     validate_config_file,
 )
+# Error handling will be imported directly when needed
 from .invalidator import (
     CascadeInvalidator,
     OptimizedInvalidator,
