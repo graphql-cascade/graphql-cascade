@@ -6,7 +6,7 @@ import {
   buildStreamingSuccessResponse,
 } from './builder';
 import { CascadeTracker } from './tracker';
-import { CascadeError } from './types';
+import { CascadeErrorInfo } from './types';
 
 // Mock entities for testing
 class MockEntity {
@@ -98,7 +98,7 @@ describe('CascadeBuilder', () => {
 
   describe('Response Building - Error', () => {
     it('should build error response with errors', () => {
-      const errors: CascadeError[] = [
+      const errors: CascadeErrorInfo[] = [
         { message: 'Test error', code: 'TEST_ERROR' }
       ];
 
@@ -116,7 +116,7 @@ describe('CascadeBuilder', () => {
       tracker.startTransaction();
       tracker.trackUpdate(new MockEntity(1, 'Test'));
 
-      const errors: CascadeError[] = [
+      const errors: CascadeErrorInfo[] = [
         { message: 'Transaction error', code: 'TX_ERROR' }
       ];
 
@@ -128,7 +128,7 @@ describe('CascadeBuilder', () => {
 
     it('should handle error response when transaction ending fails', () => {
       // Transaction not started, but builder tries to end it
-      const errors: CascadeError[] = [
+      const errors: CascadeErrorInfo[] = [
         { message: 'Error', code: 'ERROR' }
       ];
 
@@ -420,7 +420,7 @@ describe('CascadeBuilder', () => {
     });
 
     it('should build error response using convenience function', () => {
-      const errors: CascadeError[] = [
+      const errors: CascadeErrorInfo[] = [
         { message: 'Convenience error', code: 'CONVENIENCE_ERROR' }
       ];
 

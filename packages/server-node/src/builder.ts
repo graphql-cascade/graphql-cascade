@@ -7,7 +7,7 @@
 import { CascadeTracker } from './tracker';
 import {
   CascadeResponse,
-  CascadeError,
+  CascadeErrorInfo,
   CascadeBuilderConfig,
   CascadeUpdatedEntity,
   CascadeDeletedEntity,
@@ -49,7 +49,7 @@ export class CascadeBuilder {
   buildResponse<T = unknown>(
     primaryResult: T | null = null,
     success: boolean = true,
-    errors: CascadeError[] = []
+    errors: CascadeErrorInfo[] = []
   ): CascadeResponse {
     const startTime = Date.now();
 
@@ -115,7 +115,7 @@ export class CascadeBuilder {
   /**
    * Build an error response.
    */
-  buildErrorResponse(errors: CascadeError[], primaryResult: any = null): CascadeResponse {
+  buildErrorResponse(errors: CascadeErrorInfo[], primaryResult: any = null): CascadeResponse {
     // For errors, we still want to track the transaction if it was started
     let cascadeData: any = {
       updated: [],
@@ -225,7 +225,7 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
   buildStreamingResponse(
     primaryResult: any = null,
     success: boolean = true,
-    errors: CascadeError[] = []
+    errors: CascadeErrorInfo[] = []
   ): CascadeResponse {
     // For streaming, we process entities on-demand
     const cascadeData: any = {
@@ -388,7 +388,7 @@ export function buildSuccessResponse(
  */
 export function buildErrorResponse(
   tracker: CascadeTracker,
-  errors: CascadeError[],
+  errors: CascadeErrorInfo[],
   primaryResult: any = null
 ): CascadeResponse {
   const builder = new CascadeBuilder(tracker);

@@ -9,6 +9,18 @@ export { CascadeTracker, CascadeTransaction, trackCascade } from './tracker';
 export { CascadeBuilder, StreamingCascadeBuilder } from './builder';
 export { CascadeError, CascadeErrorCode } from './errors';
 
+// Error convenience functions
+export {
+  validationError,
+  notFoundError,
+  timeoutError,
+  rateLimitedError,
+  serviceUnavailableError,
+  unauthorizedError,
+  forbiddenError,
+  conflictError,
+} from './errors';
+
 // Logging
 export {
   logger,
@@ -51,8 +63,9 @@ export type {
   CascadeDeletedEntity,
   CascadeInvalidation,
   CascadeData,
+  CascadeErrorInfo,
   CascadeResponse,
-  CascadeError as CascadeErrorType,
+  CascadeErrorInfo as CascadeErrorType,
   CascadeTrackerConfig,
   CascadeBuilderConfig,
   GraphQLEntity,
@@ -82,4 +95,4 @@ export type {
 } from './integrations';
 
 // Version
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';

@@ -1,6 +1,6 @@
 {
   "name": "@graphql-cascade/server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "GraphQL Cascade server implementation for Node.js/TypeScript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

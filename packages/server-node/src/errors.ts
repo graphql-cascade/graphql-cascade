@@ -4,13 +4,43 @@
  * Structured error handling with hints and documentation links.
  */
 
+import type { CascadeErrorInfo } from './types';
+
 /**
- * Error codes for cascade operations.
+ * Standard GraphQL Cascade error codes (v1.1).
+ *
+ * These codes provide standardized error handling across GraphQL Cascade implementations.
+ * All codes align with the GraphQL Cascade specification.
  */
 export enum CascadeErrorCode {
+  // Input and validation errors
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  NOT_FOUND = 'NOT_FOUND',
+
+  // Authentication and authorization
+  UNAUTHORIZED = 'UNAUTHORIZED',
+  FORBIDDEN = 'FORBIDDEN',
+
+  // Conflict and consistency
+  CONFLICT = 'CONFLICT',
+  TRANSACTION_FAILED = 'TRANSACTION_FAILED',
+
+  // Operational errors (v1.1)
+  TIMEOUT = 'TIMEOUT',
+  RATE_LIMITED = 'RATE_LIMITED',
+  SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
+
+  // Fallback
+  INTERNAL_ERROR = 'INTERNAL_ERROR',
+
+  // Legacy internal codes (for backward compatibility)
+  /** @deprecated Use INTERNAL_ERROR instead */
   NO_TRANSACTION = 'NO_TRANSACTION',
+  /** @deprecated Use INTERNAL_ERROR instead */
   TRANSACTION_IN_PROGRESS = 'TRANSACTION_IN_PROGRESS',
+  /** @deprecated Use VALIDATION_ERROR instead */
   MISSING_ID = 'MISSING_ID',
+  /** @deprecated Use INTERNAL_ERROR instead */
   SERIALIZATION_ERROR = 'SERIALIZATION_ERROR',
 }
 
@@ -91,4 +121,151 @@ export function formatErrorMessage(
   }
 
   return formatted;
+}
+
+/**
+ * Create a validation error.
+ */
+export function validationError(
+  message: string,
+  field?: string,
+  path?: string[],
+  extensions?: Record<string, any>
+): CascadeErrorInfo {
+  return {
+    message,
+    code: CascadeErrorCode.VALIDATION_ERROR,
+    field,
+    path,
+    extensions,
+  };
+}
+
+/**
+ * Create a not found error.
+ */
+export function notFoundError(
+  message: string,
+  field?: string,
+  path?: string[],
+  extensions?: Record<string, any>
+): CascadeErrorInfo {
+  return {
+    message,
+    code: CascadeErrorCode.NOT_FOUND,
+    field,
+    path,
+    extensions,
+  };
+}
+
+/**
+ * Create a timeout error.
+ */
+export function timeoutError(
+  message: string,
+  timeoutMs: number,
+  service?: string,
+  extensions?: Record<string, any>
+): CascadeErrorInfo {
+  return {
+    message,
+    code: CascadeErrorCode.TIMEOUT,
+    extensions: {
+      timeoutMs,
+      service,
+      retryable: true,
+      ...extensions,
+    },
+  };
+}
+
+/**
+ * Create a rate limited error.
+ */
+export function rateLimitedError(
+  message: string,
+  retryAfter: number,
+  limit: number,
+  window: string,
+  extensions?: Record<string, any>
+): CascadeErrorInfo {
+  return {
+    message,
+    code: CascadeErrorCode.RATE_LIMITED,
+    extensions: {
+      retryAfter,
+      limit,
+      window,
+      remaining: 0,
+      ...extensions,
+    },
+  };
+}
+
+/**
+ * Create a service unavailable error.
+ */
+export function serviceUnavailableError(
+  message: string,
+  service: string,
+  retryAfter?: number,
+  extensions?: Record<string, any>
+): CascadeErrorInfo {
+  return {
+    message,
+    code: CascadeErrorCode.SERVICE_UNAVAILABLE,
+    extensions: {
+      service,
+      retryable: true,
+      retryAfter,
+      ...extensions,
+    },
+  };
+}
+
+/**
+ * Create an unauthorized error.
+ */
+export function unauthorizedError(
+  message: string,
+  extensions?: Record<string, any>
+): CascadeErrorInfo {
+  return {
+    message,
+    code: CascadeErrorCode.UNAUTHORIZED,
+    extensions,
+  };
+}
+
+/**
+ * Create a forbidden error.
+ */
+export function forbiddenError(
+  message: string,
+  extensions?: Record<string, any>
+): CascadeErrorInfo {
+  return {
+    message,
+    code: CascadeErrorCode.FORBIDDEN,
+    extensions,
+  };
+}
+
+/**
+ * Create a conflict error.
+ */
+export function conflictError(
+  message: string,
+  field?: string,
+  path?: string[],
+  extensions?: Record<string, any>
+): CascadeErrorInfo {
+  return {
+    message,
+    code: CascadeErrorCode.CONFLICT,
+    field,
+    path,
+    extensions,
+  };
 }

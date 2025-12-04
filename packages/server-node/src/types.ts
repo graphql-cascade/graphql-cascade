@@ -4,6 +4,8 @@
  * Core types for GraphQL Cascade server implementation.
  */
 
+import type { CascadeErrorCode } from './errors';
+
 /**
  * Represents a change to an entity during a cascade transaction.
  */
@@ -101,6 +103,36 @@ export interface CascadeData {
 }
 
 /**
+ * Error information in cascade responses.
+ */
+export interface CascadeErrorInfo {
+  /** Human-readable error message */
+  message: string;
+  /** Machine-readable error code */
+  code: CascadeErrorCode | string;
+  /** Field that caused the error (if applicable) */
+  field?: string;
+  /** Path to the error in the input */
+  path?: string[];
+  /** Additional error metadata */
+  extensions?: Record<string, any>;
+}
+
+/**
+ * Complete cascade response including error handling.
+ */
+export interface CascadeResponse<T = any> {
+  /** Whether the mutation succeeded */
+  success: boolean;
+  /** List of errors if mutation failed or partially succeeded */
+  errors?: CascadeErrorInfo[];
+  /** The primary result of the mutation */
+  data?: T;
+  /** The cascade data */
+  cascade: CascadeData;
+}
+
+/**
  * Partial cascade data returned by CascadeTracker (without invalidations).
  * Uses Record<string, unknown> since the tracker builds these dynamically.
  * Invalidations are computed later by CascadeBuilder.
@@ -123,35 +155,7 @@ export interface TrackerCascadeData {
   metadata: CascadeMetadata;
 }
 
-/**
- * GraphQL Cascade response structure.
- */
-export interface CascadeResponse {
-  /** Whether the operation succeeded */
-  success: boolean;
-  /** The primary result data */
-  data?: any;
-  /** Cascade data for cache updates */
-  cascade: CascadeData;
-  /** List of errors (if any) */
-  errors: CascadeError[];
-}
 
-/**
- * Structured cascade error.
- */
-export interface CascadeError {
-  /** Error message */
-  message: string;
-  /** Error code */
-  code: string;
-  /** Field that caused the error */
-  field?: string;
-  /** Path to the error in the GraphQL document */
-  path?: string[];
-  /** Additional error extensions */
-  extensions?: Record<string, any>;
-}
 
 /**
  * Logger interface for cascade operations (matches CascadeLogger from logger.ts).

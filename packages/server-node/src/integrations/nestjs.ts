@@ -12,7 +12,7 @@ import {
   CascadeTrackerConfig,
   CascadeBuilderConfig,
   CascadeResponse,
-  CascadeError,
+  CascadeErrorInfo,
   GraphQLEntity,
 } from '../types';
 
@@ -108,14 +108,14 @@ export class CascadeService {
   /**
    * Build a complete cascade response.
    */
-  buildResponse<T>(data?: T, success: boolean = true, errors: CascadeError[] = []): CascadeResponse {
+  buildResponse<T>(data?: T, success: boolean = true, errors: CascadeErrorInfo[] = []): CascadeResponse {
     return this.builder.buildResponse(data, success, errors);
   }
 
   /**
    * Build an error cascade response.
    */
-  buildErrorResponse(errors: CascadeError[], data?: any): CascadeResponse {
+  buildErrorResponse(errors: CascadeErrorInfo[], data?: any): CascadeResponse {
     return this.builder.buildErrorResponse(errors, data);
   }
 }
