@@ -1,6 +1,6 @@
 {
   "name": "@graphql-cascade/react-query",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "React Query integration for GraphQL Cascade",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,7 +21,7 @@
     "dist"
   ],
   "dependencies": {
-    "@graphql-cascade/client": "^0.1.0"
+    "@graphql-cascade/client": "^0.2.0"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^4.0.0",

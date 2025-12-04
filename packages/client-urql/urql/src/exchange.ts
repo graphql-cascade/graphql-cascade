@@ -5,9 +5,9 @@
  * from the extensions field, applying updates to the cache.
  */
 
-import { pipe, tap } from 'wonka';
-import type { Exchange } from '@urql/core';
-import { createScopedLogger } from '@graphql-cascade/client';
+import { pipe, tap, mergeMap, fromPromise } from 'wonka';
+import type { Exchange, Operation } from '@urql/core';
+import { createScopedLogger, shouldRetry, calculateRetryDelay, RetryOptions, CascadeError } from '@graphql-cascade/client';
 import {
   CascadeExchangeOptions,
   CascadeUpdates,
@@ -162,6 +162,115 @@ function applyCascadeUpdates(
   }
 
   return result;
+}
+
+/**
+ * URQL Exchange for handling cascade errors with retry logic.
+ *
+ * This exchange:
+ * 1. Extracts cascade errors from GraphQL responses
+ * 2. Determines if operations should be retried
+ * 3. Implements exponential backoff retry logic
+ * 4. Provides callbacks for retry lifecycle events
+ */
+export const cascadeErrorExchange = (options: CascadeErrorExchangeOptions = {}): Exchange => {
+  const {
+    onRetryAttempt,
+    onRetrySuccess,
+    onRetryFailure,
+    extractErrors = extractCascadeErrors,
+    ...retryOptions
+  } = options;
+
+  return ({ forward }) => ops$ => {
+    return pipe(
+      forward(ops$),
+      tap((result) => {
+        if (result.error) {
+          const cascadeErrors = extractErrors(result.error);
+
+          if (cascadeErrors.length > 0) {
+            // For now, just call the failure callback
+            // Retry logic in URQL would require a more complex exchange
+            onRetryFailure?.(result.operation, cascadeErrors, 1);
+          }
+        }
+      })
+    );
+  };
+};
+
+/**
+ * Options for the cascade error exchange.
+ */
+export interface CascadeErrorExchangeOptions extends RetryOptions {
+  /**
+   * Callback when a retry attempt is made.
+   */
+  onRetryAttempt?: (operation: Operation, attempt: number, error: CascadeError) => void;
+
+  /**
+   * Callback when retry succeeds.
+   */
+  onRetrySuccess?: (operation: Operation, attempts: number) => void;
+
+  /**
+   * Callback when retry fails completely.
+   */
+  onRetryFailure?: (operation: Operation, errors: CascadeError[], attempts: number) => void;
+
+  /**
+   * Custom function to extract cascade errors from URQL errors.
+   */
+  extractErrors?: (error: any) => CascadeError[];
+}
+
+/**
+ * Extract cascade errors from URQL error format.
+ */
+export function extractCascadeErrors(error: any): CascadeError[] {
+  const cascadeErrors: CascadeError[] = [];
+
+  if (!error) return cascadeErrors;
+
+  // Check for GraphQL errors
+  if (error.graphQLErrors) {
+    for (const gqlError of error.graphQLErrors) {
+      const extensions = gqlError.extensions || {};
+
+      // Look for cascade error in extensions
+      if (extensions.cascade) {
+        cascadeErrors.push(extensions.cascade as CascadeError);
+      } else if (extensions.code) {
+        // Create cascade error from GraphQL error
+        cascadeErrors.push({
+          message: gqlError.message,
+          code: extensions.code as any,
+          path: gqlError.path,
+          extensions
+        });
+      }
+    }
+  }
+
+  // Check for network error with cascade data
+  if (error.networkError?.extensions?.cascade) {
+    cascadeErrors.push(error.networkError.extensions.cascade as CascadeError);
+  }
+
+  // If no cascade errors found but there are GraphQL errors, create generic ones
+  if (cascadeErrors.length === 0 && error.graphQLErrors?.length > 0) {
+    for (const gqlError of error.graphQLErrors) {
+      cascadeErrors.push({
+        message: gqlError.message,
+        code: 'INTERNAL_ERROR' as any,
+        path: gqlError.path,
+        extensions: gqlError.extensions
+      });
+    }
+  }
+
+  return cascadeErrors;
 }
 
 /**

@@ -2,7 +2,7 @@ import { ApolloError } from '@apollo/client';
 import { CascadeUpdates, CascadeResponse } from '@graphql-cascade/client';
 
 /**
- * Cascade error codes
+ * Cascade error codes - aligned with core v1.1 error codes
  */
 export enum CascadeErrorCode {
   // Network errors
@@ -28,6 +28,18 @@ export enum CascadeErrorCode {
   // Subscription errors
   SUBSCRIPTION_ERROR = 'CASCADE_SUBSCRIPTION_ERROR',
   SUBSCRIPTION_RECONNECT_FAILED = 'CASCADE_SUBSCRIPTION_RECONNECT_FAILED',
+
+  // New v1.1 error codes (mapped to existing Apollo codes for compatibility)
+  VALIDATION_ERROR = 'CASCADE_INVALID_DATA',
+  NOT_FOUND = 'CASCADE_MISSING_DATA',
+  UNAUTHORIZED = 'CASCADE_CONFLICT', // Using existing code for auth errors
+  FORBIDDEN = 'CASCADE_CONFLICT', // Using existing code for auth errors
+  CONFLICT = 'CASCADE_CONFLICT',
+  INTERNAL_ERROR = 'CASCADE_UNKNOWN_ERROR',
+  TRANSACTION_FAILED = 'CASCADE_PARTIAL_FAILURE',
+  TIMEOUT = 'CASCADE_TIMEOUT_ERROR',
+  RATE_LIMITED = 'CASCADE_NETWORK_ERROR',
+  SERVICE_UNAVAILABLE = 'CASCADE_NETWORK_ERROR',
 
   // Unknown
   UNKNOWN_ERROR = 'CASCADE_UNKNOWN_ERROR'

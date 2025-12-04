@@ -1,6 +1,6 @@
 {
   "name": "@graphql-cascade/urql",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "URQL integration for GraphQL Cascade",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,7 +25,7 @@
     "graphql": ">=16.0.0"
   },
   "dependencies": {
-    "@graphql-cascade/client": "file:../../client-core/core",
+    "@graphql-cascade/client": "^0.2.0",
     "wonka": "^6.3.4"
   },
   "devDependencies": {
