@@ -22,6 +22,9 @@ jest.mock('relay-runtime', () => ({
   },
   Store: jest.fn(() => mockStore),
   RecordSource: jest.fn(),
+  Observable: {
+    create: jest.fn(() => mockObservable)
+  },
   Environment: jest.fn().mockImplementation(() => ({
     execute: jest.fn(() => mockObservable)
   }))

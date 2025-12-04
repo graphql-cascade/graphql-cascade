@@ -8,8 +8,7 @@ import {
   isAuthError,
   isClientError,
   calculateRetryDelay,
-  shouldRetry,
-  type RetryOptions
+  shouldRetry
 } from './errors';
 import { CascadeErrorCode } from './types';
 

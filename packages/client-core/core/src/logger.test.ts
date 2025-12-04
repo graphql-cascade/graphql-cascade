@@ -4,7 +4,6 @@ import {
   getLoggerConfig,
   createScopedLogger,
   CascadeLogger,
-  LogLevel,
 } from './logger';
 
 describe('Cascade Logger', () => {

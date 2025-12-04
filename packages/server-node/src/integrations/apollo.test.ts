@@ -46,7 +46,7 @@ interface MockRequestContext {
 }
 
 // Helper to create mock request context
-function createMockRequestContext(query: string, data?: any, errors?: any[]): MockRequestContext {
+function _createMockRequestContext(query: string, data?: any, errors?: any[]): MockRequestContext {
   return {
     request: { query },
     response: {

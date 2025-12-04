@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "graphql-cascade"
-version = "0.1.0"
+version = "1.1.0"
 description = "GraphQL Cascade server reference implementation"
 readme = "README.md"
 license = "MIT"
@@ -129,4 +129,9 @@ exclude_lines = [
     "def __repr__",
     "raise AssertionError",
     "raise NotImplementedError",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14.1",
 ]

@@ -2,7 +2,7 @@
  * Error handling utilities for GraphQL Cascade client.
  */
 
-import { CascadeError, CascadeErrorCode } from './types';
+import { CascadeError } from './types';
 
 /**
  * Determines if an error is retryable based on its error code.

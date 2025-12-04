@@ -267,15 +267,29 @@ All specification changes MUST be documented in CHANGELOG.md following this form
 
 ## Appendix: Version History
 
-### v0.x (Pre-1.0)
-- Unstable, breaking changes allowed
-- Core concepts development
-- Reference implementation validation
+### v1.1.0 (2025-12-04)
+
+#### Changes
+- Added TIMEOUT, RATE_LIMITED, SERVICE_UNAVAILABLE error codes
+- Added error code selection guidelines
+- Documented async operation patterns
+- Extended error examples
+
+#### Backward Compatibility
+Fully backward compatible. All changes are additive.
+
+#### Migration
+No migration required. New error codes are optional.
 
 ### v1.0 (Stable)
 - First stable release
 - Core cascade functionality
 - Basic invalidation support
+
+### v0.x (Pre-1.0)
+- Unstable, breaking changes allowed
+- Core concepts development
+- Reference implementation validation
 
 ### Future Versions
 - v1.x: Backward compatible enhancements

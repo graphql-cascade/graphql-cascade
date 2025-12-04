@@ -1,5 +1,6 @@
 import { RecordSourceSelectorProxy, MutationConfig, SelectorStoreUpdater } from 'relay-runtime';
 import { CascadeResponse, CascadeUpdates, UpdatedEntity, DeletedEntity } from '@graphql-cascade/client';
+import { RelayRetryOptions } from './error-handling';
 
 /**
  * Relay-specific types for GraphQL Cascade integration.
@@ -82,6 +83,8 @@ export interface RelayCascadeEnvironmentConfig {
   connectionHandlers?: Record<string, (updates: ConnectionUpdate[]) => void>;
   /** Enable debug logging */
   debug?: boolean;
+  /** Retry options for network error handling */
+  retryOptions?: RelayRetryOptions;
 }
 
 /**

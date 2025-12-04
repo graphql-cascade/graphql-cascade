@@ -2,8 +2,6 @@ import { DocumentNode } from 'graphql';
 import {
   CascadeCache,
   CascadeResponse,
-  CascadeUpdates,
-  QueryInvalidation,
   InvalidationStrategy
 } from './types';
 
