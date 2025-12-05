@@ -5,7 +5,7 @@
 </p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Specification](https://img.shields.io/badge/Specification-v0.1-blue)](./specification/)
+[![Specification](https://img.shields.io/badge/Specification-v1.1-blue)](./specification/)
 
 **Cascading cache updates for GraphQL** - Automatic, intelligent cache invalidation that cascades through your entire data graph.
 

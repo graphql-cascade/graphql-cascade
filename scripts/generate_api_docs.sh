@@ -210,75 +210,56 @@ npm install @graphql-cascade/$package_name
 yarn add @graphql-cascade/$package_name
 \`\`\`
 
-## Usage
+## Overview
 
-\`\`\`typescript
-import { CascadeLink, CascadeCache } from '@graphql-cascade/$package_name';
-
-// Example usage
-const link = new CascadeLink();
-const cache = new CascadeCache();
-\`\`\`
-
-## Classes
-
-### CascadeLink
-
-Apollo Link for handling cascade updates.
-
-**Constructor:**
-\`\`\`typescript
-new CascadeLink(options?: CascadeLinkOptions)
-\`\`\`
-
-**Methods:**
-- \`request(operation: Operation, forward: NextLink)\` - Process GraphQL operations
-
-### CascadeCache
-
-Cache wrapper that handles cascade invalidations.
-
-**Constructor:**
-\`\`\`typescript
-new CascadeCache(cache: ApolloCache, options?: CascadeCacheOptions)
-\`\`\`
-
-**Methods:**
-- \`write(query: DocumentNode, result: any)\` - Write to cache with cascade tracking
-- \`evict(options: Cache.EvictOptions)\` - Evict with cascade invalidation
+This package provides TypeScript types and utilities for GraphQL Cascade integration.
 
 ## Types
 
-### CascadeLinkOptions
+### CascadeResponse<T>
+
 \`\`\`typescript
-interface CascadeLinkOptions {
-  enabled?: boolean;
-  debug?: boolean;
-  onCascade?: (cascade: CascadeInfo) => void;
+interface CascadeResponse<T = any> {
+  success: boolean;
+  data: T;
+  errors?: CascadeError[];
+  cascade: CascadeUpdates;
 }
 \`\`\`
 
-### CascadeCacheOptions
+### CascadeUpdates
+
 \`\`\`typescript
-interface CascadeCacheOptions {
-  cascadeKey?: string;
-  maxDepth?: number;
+interface CascadeUpdates {
+  updated: UpdatedEntity[];
+  deleted: DeletedEntity[];
+  invalidations: QueryInvalidation[];
+  metadata: CascadeMetadata;
 }
 \`\`\`
 
-### CascadeInfo
+### CascadeError
+
 \`\`\`typescript
-interface CascadeInfo {
-  entityId: string;
-  entityType: string;
-  invalidatedKeys: string[];
-  timestamp: number;
+interface CascadeError {
+  message: string;
+  code: string;
+  path?: string[];
+  extensions?: Record<string, any>;
 }
+\`\`\`
+
+## Usage
+
+\`\`\`typescript
+import { CascadeResponse, CascadeUpdates } from '@graphql-cascade/$package_name';
+
+// Use in your GraphQL client integration
 \`\`\`
 
 ---
 
-*This documentation was auto-generated from TypeScript definitions and JSDoc comments.*
+*This documentation was auto-generated. For complete API details, see the source code.*
 EOF
         echo "  ✓ Generated $output_file"
     done

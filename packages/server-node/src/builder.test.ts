@@ -603,4 +603,161 @@ describe('CascadeBuilder', () => {
       expect(size).toBeGreaterThan(0); // Metadata size
     });
   });
+
+  describe('Metadata Control', () => {
+    describe('includeTimingMetadata', () => {
+      it('should include timing metadata by default', () => {
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Test'));
+
+        const response = builder.buildResponse();
+
+        expect(response.cascade.metadata.trackingTime).toBeDefined();
+        expect(response.cascade.metadata.constructionTime).toBeDefined();
+        expect(typeof response.cascade.metadata.trackingTime).toBe('number');
+        expect(typeof response.cascade.metadata.constructionTime).toBe('number');
+      });
+
+      it('should exclude timing metadata when includeTimingMetadata is false', () => {
+        const builderNoTiming = new CascadeBuilder(tracker, mockInvalidator, {
+          includeTimingMetadata: false
+        });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Test'));
+
+        const response = builderNoTiming.buildResponse();
+
+        expect(response.cascade.metadata.trackingTime).toBeUndefined();
+        expect(response.cascade.metadata.constructionTime).toBeUndefined();
+        expect(response.cascade.metadata.timestamp).toBeDefined(); // Other metadata still present
+      });
+
+      it('should exclude timing metadata from error responses', () => {
+        const builderNoTiming = new CascadeBuilder(tracker, undefined, {
+          includeTimingMetadata: false
+        });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Test'));
+
+        const errors: CascadeErrorInfo[] = [
+          { message: 'Test error', code: 'TEST_ERROR' }
+        ];
+
+        const response = builderNoTiming.buildErrorResponse(errors);
+
+        expect(response.cascade.metadata.trackingTime).toBeUndefined();
+        expect(response.cascade.metadata.constructionTime).toBeUndefined();
+      });
+    });
+
+    describe('includeTransactionId', () => {
+      it('should include transactionId by default', () => {
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Test'));
+
+        const response = builder.buildResponse();
+
+        expect(response.cascade.metadata.transactionId).toBeDefined();
+        expect(typeof response.cascade.metadata.transactionId).toBe('string');
+        expect(response.cascade.metadata.transactionId).toContain('cascade_');
+      });
+
+      it('should exclude transactionId when includeTransactionId is false', () => {
+        const builderNoTxId = new CascadeBuilder(tracker, mockInvalidator, {
+          includeTransactionId: false
+        });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Test'));
+
+        const response = builderNoTxId.buildResponse();
+
+        expect(response.cascade.metadata.transactionId).toBeUndefined();
+        expect(response.cascade.metadata.timestamp).toBeDefined(); // Other metadata still present
+      });
+
+      it('should exclude transactionId from error responses', () => {
+        const builderNoTxId = new CascadeBuilder(tracker, undefined, {
+          includeTransactionId: false
+        });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Test'));
+
+        const errors: CascadeErrorInfo[] = [
+          { message: 'Test error', code: 'TEST_ERROR' }
+        ];
+
+        const response = builderNoTxId.buildErrorResponse(errors);
+
+        expect(response.cascade.metadata.transactionId).toBeUndefined();
+      });
+    });
+
+    describe('Combined Metadata Control', () => {
+      it('should exclude both timing and transactionId when configured', () => {
+        const builderMinimalMetadata = new CascadeBuilder(tracker, mockInvalidator, {
+          includeTimingMetadata: false,
+          includeTransactionId: false
+        });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Test'));
+
+        const response = builderMinimalMetadata.buildResponse();
+
+        // These should be undefined
+        expect(response.cascade.metadata.trackingTime).toBeUndefined();
+        expect(response.cascade.metadata.constructionTime).toBeUndefined();
+        expect(response.cascade.metadata.transactionId).toBeUndefined();
+
+        // These should still be present
+        expect(response.cascade.metadata.timestamp).toBeDefined();
+        expect(response.cascade.metadata.depth).toBeDefined();
+        expect(response.cascade.metadata.affectedCount).toBeDefined();
+      });
+
+      it('should work with production-style configuration', () => {
+        // Simulate production configuration
+        const isProduction = true;
+        const builderProduction = new CascadeBuilder(tracker, mockInvalidator, {
+          includeTimingMetadata: !isProduction,
+          includeTransactionId: !isProduction
+        });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Test'));
+
+        const response = builderProduction.buildResponse();
+
+        // Verify minimal metadata for production
+        expect(response.cascade.metadata.trackingTime).toBeUndefined();
+        expect(response.cascade.metadata.constructionTime).toBeUndefined();
+        expect(response.cascade.metadata.transactionId).toBeUndefined();
+        expect(response.cascade.metadata.timestamp).toBeDefined();
+      });
+
+      it('should still include metadata in development mode', () => {
+        // Simulate development configuration
+        const isProduction = false;
+        const builderDevelopment = new CascadeBuilder(tracker, mockInvalidator, {
+          includeTimingMetadata: !isProduction,
+          includeTransactionId: !isProduction
+        });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Test'));
+
+        const response = builderDevelopment.buildResponse();
+
+        // Verify full metadata for development
+        expect(response.cascade.metadata.trackingTime).toBeDefined();
+        expect(response.cascade.metadata.constructionTime).toBeDefined();
+        expect(response.cascade.metadata.transactionId).toBeDefined();
+        expect(response.cascade.metadata.timestamp).toBeDefined();
+      });
+    });
+  });
 });

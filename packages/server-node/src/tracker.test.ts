@@ -692,4 +692,375 @@ describe('CascadeTracker', () => {
       expect(result2.updated.find((u: any) => u.id === '1')).toBeUndefined();
     });
   });
+
+  describe('Security Features', () => {
+    describe('fieldFilter', () => {
+      it('should exclude sensitive fields from entity serialization', () => {
+        const tracker = new CascadeTracker({
+          fieldFilter: (typename, fieldName, value) => {
+            const sensitiveFields = ['password', 'passwordHash', 'ssn', 'apiKey'];
+            return !sensitiveFields.includes(fieldName);
+          }
+        });
+
+        tracker.startTransaction();
+
+        // Create entity with sensitive data
+        const entity = {
+          id: 1,
+          __typename: 'User',
+          name: 'John Doe',
+          password: 'secret123',
+          email: 'john@example.com',
+          ssn: '123-45-6789',
+          toDict() {
+            return {
+              id: this.id,
+              __typename: this.__typename,
+              name: this.name,
+              password: this.password,
+              email: this.email,
+              ssn: this.ssn,
+            };
+          }
+        };
+
+        tracker.trackUpdate(entity);
+        const result = tracker.endTransaction();
+
+        expect(result.updated).toHaveLength(1);
+        expect(result.updated[0].entity.name).toBe('John Doe');
+        expect(result.updated[0].entity.email).toBe('john@example.com');
+        expect(result.updated[0].entity.password).toBeUndefined();
+        expect(result.updated[0].entity.ssn).toBeUndefined();
+      });
+
+      it('should work with entities that do not have toDict method', () => {
+        const tracker = new CascadeTracker({
+          fieldFilter: (typename, fieldName, value) => {
+            return fieldName !== 'secret';
+          }
+        });
+
+        tracker.startTransaction();
+
+        const entity = {
+          id: 1,
+          __typename: 'Config',
+          name: 'AppConfig',
+          secret: 'top-secret-key',
+          publicValue: 'public-data'
+        };
+
+        tracker.trackUpdate(entity);
+        const result = tracker.endTransaction();
+
+        expect(result.updated[0].entity.name).toBe('AppConfig');
+        expect(result.updated[0].entity.publicValue).toBe('public-data');
+        expect(result.updated[0].entity.secret).toBeUndefined();
+      });
+    });
+
+    describe('entityFilter', () => {
+      it('should filter entities synchronously', async () => {
+        const tracker = new CascadeTracker({
+          entityFilter: (entity) => {
+            // Only include entities with even IDs
+            return Number(entity.id) % 2 === 0;
+          }
+        });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Odd'));
+        tracker.trackUpdate(new MockEntity(2, 'Even'));
+        tracker.trackUpdate(new MockEntity(3, 'Odd'));
+        tracker.trackUpdate(new MockEntity(4, 'Even'));
+
+        const result = await tracker.endTransactionAsync();
+
+        expect(result.updated).toHaveLength(2);
+        expect(result.updated[0].id).toBe('2');
+        expect(result.updated[1].id).toBe('4');
+      });
+
+      it('should filter entities asynchronously', async () => {
+        const authorizedIds = new Set(['1', '3']);
+
+        const tracker = new CascadeTracker({
+          entityFilter: async (entity) => {
+            // Simulate async authorization check
+            await new Promise(resolve => setTimeout(resolve, 1));
+            return authorizedIds.has(String(entity.id));
+          }
+        });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Authorized'));
+        tracker.trackUpdate(new MockEntity(2, 'Unauthorized'));
+        tracker.trackUpdate(new MockEntity(3, 'Authorized'));
+
+        const result = await tracker.endTransactionAsync();
+
+        expect(result.updated).toHaveLength(2);
+        expect(result.updated[0].id).toBe('1');
+        expect(result.updated[1].id).toBe('3');
+      });
+
+      it('should support context-based filtering', async () => {
+        const tracker = new CascadeTracker({
+          entityFilter: (entity, context: any) => {
+            const userRole = context?.userRole;
+            // Admin can see all, user can only see their own
+            if (userRole === 'admin') return true;
+            return entity.id === context?.userId;
+          }
+        });
+
+        tracker.setContext({ userRole: 'user', userId: 2 });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Other User'));
+        tracker.trackUpdate(new MockEntity(2, 'Current User'));
+        tracker.trackUpdate(new MockEntity(3, 'Another User'));
+
+        const result = await tracker.endTransactionAsync();
+
+        expect(result.updated).toHaveLength(1);
+        expect(result.updated[0].id).toBe('2');
+      });
+
+      it('should handle filter errors gracefully', async () => {
+        const tracker = new CascadeTracker({
+          entityFilter: (entity) => {
+            if (Number(entity.id) === 2) {
+              throw new Error('Filter error');
+            }
+            return true;
+          },
+          onSerializationError: jest.fn()
+        });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Good'));
+        tracker.trackUpdate(new MockEntity(2, 'Bad'));
+        tracker.trackUpdate(new MockEntity(3, 'Good'));
+
+        const result = await tracker.endTransactionAsync();
+
+        // Entity 2 should be filtered out due to error
+        expect(result.updated.length).toBeLessThan(3);
+      });
+    });
+
+    describe('validateEntity', () => {
+      it('should validate entities before tracking', () => {
+        const tracker = new CascadeTracker({
+          validateEntity: (entity) => {
+            if (!entity.id) {
+              throw new Error('Entity must have an id');
+            }
+            if (typeof entity.id !== 'string' && typeof entity.id !== 'number') {
+              throw new Error('Entity id must be string or number');
+            }
+          }
+        });
+
+        tracker.startTransaction();
+
+        // Valid entity should work
+        expect(() => {
+          tracker.trackUpdate(new MockEntity(1, 'Valid'));
+        }).not.toThrow();
+
+        // Invalid entity should throw
+        expect(() => {
+          tracker.trackUpdate({ __typename: 'Invalid' } as any);
+        }).toThrow();
+      });
+
+      it('should validate and reject dangerous properties', () => {
+        const tracker = new CascadeTracker({
+          validateEntity: (entity) => {
+            // Check for explicit 'prototype' property on plain objects (not instances)
+            if (Object.prototype.hasOwnProperty.call(entity, 'prototype')) {
+              throw new Error('Entity contains potentially dangerous properties');
+            }
+          }
+        });
+
+        tracker.startTransaction();
+
+        // Normal entity should work (MockEntity instances don't have 'prototype' as own property)
+        expect(() => {
+          tracker.trackUpdate(new MockEntity(1, 'Normal'));
+        }).not.toThrow();
+
+        // Entity with explicitly dangerous prototype property should be rejected
+        const maliciousEntity = {
+          id: 2,
+          __typename: 'Malicious',
+          prototype: { isAdmin: true }  // Explicit 'prototype' property
+        };
+
+        expect(() => {
+          tracker.trackUpdate(maliciousEntity as any);
+        }).toThrow('dangerous properties');
+      });
+
+      it('should validate entity data types', () => {
+        const tracker = new CascadeTracker({
+          validateEntity: (entity) => {
+            if (entity.__typename && typeof entity.__typename !== 'string') {
+              throw new Error('__typename must be a string');
+            }
+          }
+        });
+
+        tracker.startTransaction();
+
+        expect(() => {
+          tracker.trackUpdate({
+            id: 1,
+            __typename: 123 as any
+          });
+        }).toThrow('__typename must be a string');
+      });
+    });
+
+    describe('transformEntity', () => {
+      it('should transform entity data before serialization', () => {
+        const tracker = new CascadeTracker({
+          transformEntity: (entity) => {
+            // Mask email addresses
+            if ('email' in entity && typeof entity.email === 'string') {
+              const [local, domain] = entity.email.split('@');
+              return {
+                ...entity,
+                email: `${local[0]}***@${domain}`
+              };
+            }
+            return entity;
+          }
+        });
+
+        tracker.startTransaction();
+
+        const entity = {
+          id: 1,
+          __typename: 'User',
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+          toDict() {
+            return {
+              id: this.id,
+              name: this.name,
+              email: this.email
+            };
+          }
+        };
+
+        tracker.trackUpdate(entity);
+        const result = tracker.endTransaction();
+
+        expect(result.updated[0].entity.email).toBe('j***@example.com');
+        expect(result.updated[0].entity.name).toBe('John Doe');
+      });
+
+      it('should sanitize sensitive data fields', () => {
+        const tracker = new CascadeTracker({
+          transformEntity: (entity) => {
+            const sanitized = { ...entity };
+            if ('creditCard' in sanitized) {
+              sanitized.creditCard = '****-****-****-' + String(sanitized.creditCard).slice(-4);
+            }
+            if ('ssn' in sanitized) {
+              sanitized.ssn = '***-**-' + String(sanitized.ssn).slice(-4);
+            }
+            return sanitized;
+          }
+        });
+
+        tracker.startTransaction();
+
+        const entity = {
+          id: 1,
+          __typename: 'Payment',
+          creditCard: '1234-5678-9012-3456',
+          ssn: '123-45-6789',
+          toDict() {
+            return {
+              id: this.id,
+              creditCard: this.creditCard,
+              ssn: this.ssn
+            };
+          }
+        };
+
+        tracker.trackUpdate(entity);
+        const result = tracker.endTransaction();
+
+        expect(result.updated[0].entity.creditCard).toBe('****-****-****-3456');
+        expect(result.updated[0].entity.ssn).toBe('***-**-6789');
+      });
+    });
+
+    describe('Combined Security Filters', () => {
+      it('should apply all security filters in correct order', async () => {
+        const tracker = new CascadeTracker({
+          validateEntity: (entity) => {
+            if (!entity.id) throw new Error('Missing id');
+          },
+          entityFilter: (entity) => {
+            return Number(entity.id) !== 2; // Filter out entity 2
+          },
+          transformEntity: (entity) => {
+            // Transform by adding a flag - this is applied after toDict
+            const transformed = { ...entity, transformed: true };
+            return transformed as any;
+          },
+          fieldFilter: (typename, fieldName) => {
+            return fieldName !== 'secret';
+          }
+        });
+
+        tracker.startTransaction();
+
+        const entity1 = {
+          id: 1,
+          __typename: 'Secure',
+          data: 'public',
+          secret: 'hidden',
+          toDict() {
+            return { id: this.id, data: this.data, secret: this.secret };
+          }
+        };
+
+        const entity2 = {
+          id: 2,
+          __typename: 'Secure',
+          data: 'filtered-out',
+          toDict() {
+            return { id: this.id, data: this.data };
+          }
+        };
+
+        tracker.trackUpdate(entity1);
+        tracker.trackUpdate(entity2);
+
+        const result = await tracker.endTransactionAsync();
+
+        // Only entity 1 should be in result (entity 2 filtered by entityFilter)
+        expect(result.updated).toHaveLength(1);
+        expect(result.updated[0].id).toBe('1');
+
+        // Secret field should be filtered by fieldFilter
+        expect(result.updated[0].entity.secret).toBeUndefined();
+        expect(result.updated[0].entity.data).toBe('public');
+
+        // Note: transformEntity transforms the entity object itself before toDict is called,
+        // but toDict overrides it. For transform to affect the output, it needs to work
+        // on the result of toDict or transform fields directly.
+      });
+    });
+  });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@graphql-cascade/integration-tests",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "End-to-end integration tests for GraphQL Cascade",
   "private": true,
   "scripts": {

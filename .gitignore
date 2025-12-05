@@ -150,6 +150,9 @@ credentials.json
 # But ignore pnpm-lock.yaml if not using pnpm
 # pnpm-lock.yaml
 
+# Build artifacts
+sbom.json
+
 # Misc
 *.bak
 *.orig

@@ -194,14 +194,35 @@ export interface CascadeTrackerConfig {
   debug?: boolean;
   /** Optional metrics collector for observability */
   metrics?: import('./metrics').MetricsCollector;
-  /** Filter which fields are included in entity data */
+  /**
+   * Filter which fields are included in entity data.
+   * Return true to include the field, false to exclude.
+   * @param typename - The GraphQL type name
+   * @param fieldName - The field name being serialized
+   * @param value - The field value
+   */
   fieldFilter?: (typename: string, fieldName: string, value: unknown) => boolean;
-  /** Filter which entities are included in the cascade */
-  entityFilter?: (typename: string, id: string, entity: Record<string, unknown>) => boolean;
-  /** Validate entity before tracking - throw to reject */
-  validateEntity?: (typename: string, id: string, entity: Record<string, unknown>) => void;
-  /** Transform entity data before including in response */
-  transformEntity?: (typename: string, id: string, entity: Record<string, unknown>) => Record<string, unknown>;
+  /**
+   * Filter which entities are included in the cascade response.
+   * Can be async for authorization checks.
+   * Return true to include the entity, false to exclude.
+   * @param entity - The tracked entity
+   * @param context - Optional context (e.g., user, request info)
+   */
+  entityFilter?: (entity: TrackedEntity, context?: unknown) => boolean | Promise<boolean>;
+  /**
+   * Validate entity before tracking.
+   * Throw an error to reject the entity.
+   * @param entity - The entity to validate
+   */
+  validateEntity?: (entity: TrackedEntity) => void;
+  /**
+   * Transform entity data before including in response.
+   * Use for sanitization or field masking.
+   * @param entity - The entity to transform
+   * @returns The transformed entity
+   */
+  transformEntity?: (entity: TrackedEntity) => TrackedEntity;
 }
 
 /**
@@ -218,6 +239,20 @@ export interface CascadeBuilderConfig {
   maxInvalidations?: number;
   /** Optional handler called when invalidation computation fails */
   onInvalidationError?: (error: Error) => void;
+  /** Optional metrics collector for observability */
+  metrics?: import('./metrics').MetricsCollector;
+  /**
+   * Include timing metadata (trackingTime, constructionTime) in responses.
+   * Consider disabling in production to avoid information disclosure.
+   * @default true
+   */
+  includeTimingMetadata?: boolean;
+  /**
+   * Include transactionId in metadata.
+   * Consider disabling in production to avoid information disclosure.
+   * @default true
+   */
+  includeTransactionId?: boolean;
 }
 
 /**

@@ -28,7 +28,7 @@ const tracker = new CascadeTracker({
 const tracker = new CascadeTracker({
   transformEntity: (entity) => {
     // Mask email addresses
-    if (entity.email && typeof entity.email === 'string') {
+    if ('email' in entity && typeof entity.email === 'string') {
       const [local, domain] = entity.email.split('@');
       return {
         ...entity,
@@ -72,16 +72,42 @@ Cascade may include entities the user isn't authorized to see.
 ```typescript
 const tracker = new CascadeTracker({
   entityFilter: async (entity, context) => {
-    const user = (context as RequestContext)?.user;
+    const user = (context as any)?.user;
     if (!user) return false;
 
-    // Check authorization
+    // Check authorization - supports both sync and async
     return await authService.canView(user, entity.__typename, entity.id);
   }
 });
 
-// Pass context when tracking
+// Set context before tracking entities
 tracker.setContext({ user: currentUser });
+
+// Use async methods to properly handle async entityFilter
+tracker.startTransaction();
+// ... track entities ...
+const cascadeData = await tracker.endTransactionAsync();
+```
+
+**Note on Async Entity Filters:**
+- Use `endTransactionAsync()` or `getCascadeDataAsync()` when using async `entityFilter`
+- Synchronous methods (`endTransaction()`, `getCascadeData()`) will log a warning if async filters are detected
+- Context is passed to `entityFilter` via `setContext()` method
+
+**Synchronous Filtering (for simple cases):**
+```typescript
+const tracker = new CascadeTracker({
+  entityFilter: (entity, context) => {
+    // Sync filtering - no async/await needed
+    const userRole = (context as any)?.userRole;
+    return userRole === 'admin' || entity.ownerId === (context as any)?.userId;
+  }
+});
+
+tracker.setContext({ userRole: 'user', userId: 123 });
+tracker.startTransaction();
+// ... track entities ...
+const cascadeData = tracker.endTransaction(); // Can use sync method
 ```
 
 ## Information Disclosure
@@ -115,8 +141,8 @@ const tracker = new CascadeTracker({
     if (entity.__typename && typeof entity.__typename !== 'string') {
       throw new Error('Entity __typename must be a string');
     }
-    // Prevent prototype pollution
-    if ('__proto__' in entity || 'constructor' in entity) {
+    // Prevent prototype pollution - check for explicit dangerous properties
+    if (Object.prototype.hasOwnProperty.call(entity, 'prototype')) {
       throw new Error('Entity contains forbidden properties');
     }
   }

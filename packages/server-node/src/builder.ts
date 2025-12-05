@@ -14,6 +14,7 @@ import {
   CascadeInvalidation,
   Invalidator,
 } from './types';
+import type { MetricsCollector } from './metrics';
 
 /**
  * Builds GraphQL Cascade responses from tracked changes.
@@ -28,6 +29,9 @@ export class CascadeBuilder {
   protected maxDeletedEntities: number;
   protected maxInvalidations: number;
   protected onInvalidationError?: (error: Error) => void;
+  protected metrics?: MetricsCollector;
+  protected includeTimingMetadata: boolean;
+  protected includeTransactionId: boolean;
 
   constructor(
     tracker: CascadeTracker,
@@ -41,6 +45,9 @@ export class CascadeBuilder {
     this.maxDeletedEntities = config.maxDeletedEntities ?? 100;
     this.maxInvalidations = config.maxInvalidations ?? 50;
     this.onInvalidationError = config.onInvalidationError;
+    this.metrics = config.metrics;
+    this.includeTimingMetadata = config.includeTimingMetadata ?? true;
+    this.includeTransactionId = config.includeTransactionId ?? true;
   }
 
   /**
@@ -109,6 +116,20 @@ export class CascadeBuilder {
       response.cascade.metadata.constructionTime = constructionTime;
     }
 
+    // Apply metadata filtering based on configuration
+    if (response.cascade.metadata) {
+      if (!this.includeTimingMetadata) {
+        delete (response.cascade.metadata as any).trackingTime;
+        delete (response.cascade.metadata as any).constructionTime;
+      }
+      if (!this.includeTransactionId) {
+        delete (response.cascade.metadata as any).transactionId;
+      }
+    }
+
+    // Record construction time metric
+    this.metrics?.histogram('constructionTimeMs', constructionTime);
+
     return response;
   }
 
@@ -116,6 +137,8 @@ export class CascadeBuilder {
    * Build an error response.
    */
   buildErrorResponse(errors: CascadeErrorInfo[], primaryResult: any = null): CascadeResponse {
+    const startTime = Date.now();
+
     // For errors, we still want to track the transaction if it was started
     let cascadeData: any = {
       updated: [],
@@ -133,12 +156,25 @@ export class CascadeBuilder {
     }
 
     // Minimal metadata for error responses
+    const constructionTime = Date.now() - startTime;
     cascadeData.metadata = {
       timestamp: new Date().toISOString(),
       depth: 0,
       affectedCount: 0,
-      constructionTime: 0,
+      constructionTime,
     };
+
+    // Apply metadata filtering based on configuration
+    if (!this.includeTimingMetadata) {
+      delete (cascadeData.metadata as any).trackingTime;
+      delete (cascadeData.metadata as any).constructionTime;
+    }
+    if (!this.includeTransactionId) {
+      delete (cascadeData.metadata as any).transactionId;
+    }
+
+    // Record construction time metric
+    this.metrics?.histogram('constructionTimeMs', constructionTime);
 
     return {
       success: false,
@@ -227,6 +263,8 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
     success: boolean = true,
     errors: CascadeErrorInfo[] = []
   ): CascadeResponse {
+    const startTime = Date.now();
+
     // For streaming, we process entities on-demand
     const cascadeData: any = {
       updated: [] as any[],
@@ -291,6 +329,22 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
       );
       cascadeData.invalidations = invalidations?.slice(0, this.maxInvalidations) ?? [];
     }
+
+    // Add construction time to metadata
+    const constructionTime = Date.now() - startTime;
+    cascadeData.metadata.constructionTime = constructionTime;
+
+    // Apply metadata filtering based on configuration
+    if (!this.includeTimingMetadata) {
+      delete (cascadeData.metadata as any).trackingTime;
+      delete (cascadeData.metadata as any).constructionTime;
+    }
+    if (!this.includeTransactionId) {
+      delete (cascadeData.metadata as any).transactionId;
+    }
+
+    // Record construction time metric
+    this.metrics?.histogram('constructionTimeMs', constructionTime);
 
     return {
       success,

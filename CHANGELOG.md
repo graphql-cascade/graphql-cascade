@@ -15,7 +15,7 @@ This project uses **semantic versioning** for package versions:
 - **"v1.1 error codes"**: Refers to specification v1.1, not package version.
   These are included in package version 0.2.0.
 
-## [0.2.0] - 2025-12-04
+## [0.3.0] - 2025-12-05
 
 ### Added
 - Enhanced error codes (spec v1.1 compliance)
@@ -25,10 +25,14 @@ This project uses **semantic versioning** for package versions:
 - Error handling utilities in all client packages
 - Convenience functions for error creation
 - Comprehensive error tests
+- Version alignment cleanup for consistent versioning
 
 ### Changed
 - Renamed CascadeError type to CascadeErrorInfo for clarity
-- Bumped all packages to 0.2.0
+- Bumped all packages to 0.3.0
+- Clarified versioning strategy (package versions vs spec versions)
+
+## [0.2.0] - Unreleased
 
 ## [0.1.0] - Unreleased
 

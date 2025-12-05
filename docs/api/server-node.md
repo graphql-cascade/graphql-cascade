@@ -29,7 +29,7 @@ const tracker = new CascadeTracker(config?: CascadeTrackerConfig);
 | `enableRelationshipTracking` | `boolean` | `true` | Whether to automatically traverse and track related entities |
 | `maxEntities` | `number` | `1000` | Maximum total entities to track (prevents memory exhaustion) |
 | `maxRelatedPerEntity` | `number` | `100` | Maximum related entities to traverse per entity (breadth limit) |
-| `onSerializationError` | `(entity: unknown, error: Error) => void` | `undefined` | Handler called when entity serialization fails |
+| `onSerializationError` | `(entity: unknown, error: Error) =&gt; void` | `undefined` | Handler called when entity serialization fails |
 
 ```typescript
 const tracker = new CascadeTracker({
@@ -38,7 +38,7 @@ const tracker = new CascadeTracker({
   enableRelationshipTracking: true,
   maxEntities: 500,
   maxRelatedPerEntity: 50,
-  onSerializationError: (entity, error) => {
+  onSerializationError: (entity, error) =&gt; {
     console.warn('Failed to serialize entity:', entity, error);
   }
 });
@@ -58,7 +58,7 @@ const transactionId = tracker.startTransaction();
 // transactionId: "cascade_1234567890_abc123def"
 ```
 
-#### endTransaction(): Record<string, any>
+#### endTransaction(): Record&lt;string, any&gt;
 
 Ends the current transaction and returns the cascade data. Resets the tracker state.
 
@@ -74,7 +74,7 @@ const cascadeData = tracker.endTransaction();
 // }
 ```
 
-#### getCascadeData(): Record<string, any>
+#### getCascadeData(): Record&lt;string, any&gt;
 
 Gets the current cascade data without ending the transaction.
 
@@ -140,7 +140,7 @@ Resets all transaction state. Called automatically by `endTransaction()`.
 tracker.resetTransactionState();
 ```
 
-#### getUpdatedStream(): IterableIterator<[any, string]>
+#### getUpdatedStream(): IterableIterator&lt;[any, string]&gt;
 
 Returns an iterator over updated entities for streaming. Useful for large cascades.
 
@@ -152,7 +152,7 @@ for (const [entity, operation] of tracker.getUpdatedStream()) {
 }
 ```
 
-#### getDeletedStream(): IterableIterator<[string, string]>
+#### getDeletedStream(): IterableIterator&lt;[string, string]&gt;
 
 Returns an iterator over deleted entities for streaming.
 
@@ -208,14 +208,14 @@ const builder = new CascadeBuilder(
 | `maxUpdatedEntities` | `number` | `500` | Maximum updated entities in response |
 | `maxDeletedEntities` | `number` | `100` | Maximum deleted entities in response |
 | `maxInvalidations` | `number` | `50` | Maximum invalidation entries in response |
-| `onInvalidationError` | `(error: Error) => void` | `undefined` | Handler for invalidation computation errors |
+| `onInvalidationError` | `(error: Error) =&gt; void` | `undefined` | Handler for invalidation computation errors |
 
 ```typescript
 const builder = new CascadeBuilder(tracker, invalidator, {
   maxUpdatedEntities: 200,
   maxDeletedEntities: 50,
   maxInvalidations: 20,
-  onInvalidationError: (error) => {
+  onInvalidationError: (error) =&gt; {
     console.warn('Invalidation error:', error);
   }
 });
@@ -223,7 +223,7 @@ const builder = new CascadeBuilder(tracker, invalidator, {
 
 ### Methods
 
-#### buildResponse<T>(primaryResult, success, errors): CascadeResponse
+#### buildResponse&lt;T&gt;(primaryResult, success, errors): CascadeResponse
 
 Builds a complete cascade response.
 
@@ -376,7 +376,7 @@ interface CascadeUpdatedEntity {
   /** Operation performed: 'CREATED' | 'UPDATED' | 'DELETED' */
   operation: 'CREATED' | 'UPDATED' | 'DELETED';
   /** The entity data */
-  entity: Record<string, any>;
+  entity: Record&lt;string, any&gt;;
 }
 ```
 
@@ -452,7 +452,7 @@ interface CascadeError {
   /** Path to the error */
   path?: string[];
   /** Additional error extensions */
-  extensions?: Record<string, any>;
+  extensions?: Record&lt;string, any&gt;;
 }
 ```
 
@@ -467,9 +467,9 @@ interface TrackedEntity {
   /** Alternative typename field */
   _typename?: string;
   /** Custom serialization method */
-  toDict?: () => Record<string, unknown>;
+  toDict?: () =&gt; Record&lt;string, unknown&gt;;
   /** Custom method to get related entities */
-  getRelatedEntities?: () => TrackedEntity[];
+  getRelatedEntities?: () =&gt; TrackedEntity[];
   /** Additional properties */
   [key: string]: unknown;
 }
@@ -499,7 +499,7 @@ import { CascadeTracker, CascadeBuilder } from '@graphql-cascade/server';
 
 const resolvers = {
   Mutation: {
-    createTodo: async (_, { input }, context) => {
+    createTodo: async (_, { input }, context) =&gt; {
       const tracker = new CascadeTracker();
       tracker.startTransaction();
 
@@ -535,7 +535,7 @@ const invalidator = {
     const invalidations = [];
 
     // Invalidate list queries when todos change
-    const affectedTypes = new Set(updated.map(e => e.__typename));
+    const affectedTypes = new Set(updated.map(e =&gt; e.__typename));
     if (affectedTypes.has('Todo')) {
       invalidations.push({
         __typename: 'Query',

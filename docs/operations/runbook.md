@@ -56,7 +56,7 @@ groups:
 
 ### Grafana Dashboard
 
-For a Grafana dashboard, create panels for:
+See `examples/grafana-dashboard.json` for a pre-built dashboard including:
 - Transaction rate and error rate
 - Latency percentiles (p50, p95, p99)
 - Entity counts and truncation rate
@@ -196,39 +196,3 @@ Configure `maxResponseSizeMb` based on:
 - Network bandwidth constraints
 - Client parsing performance
 - CDN/proxy body size limits
-
-## Health Check Integration
-
-### Express Example
-
-```typescript
-import { createHealthCheck, getHealthStatusCode } from '@graphql-cascade/server-node';
-
-const healthCheck = createHealthCheck(metricsCollector, {
-  version: process.env.npm_package_version ?? '1.0.0',
-  memoryLimitMb: 512,
-});
-
-app.get('/health/cascade', (req, res) => {
-  const health = healthCheck();
-  res.status(getHealthStatusCode(health.status)).json(health);
-});
-```
-
-### Kubernetes Probe Example
-
-```yaml
-livenessProbe:
-  httpGet:
-    path: /health/cascade
-    port: 4000
-  initialDelaySeconds: 10
-  periodSeconds: 30
-
-readinessProbe:
-  httpGet:
-    path: /health/cascade
-    port: 4000
-  initialDelaySeconds: 5
-  periodSeconds: 10
-```

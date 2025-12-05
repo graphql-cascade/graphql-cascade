@@ -1,6 +1,6 @@
 {
   "name": "@graphql-cascade/apollo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Apollo Client integration for GraphQL Cascade",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

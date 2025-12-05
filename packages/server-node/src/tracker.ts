@@ -64,9 +64,10 @@ export class CascadeTracker implements EntityChangeIterator {
 
   // Security filters
   private fieldFilter?: (typename: string, fieldName: string, value: unknown) => boolean;
-  private entityFilter?: (typename: string, id: string, entity: Record<string, unknown>) => boolean;
-  private validateEntity?: (typename: string, id: string, entity: Record<string, unknown>) => void;
-  private transformEntity?: (typename: string, id: string, entity: Record<string, unknown>) => Record<string, unknown>;
+  private entityFilter?: (entity: TrackedEntity, context?: unknown) => boolean | Promise<boolean>;
+  private validateEntity?: (entity: TrackedEntity) => void;
+  private transformEntity?: (entity: TrackedEntity) => TrackedEntity;
+  private context?: unknown;
 
   // Transaction state
   public inTransaction: boolean = false;
@@ -148,6 +149,13 @@ export class CascadeTracker implements EntityChangeIterator {
   }
 
   /**
+   * Set context for entity filtering (e.g., current user, request info).
+   */
+  setContext(context: unknown): void {
+    this.context = context;
+  }
+
+  /**
    * Start a new cascade transaction.
    */
   startTransaction(): string {
@@ -182,7 +190,67 @@ export class CascadeTracker implements EntityChangeIterator {
   }
 
   /**
-   * End the current transaction and return cascade data.
+   * End the current transaction and return cascade data (async version with entity filtering support).
+   */
+  async endTransactionAsync(): Promise<TrackerCascadeData> {
+    if (!this.inTransaction && this.updatedEntities.size === 0 && this.deletedEntities.size === 0) {
+      throw new CascadeError(
+        'No transaction in progress',
+        CascadeErrorCode.NO_TRANSACTION,
+        'Call startTransaction() before tracking entities',
+        '/docs/server/node#transactions'
+      );
+    }
+
+    const trackingTime = Date.now() - (this.getTrackingStartTime() ?? 0);
+    const wasLimitReached = this.entityLimitReached;
+    const updatedEntities = await this.buildUpdatedEntitiesAsync();
+    const deletedEntities = this.buildDeletedEntities();
+    const errorCount = this.serializationErrorCount;
+    const cascadeSize = updatedEntities.length + deletedEntities.length;
+
+    const metadata: CascadeMetadata = {
+      transactionId: this.transactionId,
+      timestamp: new Date().toISOString(),
+      depth: this.maxDepthReached,
+      affectedCount: this.updatedEntities.size + this.deletedEntities.size,
+      trackingTime,
+      truncatedUpdated: wasLimitReached,
+      serializationErrors: errorCount > 0 ? errorCount : undefined,
+    };
+
+    const cascadeData = {
+      updated: updatedEntities,
+      deleted: deletedEntities,
+      metadata,
+    };
+
+    // Metrics instrumentation for successful completion
+    this.metrics?.increment('transactionsCompleted');
+    this.metrics?.histogram('trackingTimeMs', trackingTime);
+    this.metrics?.histogram('cascadeSize', cascadeSize);
+    if (wasLimitReached) {
+      this.metrics?.increment('entitiesTruncated');
+    }
+    this.activeTransactionCount = Math.max(0, this.activeTransactionCount - 1);
+    this.metrics?.gauge('activeTransactions', this.activeTransactionCount);
+
+    this.log.debug('Transaction ended', {
+      transactionId: this.transactionId,
+      updatedCount: updatedEntities.length,
+      deletedCount: deletedEntities.length,
+      trackingTime,
+    });
+
+    // Reset state (without triggering failed metrics)
+    this.resetTransactionStateInternal(false);
+
+    return cascadeData;
+  }
+
+  /**
+   * End the current transaction and return cascade data (synchronous version).
+   * Note: If using async entityFilter, use endTransactionAsync() instead.
    */
   endTransaction(): TrackerCascadeData {
     if (!this.inTransaction && this.updatedEntities.size === 0 && this.deletedEntities.size === 0) {
@@ -243,7 +311,37 @@ export class CascadeTracker implements EntityChangeIterator {
 
 
   /**
-   * Get cascade data without ending the transaction.
+   * Get cascade data without ending the transaction (async version with entity filtering support).
+   */
+  async getCascadeDataAsync(): Promise<TrackerCascadeData> {
+    if (!this.inTransaction) {
+      throw new Error('No transaction in progress');
+    }
+
+    const trackingTime = Date.now() - (this.getTrackingStartTime() ?? 0);
+    const updatedEntities = await this.buildUpdatedEntitiesAsync();
+    const deletedEntities = this.buildDeletedEntities();
+
+    const metadata: CascadeMetadata = {
+      transactionId: this.transactionId,
+      timestamp: new Date().toISOString(),
+      depth: this.maxDepthReached,
+      affectedCount: this.updatedEntities.size + this.deletedEntities.size,
+      trackingTime,
+      truncatedUpdated: this.entityLimitReached,
+      serializationErrors: this.serializationErrorCount > 0 ? this.serializationErrorCount : undefined,
+    };
+
+    return {
+      updated: updatedEntities,
+      deleted: deletedEntities,
+      metadata,
+    };
+  }
+
+  /**
+   * Get cascade data without ending the transaction (synchronous version).
+   * Note: If using async entityFilter, use getCascadeDataAsync() instead.
    */
   getCascadeData(): TrackerCascadeData {
     if (!this.inTransaction) {
@@ -328,14 +426,12 @@ export class CascadeTracker implements EntityChangeIterator {
       return;
     }
 
-    // Apply entity filter if configured (before adding to tracked entities)
-    if (this.entityFilter && !this.entityFilter(typename, entityId, entity as Record<string, unknown>)) {
-      return;
-    }
+    // Note: entityFilter is now applied asynchronously in getCascadeData/endTransaction
+    // to support async authorization checks. Validation is still done synchronously here.
 
     // Validate entity if configured (throws on validation failure)
     if (this.validateEntity) {
-      this.validateEntity(typename, entityId, entity as Record<string, unknown>);
+      this.validateEntity(entity as TrackedEntity);
     }
 
     // Skip if already visited
@@ -489,7 +585,51 @@ export class CascadeTracker implements EntityChangeIterator {
   }
 
   /**
-   * Build the updated entities list for cascade response.
+   * Build the updated entities list for cascade response (async version with entity filtering).
+   */
+  private async buildUpdatedEntitiesAsync(): Promise<TrackerCascadeData['updated']> {
+    const updated: TrackerCascadeData['updated'] = [];
+
+    for (const change of this.updatedEntities.values()) {
+      try {
+        let entity = change.entity;
+        const typename = this.getEntityType(entity);
+        const entityId = this.getEntityId(entity);
+
+        // Apply entity filter if configured (supports async)
+        if (this.entityFilter) {
+          const shouldInclude = await this.entityFilter(entity as TrackedEntity, this.context);
+          if (!shouldInclude) {
+            continue;
+          }
+        }
+
+        // Apply transform if configured
+        if (this.transformEntity) {
+          entity = this.transformEntity(entity as TrackedEntity);
+        }
+
+        const entityDict = this.entityToDict(entity);
+        updated.push({
+          __typename: typename,
+          id: entityId,
+          operation: change.operation,
+          entity: entityDict,
+        });
+      } catch (e) {
+        this.serializationErrorCount++;
+        if (this.onSerializationError) {
+          this.onSerializationError(change.entity, e as Error);
+        }
+        continue;
+      }
+    }
+
+    return updated;
+  }
+
+  /**
+   * Build the updated entities list for cascade response (synchronous version for backward compatibility).
    */
   private buildUpdatedEntities(): TrackerCascadeData['updated'] {
     const updated: TrackerCascadeData['updated'] = [];
@@ -500,9 +640,20 @@ export class CascadeTracker implements EntityChangeIterator {
         const typename = this.getEntityType(entity);
         const entityId = this.getEntityId(entity);
 
+        // Apply entity filter if configured (sync only)
+        if (this.entityFilter) {
+          const result = this.entityFilter(entity as TrackedEntity, this.context);
+          // If it's a Promise, we can't handle it here - skip entity filtering in sync mode
+          if (result instanceof Promise) {
+            this.log.warn('Async entityFilter detected in sync mode - filter not applied. Use getCascadeDataAsync() instead.');
+          } else if (!result) {
+            continue;
+          }
+        }
+
         // Apply transform if configured
         if (this.transformEntity) {
-          entity = this.transformEntity(typename, entityId, entity as Record<string, unknown>);
+          entity = this.transformEntity(entity as TrackedEntity);
         }
 
         const entityDict = this.entityToDict(entity);
