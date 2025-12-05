@@ -8,8 +8,8 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
-    "@graphql-cascade/server": "file:../packages/server-node",
-    "@graphql-cascade/client": "file:../packages/client-core/core"
+    "@graphql-cascade/server": "workspace:*",
+    "@graphql-cascade/client": "workspace:*"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

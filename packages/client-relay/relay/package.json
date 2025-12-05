@@ -21,7 +21,7 @@
     "dist"
   ],
   "dependencies": {
-    "@graphql-cascade/client": "^0.2.0"
+    "@graphql-cascade/client": "workspace:*"
   },
   "peerDependencies": {
     "graphql": "^16.0.0",
