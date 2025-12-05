@@ -28,29 +28,57 @@ jobs:
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/cascade_test
       NODE_ENV: test
-    steps:
+     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build --workspaces
-      - run: npm run test:integration --workspaces --if-present
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - run: pnpm -r --if-present test:integration
 
   graphql-servers:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        server: [apollo, nestjs, express-graphql]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build --workspaces
-      - run: npm run start --workspace=examples/${{ matrix.server }}-example &
-      - run: sleep 10
-      - run: npm run test:integration:${{ matrix.server }}
+     strategy:
+       matrix:
+         server: [apollo, nestjs, express-graphql]
+     steps:
+       - uses: actions/checkout@v4
+       - uses: actions/setup-node@v4
+         with:
+           node-version: '18'
+       - name: Setup pnpm
+         uses: pnpm/action-setup@v4
+         with:
+           version: 10
+       - name: Get pnpm store directory
+         shell: bash
+         run: |
+           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+       - name: Setup pnpm cache
+         uses: actions/cache@v4
+         with:
+           path: ${{ env.STORE_PATH }}
+           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+           restore-keys: |
+             ${{ runner.os }}-pnpm-store-
+       - run: pnpm install --frozen-lockfile
+       - run: pnpm -r build
+       - run: pnpm run start --workspace=examples/${{ matrix.server }}-example &
+       - run: sleep 10
+       - run: pnpm run test:integration:${{ matrix.server }}

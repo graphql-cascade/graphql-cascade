@@ -7,50 +7,68 @@ on:
     branches: [main]
 
 jobs:
-  python:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+   python:
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+       - uses: actions/setup-python@v5
+         with:
+           python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          cd reference/server-python
-          pip install -e ".[dev]"
-          pip install pytest pytest-cov mypy ruff
+       - name: Install dependencies
+         run: |
+           cd reference/server-python
+           pip install -e ".[dev]"
+           pip install pytest pytest-cov mypy ruff
 
-      - name: Run tests
-        run: |
-          cd reference/server-python
-          pytest tests/ -v --cov=graphql_cascade
+       - name: Run tests
+         run: |
+           cd reference/server-python
+           pytest tests/ -v --cov=graphql_cascade
 
-      - name: Type check
-        run: |
-          cd reference/server-python
-          mypy graphql_cascade/ || true
+       - name: Type check
+         run: |
+           cd reference/server-python
+           mypy graphql_cascade/ || true
 
-      - name: Lint
-        run: |
-          cd reference/server-python
-          ruff check graphql_cascade/
+       - name: Lint
+         run: |
+           cd reference/server-python
+           ruff check graphql_cascade/
 
-  typescript:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+   typescript:
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+       - uses: actions/setup-node@v4
+         with:
+           node-version: '20'
 
-      - name: Install dependencies
-        run: npm install
+       - name: Setup pnpm
+         uses: pnpm/action-setup@v4
+         with:
+           version: 10
 
-      - name: Build
-        run: npm run build
+       - name: Get pnpm store directory
+         shell: bash
+         run: |
+           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-      - name: Test
-        run: npm test
+       - name: Setup pnpm cache
+         uses: actions/cache@v4
+         with:
+           path: ${{ env.STORE_PATH }}
+           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+           restore-keys: |
+             ${{ runner.os }}-pnpm-store-
+
+       - name: Install dependencies
+         run: pnpm install --frozen-lockfile
+
+       - name: Build
+         run: pnpm run build
+
+       - name: Test
+         run: pnpm test
