@@ -850,6 +850,28 @@ describe('CascadeTracker', () => {
         // Entity 2 should be filtered out due to error
         expect(result.updated.length).toBeLessThan(3);
       });
+
+      it('should handle async filter rejections gracefully', async () => {
+        const tracker = new CascadeTracker({
+          entityFilter: async (entity) => {
+            if (Number(entity.id) === 2) {
+              throw new Error('Async filter rejection');
+            }
+            return true;
+          }
+        });
+
+        tracker.startTransaction();
+        tracker.trackUpdate(new MockEntity(1, 'Good'));
+        tracker.trackUpdate(new MockEntity(2, 'Bad'));
+        tracker.trackUpdate(new MockEntity(3, 'Good'));
+
+        const result = await tracker.endTransactionAsync();
+
+        // Entity 2 should be filtered out due to async error
+        expect(result.updated).toHaveLength(2);
+        expect(result.updated.map((u: any) => u.id)).toEqual(['1', '3']);
+      });
     });
 
     describe('validateEntity', () => {

@@ -4,8 +4,8 @@
  * Tracks entity changes during GraphQL mutations for cascade response construction.
  */
 
-import { EntityChange, CascadeTrackerConfig, GraphQLEntity, EntityChangeIterator, TrackedEntity, CascadeLoggerInterface, TrackerCascadeData, CascadeMetadata } from './types';
-import { CascadeError, CascadeErrorCode } from './errors';
+import { EntityChange, CascadeTrackerConfig, GraphQLEntity, EntityChangeIterator, TrackedEntity, CascadeLoggerInterface, TrackerCascadeData, CascadeMetadata, CascadeErrorCode } from './types';
+import { CascadeError } from './errors';
 import { silentLogger, createScopedLogger } from './logger';
 import type { MetricsCollector } from './metrics';
 

@@ -7,7 +7,8 @@
 // Core classes
 export { CascadeTracker, CascadeTransaction, trackCascade } from './tracker';
 export { CascadeBuilder, StreamingCascadeBuilder } from './builder';
-export { CascadeError, CascadeErrorCode } from './errors';
+export { CascadeError } from './errors';
+export { CascadeErrorCode } from './types';
 
 // Error convenience functions
 export {

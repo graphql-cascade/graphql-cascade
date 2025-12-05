@@ -4,7 +4,43 @@
  * Core types for GraphQL Cascade server implementation.
  */
 
-import type { CascadeErrorCode } from './errors';
+/**
+ * Standard GraphQL Cascade error codes (v1.1).
+ *
+ * These codes provide standardized error handling across GraphQL Cascade implementations.
+ * All codes align with the GraphQL Cascade specification.
+ */
+export enum CascadeErrorCode {
+  // Input and validation errors
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  NOT_FOUND = 'NOT_FOUND',
+
+  // Authentication and authorization
+  UNAUTHORIZED = 'UNAUTHORIZED',
+  FORBIDDEN = 'FORBIDDEN',
+
+  // Conflict and consistency
+  CONFLICT = 'CONFLICT',
+  TRANSACTION_FAILED = 'TRANSACTION_FAILED',
+
+  // Operational errors (v1.1)
+  TIMEOUT = 'TIMEOUT',
+  RATE_LIMITED = 'RATE_LIMITED',
+  SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
+
+  // Fallback
+  INTERNAL_ERROR = 'INTERNAL_ERROR',
+
+  // Legacy internal codes (for backward compatibility)
+  /** @deprecated Use INTERNAL_ERROR instead */
+  NO_TRANSACTION = 'NO_TRANSACTION',
+  /** @deprecated Use INTERNAL_ERROR instead */
+  TRANSACTION_IN_PROGRESS = 'TRANSACTION_IN_PROGRESS',
+  /** @deprecated Use VALIDATION_ERROR instead */
+  MISSING_ID = 'MISSING_ID',
+  /** @deprecated Use INTERNAL_ERROR instead */
+  SERIALIZATION_ERROR = 'SERIALIZATION_ERROR',
+}
 
 /**
  * Represents a change to an entity during a cascade transaction.
