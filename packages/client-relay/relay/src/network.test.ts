@@ -1,5 +1,4 @@
 import { createCascadeRelayEnvironment } from './environment';
-import { CascadeResponse, CascadeOperation } from '@graphql-cascade/client';
 
 // Mock Relay runtime
 const mockObservable = {
@@ -31,7 +30,7 @@ jest.mock('relay-runtime', () => ({
 }));
 
 describe('Network Cascade Detection', () => {
-  let cascadeNetwork: any;
+  let _cascadeNetwork: any;
   let mapCallback: any;
 
   beforeEach(() => {
@@ -80,7 +79,7 @@ describe('Network Cascade Detection', () => {
       }
     };
 
-    const operation = { operationKind: 'mutation' };
+    const _operation = { operationKind: 'mutation' };
     const result = mapCallback(cascadeResponse);
 
     expect(mockStore.commitUpdates).toHaveBeenCalledTimes(1);
@@ -97,7 +96,7 @@ describe('Network Cascade Detection', () => {
       }
     };
 
-    const operation = { operationKind: 'mutation' };
+    const _operation = { operationKind: 'mutation' };
     const result = mapCallback(regularResponse);
 
     expect(mockStore.commitUpdates).not.toHaveBeenCalled();
@@ -113,7 +112,7 @@ describe('Network Cascade Detection', () => {
       }
     };
 
-    const operation = { operationKind: 'query' };
+    const _operation = { operationKind: 'query' };
     const result = mapCallback(queryResponse);
 
     expect(mockStore.commitUpdates).not.toHaveBeenCalled();
@@ -130,7 +129,7 @@ describe('Network Cascade Detection', () => {
       }
     };
 
-    const operation = { operationKind: 'subscription' };
+    const _operation = { operationKind: 'subscription' };
     const result = mapCallback(subscriptionResponse);
 
     expect(mockStore.commitUpdates).not.toHaveBeenCalled();
@@ -166,7 +165,7 @@ describe('Network Cascade Detection', () => {
       }
     };
 
-    const operation = { operationKind: 'mutation' };
+    const _operation = { operationKind: 'mutation' };
     const result = mapCallback(batchResponse);
 
     expect(mockStore.commitUpdates).toHaveBeenCalledTimes(1);
@@ -202,7 +201,7 @@ describe('Network Cascade Detection', () => {
       }
     };
 
-    const operation = { operationKind: 'mutation' };
+    const _operation = { operationKind: 'mutation' };
 
     // The map callback should handle errors internally and still return the payload
     expect(() => {
@@ -220,7 +219,7 @@ describe('Network Cascade Detection', () => {
       }
     };
 
-    const operation = { operationKind: 'mutation' };
+    const _operation = { operationKind: 'mutation' };
     const result = mapCallback(testPayload);
 
     // The payload should be returned unchanged

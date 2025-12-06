@@ -1,5 +1,4 @@
 import { createCascadeRelayEnvironment, createBasicCascadeEnvironment } from './environment';
-import { CascadeResponse, CascadeOperation } from '@graphql-cascade/client';
 
 // Mock Relay runtime
 const mockObservable = {
@@ -37,13 +36,13 @@ describe('createCascadeRelayEnvironment', () => {
 
   it('should create a Relay Environment', () => {
     const { Environment } = require('relay-runtime');
-    const environment = createCascadeRelayEnvironment(mockNetwork as any, mockStore as any);
+    const _environment = createCascadeRelayEnvironment(mockNetwork as any, mockStore as any);
     expect(Environment).toHaveBeenCalled();
   });
 
   it('should create environment with cascade network wrapper', () => {
     const { Network } = require('relay-runtime');
-    const environment = createCascadeRelayEnvironment(mockNetwork as any, mockStore as any);
+    const _environment = createCascadeRelayEnvironment(mockNetwork as any, mockStore as any);
 
     // Verify that Network.create was called to wrap the network
     expect(Network.create).toHaveBeenCalled();
@@ -55,7 +54,7 @@ describe('createBasicCascadeEnvironment', () => {
     const { Environment, Network, Store } = require('relay-runtime');
     const fetchFn = jest.fn();
 
-    const environment = createBasicCascadeEnvironment(fetchFn);
+    const _environment = createBasicCascadeEnvironment(fetchFn);
     expect(Network.create).toHaveBeenCalledWith(fetchFn);
     expect(Store).toHaveBeenCalled();
     expect(Environment).toHaveBeenCalled();

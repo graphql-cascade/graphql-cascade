@@ -1,5 +1,5 @@
-import { RecordSourceSelectorProxy, MutationConfig, SelectorStoreUpdater } from 'relay-runtime';
-import { CascadeResponse, CascadeUpdates, UpdatedEntity, DeletedEntity } from '@graphql-cascade/client';
+import { RecordSourceSelectorProxy, MutationConfig } from 'relay-runtime';
+import { CascadeResponse, CascadeUpdates } from '@graphql-cascade/client';
 import { RelayRetryOptions } from './error-handling';
 
 /**
