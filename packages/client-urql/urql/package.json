@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "jest",
+    "test": "jest --coverage",
     "lint": "eslint src/**/*.ts",
     "clean": "rm -rf dist"
   },
