@@ -8,6 +8,7 @@ from graphql_cascade import (
     CascadeResponse,
     CascadeError,
     CascadeTracker,
+    CascadeTransaction,
     build_success_response,
     build_error_response,
 )
@@ -16,10 +17,10 @@ from graphql_cascade import (
 class MockEntity:
     """Mock entity for testing."""
 
-    def __init__(self, id: str, name: str, __typename: str = "MockEntity"):
+    def __init__(self, id: str, name: str, typename: str = "MockEntity"):
         self.id = id
         self.name = name
-        self.__typename__ = __typename
+        self.__typename__ = typename
 
     def to_dict(self):
         return {
@@ -46,8 +47,8 @@ class TestCascadeBuilder:
         builder = CascadeBuilder(tracker)
         entity = MockEntity("1", "Test Entity")
 
-        with tracker:
-            tracker.track_create(entity)
+        tracker.start_transaction()
+        tracker.track_create(entity)
 
         response = builder.build_response(primary_result=entity)
 
@@ -100,11 +101,11 @@ class TestCascadeBuilder:
             max_response_size_mb=0.001  # Very small limit
         )
 
-        with tracker:
-            # Add more entities than the limit
-            for i in range(5):
-                entity = MockEntity(str(i), f"Entity {i}")
-                tracker.track_create(entity)
+        tracker.start_transaction()
+        # Add more entities than the limit
+        for i in range(5):
+            entity = MockEntity(str(i), f"Entity {i}")
+            tracker.track_create(entity)
 
         response = builder.build_response()
 
@@ -144,8 +145,8 @@ class TestConvenienceFunctions:
         tracker = CascadeTracker()
         entity = MockEntity("1", "Test")
 
-        with tracker:
-            tracker.track_create(entity)
+        tracker.start_transaction()
+        tracker.track_create(entity)
 
         response = build_success_response(tracker, None, entity)
 
@@ -196,6 +197,4 @@ class TestCascadeResponse:
             cascade=custom_cascade
         )
 
-        assert response.cascade == custom_cascade</content>
-</xai:function_call name="write">
-<parameter name="filePath">server-reference/tests/test_invalidator.py
+        assert response.cascade == custom_cascade

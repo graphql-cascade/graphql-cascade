@@ -1,0 +1,195 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://graphql-cascade.org/schema/v1/test-case",
+  "title": "GraphQL Cascade Conformance Test Case",
+  "description": "Schema for GraphQL Cascade conformance test cases",
+  "type": "object",
+  "required": ["id", "name", "description", "category", "requirement", "input", "expected"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique test case identifier (e.g., TC-S-001)",
+      "pattern": "^TC-[SCIT]-\\d{3}$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable test name",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of what the test validates",
+      "minLength": 10
+    },
+    "category": {
+      "type": "string",
+      "description": "Test category",
+      "enum": ["server", "client", "transport", "integration"]
+    },
+    "subcategory": {
+      "type": "string",
+      "description": "Test subcategory within the category",
+      "examples": ["tracking", "response-building", "cache-updates", "invalidation"]
+    },
+    "requirement": {
+      "type": "string",
+      "description": "Specification requirement being tested (e.g., REQ-001)",
+      "pattern": "^REQ-\\d{3}$"
+    },
+    "priority": {
+      "type": "string",
+      "description": "Test priority",
+      "enum": ["critical", "high", "medium", "low"],
+      "default": "medium"
+    },
+    "input": {
+      "type": "object",
+      "description": "Test input data",
+      "properties": {
+        "mutation": {
+          "type": "string",
+          "description": "GraphQL mutation to execute"
+        },
+        "query": {
+          "type": "string",
+          "description": "GraphQL query to execute (for read tests)"
+        },
+        "context": {
+          "type": "object",
+          "description": "Initial state and context",
+          "properties": {
+            "entities": {
+              "type": "array",
+              "description": "Initial entities in the system",
+              "items": {
+                "$ref": "#/definitions/Entity"
+              }
+            },
+            "schema": {
+              "type": "string",
+              "description": "GraphQL schema SDL"
+            },
+            "variables": {
+              "type": "object",
+              "description": "GraphQL variables"
+            }
+          }
+        },
+        "clientState": {
+          "type": "object",
+          "description": "Client-side state for client tests",
+          "properties": {
+            "cache": {
+              "type": "object",
+              "description": "Initial cache state"
+            },
+            "queries": {
+              "type": "array",
+              "description": "Active queries in cache",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "query": { "type": "string" },
+                  "variables": { "type": "object" },
+                  "result": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "description": "Expected test outcomes",
+      "properties": {
+        "cascade": {
+          "$ref": "#/definitions/CascadeResponse"
+        },
+        "error": {
+          "type": "object",
+          "description": "Expected error response",
+          "properties": {
+            "message": { "type": "string" },
+            "extensions": { "type": "object" }
+          }
+        },
+        "clientState": {
+          "type": "object",
+          "description": "Expected client state after processing",
+          "properties": {
+            "cache": {
+              "type": "object",
+              "description": "Expected cache state"
+            },
+            "invalidatedQueries": {
+              "type": "array",
+              "description": "Queries that should be invalidated",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "performance": {
+          "type": "object",
+          "description": "Performance expectations",
+          "properties": {
+            "maxExecutionTime": {
+              "type": "number",
+              "description": "Maximum execution time in milliseconds"
+            },
+            "maxResponseSize": {
+              "type": "number",
+              "description": "Maximum response size in bytes"
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "description": "Test tags for filtering and organization",
+      "items": { "type": "string" }
+    }
+  },
+  "definitions": {
+    "Entity": {
+      "type": "object",
+      "required": ["__typename", "id"],
+      "properties": {
+        "__typename": { "type": "string" },
+        "id": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "CascadeResponse": {
+      "type": "object",
+      "required": ["updated", "invalidations", "metadata"],
+      "properties": {
+        "updated": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Entity" }
+        },
+        "invalidations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/InvalidationHint" }
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "affectedCount": { "type": "integer" },
+            "operationType": { "type": "string", "enum": ["CREATE", "UPDATE", "DELETE"] },
+            "timestamp": { "type": "string", "format": "date-time" }
+          }
+        }
+      }
+    },
+    "InvalidationHint": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["entity", "query", "pattern"] },
+        "target": { "type": "string" },
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}

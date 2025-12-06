@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Perform a dry run (no actual publish)'
+        required: false
+        default: 'false'
+        type: boolean
+      tag:
+        description: 'Release tag'
+        required: false
+        default: 'latest'
+        type: choice
+        options:
+          - latest
+          - beta
+          - next
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+      id-token: write
+     steps:
+       - name: Checkout
+         uses: actions/checkout@v4
+         with:
+           fetch-depth: 0
+
+       - name: Setup Node.js
+         uses: actions/setup-node@v4
+         with:
+           node-version: '20'
+           registry-url: 'https://registry.npmjs.org'
+
+       - name: Setup pnpm
+         uses: pnpm/action-setup@v4
+         with:
+           version: 10
+
+       - name: Get pnpm store directory
+         shell: bash
+         run: |
+           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+       - name: Setup pnpm cache
+         uses: actions/cache@v4
+         with:
+           path: ${{ env.STORE_PATH }}
+           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+           restore-keys: |
+             ${{ runner.os }}-pnpm-store-
+
+       - name: Install dependencies
+         run: pnpm install --frozen-lockfile
+
+       - name: Build all packages
+         run: pnpm -r --if-present build
+
+       - name: Run tests
+         run: pnpm -r --if-present test
+
+      - name: Verify packages with publint
+        run: npx publint --strict ./packages/*
+
+      - name: Verify packages with attw
+        run: npx attw --pack ./packages/*
+
+       - name: Create Release Pull Request or Publish
+         if: ${{ github.event.inputs.dry-run != 'true' }}
+         id: changesets
+         uses: changesets/action@v1
+         with:
+           publish: pnpm run release
+           version: pnpm run version
+           commit: 'chore: release packages'
+           title: 'chore: release packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Dry Run - Show what would be published
+        if: ${{ github.event.inputs.dry-run == 'true' }}
+        run: |
+          echo "Dry run mode - showing packages that would be published:"
+          npx changeset status
+
+      - name: Create GitHub releases
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          published_packages='${{ steps.changesets.outputs.publishedPackages }}'
+          if [ -n "$published_packages" ]; then
+            echo "$published_packages" | jq -c '.[]' | while read -r package; do
+              name=$(echo "$package" | jq -r '.name')
+              version=$(echo "$package" | jq -r '.version')
+              tag="$name@$version"
+              gh release create "$tag" --title "Release $name@$version" --generate-notes
+            done
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,39 @@
+{
+  "id": "TC-S-011",
+  "name": "Nested Entity Response",
+  "description": "Servers MUST include nested related entities in the cascade response when relationships are modified",
+  "category": "server",
+  "subcategory": "response-building",
+  "requirement": "REQ-011",
+  "priority": "high",
+  "input": {
+    "mutation": "mutation CreatePost($input: CreatePostInput!) { createPost(input: $input) { id title author { id name } } }",
+    "context": {
+      "variables": {
+        "input": {
+          "title": "New Post",
+          "authorId": "user_1"
+        }
+      },
+      "entities": [
+        { "__typename": "User", "id": "user_1", "name": "John Doe", "postCount": 5 }
+      ]
+    }
+  },
+  "expected": {
+    "cascade": {
+      "updated": [
+        { "__typename": "Post", "id": "post_1", "title": "New Post", "authorId": "user_1" },
+        { "__typename": "User", "id": "user_1", "name": "John Doe", "postCount": 6 }
+      ],
+      "invalidations": [
+        { "type": "query", "target": "getPosts", "reason": "new entity created" }
+      ],
+      "metadata": {
+        "affectedCount": 2,
+        "operationType": "CREATE"
+      }
+    }
+  },
+  "tags": ["nested-entities", "relationships", "mutation"]
+}

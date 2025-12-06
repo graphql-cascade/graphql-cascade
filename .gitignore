@@ -30,7 +30,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -39,6 +38,9 @@ wheels/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
+*.whl
+*.tar.gz
+*.tgz
 .installed.cfg
 *.egg
 MANIFEST
@@ -48,7 +50,8 @@ pip-log.txt
 pip-delete-this-directory.txt
 .pytest_cache/
 .coverage
-.coverage.*
+*.coverage
+coverage.xml
 htmlcov/
 .tox/
 .nox/
@@ -58,10 +61,12 @@ cov.xml
 *.cover
 *.log
 .mypy_cache/
+.ruff_cache/
 .dmypy.json
 dmypy.json
 .pyre/
 venv/
+.venv/
 env/
 ENV/
 env.bak/
@@ -113,6 +118,7 @@ lerna-debug.log*
 *.temp
 .temp/
 .tmp/
+.phases/
 
 # Build outputs
 build/
@@ -142,6 +148,9 @@ credentials.json
 # Package manager locks (keep package-lock.json and yarn.lock)
 # But ignore pnpm-lock.yaml if not using pnpm
 # pnpm-lock.yaml
+
+# Build artifacts
+sbom.json
 
 # Misc
 *.bak

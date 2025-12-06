@@ -1,0 +1,44 @@
+{
+  "specification": {
+    "name": "GraphQL Cascade",
+    "version": "1.0.0",
+    "status": "draft",
+    "releaseDate": "2025-01-15",
+    "previousVersions": [],
+    "supportedVersions": ["1.0.0"]
+  },
+  "conformance": {
+    "testSuiteVersion": "1.0.0",
+    "totalTestCases": 8,
+    "categories": {
+      "server": {
+        "tracking": 5,
+        "response-building": 0,
+        "error-handling": 0
+      },
+      "client": {
+        "cache-updates": 2,
+        "invalidation": 1
+      },
+      "transport": 0,
+      "integration": 0
+    },
+    "requirements": {
+      "total": 8,
+      "critical": 5,
+      "high": 3,
+      "medium": 0,
+      "low": 0
+    }
+  },
+  "compatibility": {
+    "graphqlVersions": ["2021-10"],
+    "breakingChanges": [],
+    "deprecated": []
+  },
+  "metadata": {
+    "generated": "2025-01-15T00:00:00Z",
+    "generator": "conformance-test-suite",
+    "commit": "HEAD"
+  }
+}

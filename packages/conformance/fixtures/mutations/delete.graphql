@@ -1,0 +1,22 @@
+mutation DeleteUser($input: DeleteUserInput!) {
+  deleteUser(input: $input) {
+    success
+    data {
+      id
+      name
+      email
+    }
+    cascade {
+      deleted {
+        __typename
+        id
+        deletedAt
+      }
+      metadata {
+        timestamp
+        depth
+        affectedCount
+      }
+    }
+  }
+}

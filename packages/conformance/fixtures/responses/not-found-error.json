@@ -1,0 +1,22 @@
+{
+  "data": {
+    "updateUser": {
+      "success": false,
+      "data": null,
+      "cascade": {
+        "updated": [],
+        "deleted": [],
+        "invalidations": [],
+        "metadata": { "timestamp": "2024-01-01T00:00:00.000Z", "depth": 0, "affectedCount": 0 }
+      },
+      "errors": [
+        {
+          "code": "NOT_FOUND",
+          "message": "User with id 'user-999' not found",
+          "field": "id",
+          "path": ["input", "id"]
+        }
+      ]
+    }
+  }
+}

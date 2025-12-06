@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://graphql-cascade.org/schema/v1/invalidation",
+  "title": "QueryInvalidation",
+  "description": "Instructions for invalidating cached queries after a mutation",
+  "type": "object",
+  "required": ["strategy", "scope"],
+  "properties": {
+    "queryName": {
+      "type": ["string", "null"],
+      "description": "Query name to invalidate (e.g., 'listUsers', 'getCompany'). If null, use queryPattern."
+    },
+    "queryHash": {
+      "type": ["string", "null"],
+      "description": "Hash of the query for exact matching"
+    },
+    "arguments": {
+      "description": "Arguments that identify the query to invalidate. Example: { 'companyId': '123' }",
+      "oneOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "queryPattern": {
+      "type": ["string", "null"],
+      "description": "Pattern to match queries (e.g., 'list*', 'get*')"
+    },
+    "strategy": {
+      "type": "string",
+      "description": "Strategy for handling the invalidation",
+      "enum": ["INVALIDATE", "REFETCH", "REMOVE"]
+    },
+    "scope": {
+      "type": "string",
+      "description": "Scope of the invalidation",
+      "enum": ["EXACT", "PREFIX", "PATTERN", "ALL"]
+    }
+  },
+  "examples": [
+    {
+      "queryName": "getUser",
+      "arguments": { "id": "123" },
+      "strategy": "REFETCH",
+      "scope": "EXACT"
+    },
+    {
+      "queryName": "listUsers",
+      "strategy": "INVALIDATE",
+      "scope": "PREFIX"
+    },
+    {
+      "queryPattern": "list*",
+      "strategy": "INVALIDATE",
+      "scope": "PATTERN"
+    },
+    {
+      "strategy": "INVALIDATE",
+      "scope": "ALL"
+    }
+  ]
+}

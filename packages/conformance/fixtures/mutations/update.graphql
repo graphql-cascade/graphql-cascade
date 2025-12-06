@@ -1,0 +1,22 @@
+mutation UpdateUser($input: UpdateUserInput!) {
+  updateUser(input: $input) {
+    success
+    data {
+      id
+      name
+      email
+    }
+    cascade {
+      updated {
+        __typename
+        id
+        operation
+      }
+      metadata {
+        timestamp
+        depth
+        affectedCount
+      }
+    }
+  }
+}

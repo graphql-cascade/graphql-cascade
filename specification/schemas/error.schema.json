@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://graphql-cascade.org/schema/v1/error",
+  "title": "CascadeError",
+  "description": "Structured error information for GraphQL Cascade operations",
+  "type": "object",
+  "required": ["message", "code", "path"],
+  "properties": {
+    "message": {
+      "type": "string",
+      "description": "Human-readable error message",
+      "minLength": 1
+    },
+    "code": {
+      "type": "string",
+      "description": "Machine-readable error code",
+      "enum": [
+        "VALIDATION_ERROR",
+        "NOT_FOUND",
+        "UNAUTHORIZED",
+        "FORBIDDEN",
+        "CONFLICT",
+        "INTERNAL_ERROR",
+        "TRANSACTION_FAILED",
+        "TIMEOUT",
+        "RATE_LIMITED",
+        "SERVICE_UNAVAILABLE"
+      ]
+    },
+    "field": {
+      "type": ["string", "null"],
+      "description": "Field that caused the error (if applicable)"
+    },
+    "path": {
+      "type": "array",
+      "description": "Path to the error in the input",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 0
+    },
+    "extensions": {
+      "description": "Additional error metadata",
+      "oneOf": [
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "examples": [
+    {
+      "message": "User not found",
+      "code": "NOT_FOUND",
+      "field": "userId",
+      "path": ["updateUser", "userId"],
+      "extensions": {
+        "entityType": "User",
+        "entityId": "123"
+      }
+    },
+    {
+      "message": "Validation failed",
+      "code": "VALIDATION_ERROR",
+      "field": "email",
+      "path": ["createUser", "input", "email"],
+      "extensions": null
+    },
+    {
+      "message": "Payment provider did not respond within 30 seconds",
+      "code": "TIMEOUT",
+      "field": null,
+      "path": ["createOrder"],
+      "extensions": {
+        "timeoutMs": 30000,
+        "service": "payment-gateway",
+        "retryable": true
+      }
+    },
+    {
+      "message": "Rate limit exceeded: 100 requests per minute",
+      "code": "RATE_LIMITED",
+      "field": null,
+      "path": ["sendEmail"],
+      "extensions": {
+        "retryAfter": 45,
+        "limit": 100,
+        "window": "1m",
+        "remaining": 0,
+        "resetAt": "2023-11-11T10:01:00Z"
+      }
+    },
+    {
+      "message": "Email service temporarily unavailable",
+      "code": "SERVICE_UNAVAILABLE",
+      "field": null,
+      "path": ["createUser"],
+      "extensions": {
+        "service": "email-provider",
+        "retryable": true,
+        "retryAfter": 60
+      }
+    }
+  ]
+}

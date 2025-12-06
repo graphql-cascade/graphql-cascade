@@ -1,0 +1,39 @@
+{
+  "id": "TC-S-001",
+  "name": "Entity Creation Tracking",
+  "description": "Servers MUST track newly created entities during mutation execution and include them in the cascade response",
+  "category": "server",
+  "subcategory": "tracking",
+  "requirement": "REQ-001",
+  "priority": "critical",
+  "input": {
+    "mutation": "mutation CreateUser($input: CreateUserInput!) { createUser(input: $input) { id name email } }",
+    "context": {
+      "variables": {
+        "input": {
+          "name": "John Doe",
+          "email": "john@example.com"
+        }
+      },
+      "schema": "type Mutation { createUser(input: CreateUserInput!): User } type User { id: ID! name: String! email: String! } input CreateUserInput { name: String! email: String! }"
+    }
+  },
+  "expected": {
+    "cascade": {
+      "updated": [
+        {
+          "__typename": "User",
+          "id": "user_123",
+          "name": "John Doe",
+          "email": "john@example.com"
+        }
+      ],
+      "invalidations": [],
+      "metadata": {
+        "affectedCount": 1,
+        "operationType": "CREATE"
+      }
+    }
+  },
+  "tags": ["entity-creation", "tracking", "mutation"]
+}

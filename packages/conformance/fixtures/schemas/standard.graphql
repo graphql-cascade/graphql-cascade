@@ -1,0 +1,162 @@
+interface Node { id: ID! }
+
+enum CascadeOperation { CREATED UPDATED DELETED }
+enum InvalidationStrategy { INVALIDATE REFETCH REMOVE }
+enum InvalidationScope { EXACT PREFIX PATTERN ALL }
+
+type UpdatedEntity {
+  __typename: String!
+  id: ID!
+  operation: CascadeOperation!
+  entity: Node
+}
+
+type DeletedEntity {
+  __typename: String!
+  id: ID!
+  deletedAt: String!
+}
+
+type QueryInvalidation {
+  queryName: String!
+  strategy: InvalidationStrategy!
+  scope: InvalidationScope!
+}
+
+type CascadeMetadata {
+  timestamp: String!
+  depth: Int!
+  affectedCount: Int!
+}
+
+type CascadeUpdates {
+  updated: [UpdatedEntity!]!
+  deleted: [DeletedEntity!]!
+  invalidations: [QueryInvalidation!]!
+  metadata: CascadeMetadata!
+}
+
+type CascadeError {
+  code: String!
+  message: String!
+  field: String
+  path: [String!]
+}
+
+type User implements Node {
+  id: ID!
+  name: String!
+  email: String!
+  posts: [Post!]!
+}
+
+type Post implements Node {
+  id: ID!
+  title: String!
+  content: String!
+  author: User!
+  comments: [Comment!]!
+}
+
+type Comment implements Node {
+  id: ID!
+  text: String!
+  author: User!
+  post: Post!
+}
+
+type CreateUserCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type UpdateUserCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type DeleteUserCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type CreatePostCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Post
+  cascade: CascadeUpdates!
+}
+
+type UpdatePostCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Post
+  cascade: CascadeUpdates!
+}
+
+type DeletePostCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Post
+  cascade: CascadeUpdates!
+}
+
+type CreateCommentCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Comment
+  cascade: CascadeUpdates!
+}
+
+type UpdateCommentCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Comment
+  cascade: CascadeUpdates!
+}
+
+type DeleteCommentCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Comment
+  cascade: CascadeUpdates!
+}
+
+input CreateUserInput { name: String!, email: String! }
+input UpdateUserInput { id: ID!, name: String, email: String }
+input DeleteUserInput { id: ID! }
+
+input CreatePostInput { title: String!, content: String!, authorId: ID! }
+input UpdatePostInput { id: ID!, title: String, content: String }
+input DeletePostInput { id: ID! }
+
+input CreateCommentInput { text: String!, authorId: ID!, postId: ID! }
+input UpdateCommentInput { id: ID!, text: String }
+input DeleteCommentInput { id: ID! }
+
+type Mutation {
+  createUser(input: CreateUserInput!): CreateUserCascade!
+  updateUser(input: UpdateUserInput!): UpdateUserCascade!
+  deleteUser(input: DeleteUserInput!): DeleteUserCascade!
+  createPost(input: CreatePostInput!): CreatePostCascade!
+  updatePost(input: UpdatePostInput!): UpdatePostCascade!
+  deletePost(input: DeletePostInput!): DeletePostCascade!
+  createComment(input: CreateCommentInput!): CreateCommentCascade!
+  updateComment(input: UpdateCommentInput!): UpdateCommentCascade!
+  deleteComment(input: DeleteCommentInput!): DeleteCommentCascade!
+}
+
+type Query {
+  user(id: ID!): User
+  users: [User!]!
+  post(id: ID!): Post
+  posts: [Post!]!
+  comment(id: ID!): Comment
+  comments: [Comment!]!
+}

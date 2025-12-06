@@ -1,0 +1,25 @@
+{
+  "data": {
+    "batchUpdateUsers": {
+      "success": true,
+      "data": [
+        { "id": "user-1", "name": "User One", "__typename": "User" },
+        { "id": "user-2", "name": "User Two", "__typename": "User" },
+        { "id": "user-3", "name": "User Three", "__typename": "User" }
+      ],
+      "cascade": {
+        "updated": [
+          { "__typename": "UpdatedEntity", "id": "user-1", "operation": "UPDATED", "entity": { "id": "user-1", "name": "User One", "__typename": "User" } },
+          { "__typename": "UpdatedEntity", "id": "user-2", "operation": "UPDATED", "entity": { "id": "user-2", "name": "User Two", "__typename": "User" } },
+          { "__typename": "UpdatedEntity", "id": "user-3", "operation": "UPDATED", "entity": { "id": "user-3", "name": "User Three", "__typename": "User" } }
+        ],
+        "deleted": [],
+        "invalidations": [
+          { "queryName": "users", "strategy": "INVALIDATE", "scope": "ALL" }
+        ],
+        "metadata": { "timestamp": "2024-01-01T00:00:00.000Z", "depth": 1, "affectedCount": 3 }
+      },
+      "errors": []
+    }
+  }
+}

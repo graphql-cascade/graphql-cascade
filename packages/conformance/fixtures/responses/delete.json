@@ -1,0 +1,20 @@
+{
+  "data": {
+    "deleteUser": {
+      "success": true,
+      "data": null,
+      "cascade": {
+        "updated": [],
+        "deleted": [
+          { "__typename": "User", "id": "user-1", "deletedAt": "2024-01-01T00:00:00.000Z" }
+        ],
+        "invalidations": [
+          { "queryName": "users", "strategy": "INVALIDATE", "scope": "ALL" },
+          { "queryName": "user", "strategy": "REMOVE", "scope": "EXACT", "arguments": { "id": "user-1" } }
+        ],
+        "metadata": { "timestamp": "2024-01-01T00:00:00.000Z", "depth": 1, "affectedCount": 1 }
+      },
+      "errors": []
+    }
+  }
+}

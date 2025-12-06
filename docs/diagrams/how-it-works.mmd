@@ -1,0 +1,14 @@
+graph TD
+    A[Client Mutation] --> B[GraphQL Server]
+    B --> C[Execute Mutation]
+    C --> D[Track Entity Changes]
+    D --> E[Find Related Entities]
+    E --> F[Build Cascade Response]
+
+    F --> G[Return to Client]
+    G --> H[Apply to Cache]
+    H --> I[Auto-Update UI]
+
+    style A fill:#e1f5fe
+    style C fill:#f3e5f5
+    style H fill:#e8f5e8

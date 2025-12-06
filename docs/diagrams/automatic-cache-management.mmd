@@ -1,0 +1,10 @@
+graph TD
+    A[Mutation] --> B[Update Database]
+    B --> C[Server Tracks Relationships]
+    C --> D[Build Cascade Response]
+    D --> E[Client Applies Cascade]
+    E --> F[Cache Auto-Updated]
+    F --> G[UI Auto-Updated]
+
+    style F fill:#e8f5e8
+    style G fill:#e8f5e8

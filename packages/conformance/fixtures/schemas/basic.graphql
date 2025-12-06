@@ -1,0 +1,83 @@
+interface Node { id: ID! }
+
+enum CascadeOperation { CREATED UPDATED DELETED }
+enum InvalidationStrategy { INVALIDATE REFETCH REMOVE }
+enum InvalidationScope { EXACT PREFIX PATTERN ALL }
+
+type UpdatedEntity {
+  __typename: String!
+  id: ID!
+  operation: CascadeOperation!
+  entity: Node
+}
+
+type DeletedEntity {
+  __typename: String!
+  id: ID!
+  deletedAt: String!
+}
+
+type QueryInvalidation {
+  queryName: String!
+  strategy: InvalidationStrategy!
+  scope: InvalidationScope!
+}
+
+type CascadeMetadata {
+  timestamp: String!
+  depth: Int!
+  affectedCount: Int!
+}
+
+type CascadeUpdates {
+  updated: [UpdatedEntity!]!
+  deleted: [DeletedEntity!]!
+  invalidations: [QueryInvalidation!]!
+  metadata: CascadeMetadata!
+}
+
+type CascadeError {
+  code: String!
+  message: String!
+  field: String
+  path: [String!]
+}
+
+type User implements Node {
+  id: ID!
+  name: String!
+  email: String!
+}
+
+type CreateUserCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type UpdateUserCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type DeleteUserCascade {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+input CreateUserInput { name: String!, email: String! }
+input UpdateUserInput { id: ID!, name: String, email: String }
+input DeleteUserInput { id: ID! }
+
+type Mutation {
+  createUser(input: CreateUserInput!): CreateUserCascade!
+  updateUser(input: UpdateUserInput!): UpdateUserCascade!
+  deleteUser(input: DeleteUserInput!): DeleteUserCascade!
+}
+
+type Query { user(id: ID!): User users: [User!]! }

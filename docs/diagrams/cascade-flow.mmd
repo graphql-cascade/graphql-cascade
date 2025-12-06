@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant Client
+    participant Server
+    participant Database
+
+    Client->>Server: updateUser(id: "123", name: "John")
+    Server->>Database: UPDATE users SET name = 'John' WHERE id = 123
+    Database-->>Server: User updated
+    Server->>Database: Find related entities (posts, comments, etc.)
+    Database-->>Server: Related: Post[456], Comment[789]
+    Server->>Server: Build cascade response
+    Server-->>Client: { data: User, cascade: { updated: [User, Post, Comment] } }
+    Client->>Client: Auto-update cache with cascade
+    Note over Client: UI automatically shows updated data

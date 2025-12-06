@@ -2,8 +2,6 @@ import { DocumentNode } from 'graphql';
 import {
   CascadeCache,
   CascadeResponse,
-  CascadeUpdates,
-  QueryInvalidation,
   InvalidationStrategy
 } from './types';
 
@@ -19,12 +17,14 @@ export class CascadeClient {
   /**
    * Apply a cascade response to the cache.
    */
-  applyCascade(response: CascadeResponse): void {
+  applyCascade<T = unknown>(response: CascadeResponse<T>): void {
     const { data, cascade } = response;
 
     // 1. Write primary result
     if (data && typeof data === 'object' && '__typename' in data && 'id' in data) {
-      this.cache.write(data.__typename, data.id, data);
+      const typename = (data as Record<string, unknown>).__typename as string;
+      const id = (data as Record<string, unknown>).id as string;
+      this.cache.write(typename, id, data as Record<string, unknown>);
     }
 
     // 2. Apply all updates

@@ -1,0 +1,53 @@
+{
+  "id": "TC-C-002",
+  "name": "Document Cache Updates",
+  "description": "Clients MUST update document cache entries when processing cascade responses with entity updates",
+  "category": "client",
+  "subcategory": "cache-updates",
+  "requirement": "REQ-102",
+  "priority": "critical",
+  "input": {
+    "clientState": {
+      "cache": {
+        "query:GetUser:{\"id\":\"user_123\"}": {
+          "user": {
+            "__typename": "User",
+            "id": "user_123",
+            "name": "John Doe",
+            "email": "john@example.com"
+          }
+        }
+      },
+      "queries": [
+        {
+          "query": "query GetUser($id: ID!) { user(id: $id) { id name email } }",
+          "variables": { "id": "user_123" },
+          "result": {
+            "user": {
+              "__typename": "User",
+              "id": "user_123",
+              "name": "John Doe",
+              "email": "john@example.com"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "expected": {
+    "clientState": {
+      "cache": {
+        "query:GetUser:{\"id\":\"user_123\"}": {
+          "user": {
+            "__typename": "User",
+            "id": "user_123",
+            "name": "Jane Doe",
+            "email": "jane@example.com"
+          }
+        }
+      },
+      "invalidatedQueries": []
+    }
+  },
+  "tags": ["document-cache", "cache-updates", "client"]
+}

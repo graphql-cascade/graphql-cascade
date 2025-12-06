@@ -128,8 +128,8 @@ const result = await cascade.mutateOptimistic(
 
 - ✅ **Apollo Client**: Full normalized cache integration
 - ✅ **React Query**: Query invalidation and entity updates
-- 🚧 **URQL**: Planned (cache adapter implementation needed)
-- 🚧 **Relay**: Planned (environment integration needed)
+- ✅ **URQL**: Cascade exchange and cache adapter
+- ✅ **Relay**: Environment integration with store updates
 
 ## 🧪 Testing
 

@@ -1,0 +1,31 @@
+{
+  "id": "TC-C-020",
+  "name": "Prefix-Based Query Invalidation",
+  "description": "Clients MUST invalidate all queries matching a prefix pattern when specified in cascade invalidations",
+  "category": "client",
+  "subcategory": "invalidation",
+  "requirement": "REQ-030",
+  "priority": "high",
+  "input": {
+    "clientState": {
+      "queries": [
+        { "query": "getUsers", "variables": {}, "result": { "users": [] } },
+        { "query": "getUserById", "variables": { "id": "1" }, "result": { "user": {} } },
+        { "query": "getPosts", "variables": {}, "result": { "posts": [] } }
+      ]
+    },
+    "cascade": {
+      "updated": [{ "__typename": "User", "id": "1", "name": "Updated" }],
+      "invalidations": [
+        { "type": "pattern", "target": "getUser*", "reason": "user updated" }
+      ],
+      "metadata": { "affectedCount": 1, "operationType": "UPDATE" }
+    }
+  },
+  "expected": {
+    "clientState": {
+      "invalidatedQueries": ["getUsers", "getUserById"]
+    }
+  },
+  "tags": ["invalidation", "prefix", "pattern-matching"]
+}
