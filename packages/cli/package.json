@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "test": "jest --maxWorkers=50% --coverage",
     "dev": "tsc --watch"
   },
