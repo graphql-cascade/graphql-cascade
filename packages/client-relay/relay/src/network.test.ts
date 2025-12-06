@@ -1,4 +1,5 @@
 import { createCascadeRelayEnvironment } from './environment';
+import { CascadeOperation } from '@graphql-cascade/client';
 
 // Mock Relay runtime
 const mockObservable = {
