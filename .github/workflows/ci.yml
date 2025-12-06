@@ -91,8 +91,8 @@ jobs:
 
       - name: Check package exports
         run: |
-          npx attw --pack packages/server-node
-          npx attw --pack packages/client-core/core
+          npx @arethetypeswrong/cli --pack packages/server-node
+          npx @arethetypeswrong/cli --pack packages/client-core/core
 
   test:
     name: Test (${{ matrix.os }}-${{ matrix.node-version }})
@@ -136,7 +136,7 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run tests
-        run: pnpm -r --if-present test -- --coverage
+        run: pnpm -r --if-present test
 
       - name: Check coverage threshold
         if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
