@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "jest --coverage",
+    "test": "jest --maxWorkers=50% --coverage",
     "test:mutation": "stryker run",
     "lint": "eslint src/**/*.ts",
     "clean": "rm -rf dist"

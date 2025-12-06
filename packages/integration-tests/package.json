@@ -4,7 +4,7 @@
   "description": "End-to-end integration tests for GraphQL Cascade",
   "private": true,
   "scripts": {
-    "test": "jest --coverage",
+    "test": "jest --maxWorkers=50% --coverage",
     "test:watch": "jest --watch"
   },
   "dependencies": {

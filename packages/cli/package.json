@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "jest --coverage",
+    "test": "jest --maxWorkers=50% --coverage",
     "dev": "tsc --watch"
   },
   "keywords": [
