@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { CascadeCache, QueryInvalidation, InvalidationStrategy, InvalidationScope } from '@graphql-cascade/client';
+import { CascadeCache, QueryInvalidation, InvalidationScope } from '@graphql-cascade/client';
 
 /**
  * React Query cache adapter for GraphQL Cascade.
@@ -19,7 +19,7 @@ export class ReactQueryCascadeCache implements CascadeCache {
     );
   }
 
-  read(typename: string, id: string): any | null {
+  read(_typename: string, _id: string): any | null {
     // Can't directly read entities from React Query
     return null;
   }

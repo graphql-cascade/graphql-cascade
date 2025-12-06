@@ -11,7 +11,7 @@ export function useCascadeMutation<TData = any, TVariables = any>(
   mutation: DocumentNode,
   options?: UseCascadeMutationOptions<TData, TVariables>
 ) {
-  const { retryOptions, onRetryAttempt, onRetrySuccess, onRetryFailure, ...mutationOptions } = options || {};
+  const { retryOptions, onRetryAttempt, ...mutationOptions } = options || {};
 
   return useMutation({
     mutationFn: (variables: TVariables) => cascadeClient.mutate<TData>(mutation, variables),
