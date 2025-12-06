@@ -28,6 +28,22 @@ src/commands/validate.ts(2,58): error TS2307: Cannot find module '../lib/schema-
 2. TypeScript strict mode differences between local and CI
 3. Missing type annotations causing stricter CI checks to fail
 
+## Already Completed
+
+**Before starting this plan**, the following TypeScript issues were already fixed (commit `537d5c6`):
+
+### ✅ Missing @types/react Dependencies
+- Added `@types/react@^18.0.0` to:
+  - `packages/client-apollo/apollo/package.json`
+  - `packages/client-relay/relay/package.json`
+- Updated `pnpm-lock.yaml` with new dependencies
+- **Impact**: Resolves "Could not find declaration file for module 'react'" errors
+
+**What This Plan Still Needs to Fix**:
+- CLI package module resolution errors
+- Implicit 'any' type errors in doctor.ts and validate.ts
+- tsconfig.json exclude pattern issues
+
 ## Files to Modify/Create
 
 ### Investigate:
