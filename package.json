@@ -13,14 +13,14 @@
     "packages/server-node"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
     "clean": "rm -rf packages/*/dist packages/**/node_modules node_modules",
     "diagrams": "mmdc -p puppeteer-config.json -i docs/diagrams/manual-cache-management.mmd -o docs/diagrams/manual-cache-management.png && mmdc -p puppeteer-config.json -i docs/diagrams/automatic-cache-management.mmd -o docs/diagrams/automatic-cache-management.png && mmdc -p puppeteer-config.json -i docs/diagrams/how-it-works.mmd -o docs/diagrams/how-it-works.png && mmdc -p puppeteer-config.json -i docs/diagrams/cascade-flow.mmd -o docs/diagrams/cascade-flow.png && mmdc -p puppeteer-config.json -i docs/diagrams/entity-relationships.mmd -o docs/diagrams/entity-relationships.png",
     "version": "changeset version",
-    "release": "npm run build && changeset publish",
+    "release": "pnpm run build && changeset publish",
     "sbom": "pnpm dlx @cyclonedx/cyclonedx-npm --output-file sbom.json --ignore-npm-errors"
   },
   "devDependencies": {

@@ -41,8 +41,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-       - name: Install dependencies
-         run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run ESLint
         run: pnpm -r --if-present lint
@@ -80,8 +80,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-       - name: Install dependencies
-         run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run TypeScript
         run: pnpm -r --if-present typecheck
@@ -132,8 +132,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-       - name: Install dependencies
-         run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run tests
         run: pnpm -r --if-present test -- --coverage
@@ -211,8 +211,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-       - name: Install dependencies
-         run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Build all packages
         run: pnpm -r --if-present build
@@ -290,8 +290,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-       - name: Install dependencies
-         run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -383,8 +383,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-       - name: Install dependencies
-         run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
