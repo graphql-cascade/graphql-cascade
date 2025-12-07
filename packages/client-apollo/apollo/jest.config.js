@@ -21,7 +21,7 @@ module.exports = {
     '^.+\\.tsx?$': ['ts-jest', {
       tsconfig: {
         jsx: 'react-jsx',
-        outDir: '$$ts-jest$$'
+        outDir: './.ts-jest'
       }
     }]
   }
