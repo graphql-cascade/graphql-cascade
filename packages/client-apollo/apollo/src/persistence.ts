@@ -1,5 +1,9 @@
-import { ApolloClient, InMemoryCache, NormalizedCacheObject } from '@apollo/client';
-import { CascadeUpdates, CascadeResponse } from '@graphql-cascade/client';
+import {
+  ApolloClient,
+  InMemoryCache,
+  NormalizedCacheObject,
+} from "@apollo/client";
+import { CascadeUpdates, CascadeResponse } from "@graphql-cascade/client";
 
 /**
  * Storage interface for cache persistence
@@ -72,7 +76,7 @@ export interface CachePersistenceOptions {
   /**
    * Callback when persistence fails
    */
-  onError?: (error: Error, operation: 'save' | 'restore') => void;
+  onError?: (error: Error, operation: "save" | "restore") => void;
 
   /**
    * Callback when persistence succeeds
@@ -117,24 +121,32 @@ export interface CascadeHistoryEntry {
  * Handles saving and restoring cache state with cascade history tracking.
  */
 export class CascadeCachePersistence {
-  private options: Required<Omit<CachePersistenceOptions, 'onError' | 'onPersist' | 'onRestore' | 'filter'>> &
-    Pick<CachePersistenceOptions, 'onError' | 'onPersist' | 'onRestore' | 'filter'>;
+  private options: Required<
+    Omit<
+      CachePersistenceOptions,
+      "onError" | "onPersist" | "onRestore" | "filter"
+    >
+  > &
+    Pick<
+      CachePersistenceOptions,
+      "onError" | "onPersist" | "onRestore" | "filter"
+    >;
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
   private cascadeHistory: CascadeHistoryEntry[] = [];
   private isRestoring = false;
 
   constructor(
     private apolloClient: ApolloClient<NormalizedCacheObject>,
-    options: CachePersistenceOptions
+    options: CachePersistenceOptions,
   ) {
     this.options = {
-      key: 'cascade_cache',
+      key: "cascade_cache",
       persistOnChange: false,
       debounceMs: 1000,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       serialize: JSON.stringify,
       deserialize: JSON.parse,
-      ...options
+      ...options,
     };
   }
 
@@ -152,30 +164,34 @@ export class CascadeCachePersistence {
         : cacheData;
 
       const metadata: CacheMetadata = {
-        version: '1.0',
+        version: "1.0",
         timestamp: Date.now(),
         entityCount: Object.keys(filteredData).length,
-        lastCascadeTimestamp: this.cascadeHistory.length > 0
-          ? this.cascadeHistory[this.cascadeHistory.length - 1].timestamp
-          : undefined
+        lastCascadeTimestamp:
+          this.cascadeHistory.length > 0
+            ? this.cascadeHistory[this.cascadeHistory.length - 1].timestamp
+            : undefined,
       };
 
       const persistedData: PersistedCacheData = {
         cache: filteredData,
-        metadata
+        metadata,
       };
 
-      const serialized = this.options.serialize(persistedData as unknown as NormalizedCacheObject);
+      const serialized = this.options.serialize(
+        persistedData as unknown as NormalizedCacheObject,
+      );
 
-      await Promise.resolve(this.options.storage.setItem(this.options.key, serialized));
+      await Promise.resolve(
+        this.options.storage.setItem(this.options.key, serialized),
+      );
 
       // Persist cascade history separately
       await this.persistCascadeHistory();
 
       this.options.onPersist?.(persistedData);
-
     } catch (error) {
-      this.options.onError?.(error as Error, 'save');
+      this.options.onError?.(error as Error, "save");
     }
   }
 
@@ -191,7 +207,7 @@ export class CascadeCachePersistence {
 
     try {
       const serialized = await Promise.resolve(
-        this.options.storage.getItem(this.options.key)
+        this.options.storage.getItem(this.options.key),
       );
 
       if (!serialized) {
@@ -199,7 +215,9 @@ export class CascadeCachePersistence {
         return false;
       }
 
-      const persistedData = this.options.deserialize(serialized) as unknown as PersistedCacheData;
+      const persistedData = this.options.deserialize(
+        serialized,
+      ) as unknown as PersistedCacheData;
 
       // Check if cache is stale
       if (this.isCacheStale(persistedData.metadata)) {
@@ -219,9 +237,8 @@ export class CascadeCachePersistence {
 
       this.isRestoring = false;
       return true;
-
     } catch (error) {
-      this.options.onError?.(error as Error, 'restore');
+      this.options.onError?.(error as Error, "restore");
       this.isRestoring = false;
       return false;
     }
@@ -233,10 +250,12 @@ export class CascadeCachePersistence {
   async clear(): Promise<void> {
     try {
       await Promise.resolve(this.options.storage.removeItem(this.options.key));
-      await Promise.resolve(this.options.storage.removeItem(`${this.options.key}_history`));
+      await Promise.resolve(
+        this.options.storage.removeItem(`${this.options.key}_history`),
+      );
       this.cascadeHistory = [];
     } catch (error) {
-      this.options.onError?.(error as Error, 'save');
+      this.options.onError?.(error as Error, "save");
     }
   }
 
@@ -267,7 +286,7 @@ export class CascadeCachePersistence {
     this.cascadeHistory.push({
       timestamp,
       cascade,
-      applied: true
+      applied: true,
     });
 
     // Keep history bounded (last 100 entries)
@@ -293,11 +312,11 @@ export class CascadeCachePersistence {
    */
   async replayCascadeHistory(
     fromTimestamp: string,
-    applyCascade: (cascade: CascadeUpdates) => void
+    applyCascade: (cascade: CascadeUpdates) => void,
   ): Promise<number> {
     const fromTime = new Date(fromTimestamp).getTime();
 
-    const toReplay = this.cascadeHistory.filter(entry => {
+    const toReplay = this.cascadeHistory.filter((entry) => {
       const entryTime = new Date(entry.timestamp).getTime();
       return entryTime >= fromTime;
     });
@@ -320,14 +339,18 @@ export class CascadeCachePersistence {
     let totalEntities = 0;
 
     for (const key of Object.keys(cacheData)) {
-      if (key === 'ROOT_QUERY' || key === 'ROOT_MUTATION' || key === 'ROOT_SUBSCRIPTION') {
+      if (
+        key === "ROOT_QUERY" ||
+        key === "ROOT_MUTATION" ||
+        key === "ROOT_SUBSCRIPTION"
+      ) {
         continue;
       }
 
       totalEntities++;
 
       const entity = cacheData[key];
-      if (entity && typeof entity === 'object' && '__typename' in entity) {
+      if (entity && typeof entity === "object" && "__typename" in entity) {
         const typename = (entity as { __typename: string }).__typename;
         typeCounts[typename] = (typeCounts[typename] || 0) + 1;
       }
@@ -337,7 +360,7 @@ export class CascadeCachePersistence {
       totalEntities,
       typeCounts,
       cascadeHistoryLength: this.cascadeHistory.length,
-      lastPersistTime: null // Would need to track this
+      lastPersistTime: null, // Would need to track this
     };
   }
 
@@ -359,13 +382,13 @@ export class CascadeCachePersistence {
 
     for (const [key, value] of Object.entries(data)) {
       // Always keep ROOT_ entries
-      if (key.startsWith('ROOT_')) {
+      if (key.startsWith("ROOT_")) {
         filtered[key] = value;
         continue;
       }
 
       // Parse typename:id from key
-      const colonIndex = key.indexOf(':');
+      const colonIndex = key.indexOf(":");
       if (colonIndex === -1) {
         filtered[key] = value;
         continue;
@@ -396,7 +419,9 @@ export class CascadeCachePersistence {
    */
   private async restoreCascadeHistory(): Promise<void> {
     const historyKey = `${this.options.key}_history`;
-    const serialized = await Promise.resolve(this.options.storage.getItem(historyKey));
+    const serialized = await Promise.resolve(
+      this.options.storage.getItem(historyKey),
+    );
 
     if (serialized) {
       try {
@@ -425,17 +450,20 @@ export interface CacheStats {
 export function createLocalStoragePersistence(): CascadePersistenceStorage {
   // Check if we're in a browser environment
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const win = typeof globalThis !== 'undefined' ? (globalThis as any) : undefined;
+  const win =
+    typeof globalThis !== "undefined" ? (globalThis as any) : undefined;
   const storage = win?.localStorage || win?.window?.localStorage;
 
   if (!storage) {
-    throw new Error('localStorage is not available. Use createInMemoryPersistence for non-browser environments.');
+    throw new Error(
+      "localStorage is not available. Use createInMemoryPersistence for non-browser environments.",
+    );
   }
 
   return {
     getItem: (key) => storage.getItem(key),
     setItem: (key, value) => storage.setItem(key, value),
-    removeItem: (key) => storage.removeItem(key)
+    removeItem: (key) => storage.removeItem(key),
   };
 }
 
@@ -447,8 +475,12 @@ export function createInMemoryPersistence(): CascadePersistenceStorage {
 
   return {
     getItem: (key) => store.get(key) ?? null,
-    setItem: (key, value) => { store.set(key, value); },
-    removeItem: (key) => { store.delete(key); }
+    setItem: (key, value) => {
+      store.set(key, value);
+    },
+    removeItem: (key) => {
+      store.delete(key);
+    },
   };
 }
 
@@ -461,7 +493,7 @@ export function createInMemoryPersistence(): CascadePersistenceStorage {
  */
 export function onCascadeApplied(
   persistence: CascadeCachePersistence,
-  response: CascadeResponse
+  response: CascadeResponse,
 ): void {
   persistence.recordCascade(response.cascade);
 }

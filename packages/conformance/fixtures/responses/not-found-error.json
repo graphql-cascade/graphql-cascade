@@ -7,7 +7,11 @@
         "updated": [],
         "deleted": [],
         "invalidations": [],
-        "metadata": { "timestamp": "2024-01-01T00:00:00.000Z", "depth": 0, "affectedCount": 0 }
+        "metadata": {
+          "timestamp": "2024-01-01T00:00:00.000Z",
+          "depth": 0,
+          "affectedCount": 0
+        }
       },
       "errors": [
         {

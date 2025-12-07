@@ -4,13 +4,13 @@
  * Provides health check functionality for cascade operations.
  */
 
-import type { MetricsCollector } from './metrics';
+import type { MetricsCollector } from "./metrics";
 
 /**
  * Health status for cascade operations.
  */
 export interface CascadeHealthStatus {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   version: string;
   uptime: number;
   metrics: {
@@ -73,7 +73,7 @@ const startTime = Date.now();
  */
 export function createHealthCheck(
   metricsCollector: MetricsCollector | null,
-  config: HealthCheckConfig = {}
+  config: HealthCheckConfig = {},
 ): () => CascadeHealthStatus {
   const {
     memoryLimitMb = 500,
@@ -81,7 +81,7 @@ export function createHealthCheck(
     unhealthyErrorRate = 0.1,
     degradedTrackingTimeMs = 200,
     unhealthyTrackingTimeMs = 500,
-    version = 'unknown',
+    version = "unknown",
   } = config;
 
   return (): CascadeHealthStatus => {
@@ -109,20 +109,20 @@ export function createHealthCheck(
     const trackerOk = true; // Could add more checks
 
     // Determine overall status
-    let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+    let status: "healthy" | "degraded" | "unhealthy" = "healthy";
 
     if (!memoryOk) {
-      status = 'unhealthy';
+      status = "unhealthy";
     } else if (
       errorRate >= unhealthyErrorRate ||
       avgTrackingTime >= unhealthyTrackingTimeMs
     ) {
-      status = 'unhealthy';
+      status = "unhealthy";
     } else if (
       errorRate >= degradedErrorRate ||
       avgTrackingTime >= degradedTrackingTimeMs
     ) {
-      status = 'degraded';
+      status = "degraded";
     }
 
     return {
@@ -151,14 +151,14 @@ export function createHealthCheck(
  * Get HTTP status code for health status.
  */
 export function getHealthStatusCode(
-  status: CascadeHealthStatus['status']
+  status: CascadeHealthStatus["status"],
 ): number {
   switch (status) {
-    case 'healthy':
+    case "healthy":
       return 200;
-    case 'degraded':
+    case "degraded":
       return 200; // Still serving traffic
-    case 'unhealthy':
+    case "unhealthy":
       return 503;
   }
 }

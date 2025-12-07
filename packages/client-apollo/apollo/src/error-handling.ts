@@ -1,7 +1,18 @@
-import { ApolloLink, Observable, Operation, NextLink, FetchResult } from '@apollo/client';
-import { shouldRetry, calculateRetryDelay, RetryOptions, CascadeError as CoreCascadeError, CascadeErrorCode as CoreCascadeErrorCode } from '@graphql-cascade/client';
-import { CascadeError, CascadeErrorCode } from './errors';
-
+import {
+  ApolloLink,
+  Observable,
+  Operation,
+  NextLink,
+  FetchResult,
+} from "@apollo/client";
+import {
+  shouldRetry,
+  calculateRetryDelay,
+  RetryOptions,
+  CascadeError as CoreCascadeError,
+  CascadeErrorCode as CoreCascadeErrorCode,
+} from "@graphql-cascade/client";
+import { CascadeError, CascadeErrorCode } from "./errors";
 
 /**
  * Options for the cascade error handling link.
@@ -10,7 +21,11 @@ export interface CascadeErrorLinkOptions extends RetryOptions {
   /**
    * Callback when a retry attempt is made.
    */
-  onRetryAttempt?: (operation: Operation, attempt: number, error: CascadeError) => void;
+  onRetryAttempt?: (
+    operation: Operation,
+    attempt: number,
+    error: CascadeError,
+  ) => void;
 
   /**
    * Callback when retry succeeds.
@@ -20,7 +35,11 @@ export interface CascadeErrorLinkOptions extends RetryOptions {
   /**
    * Callback when retry fails completely.
    */
-  onRetryFailure?: (operation: Operation, error: CascadeError, attempts: number) => void;
+  onRetryFailure?: (
+    operation: Operation,
+    error: CascadeError,
+    attempts: number,
+  ) => void;
 
   /**
    * Whether to extract cascade errors from GraphQL responses.
@@ -39,8 +58,10 @@ export interface CascadeErrorLinkOptions extends RetryOptions {
  * 4. Provides callbacks for retry lifecycle events
  */
 export class CascadeErrorLink extends ApolloLink {
-  private options: Required<Pick<CascadeErrorLinkOptions, 'extractCascadeErrors'>> &
-    Omit<CascadeErrorLinkOptions, 'extractCascadeErrors'>;
+  private options: Required<
+    Pick<CascadeErrorLinkOptions, "extractCascadeErrors">
+  > &
+    Omit<CascadeErrorLinkOptions, "extractCascadeErrors">;
 
   constructor(options: CascadeErrorLinkOptions = {}) {
     super();
@@ -50,7 +71,7 @@ export class CascadeErrorLink extends ApolloLink {
       maxDelay: options.maxDelay ?? 30000,
       exponentialBackoff: options.exponentialBackoff ?? true,
       extractCascadeErrors: options.extractCascadeErrors ?? true,
-      ...options
+      ...options,
     };
   }
 
@@ -77,15 +98,27 @@ export class CascadeErrorLink extends ApolloLink {
 
                 // Check if we should retry
                 if (shouldRetry(coreError, attempt, this.options)) {
-                  this.options.onRetryAttempt?.(operation, attempt, cascadeError);
+                  this.options.onRetryAttempt?.(
+                    operation,
+                    attempt,
+                    cascadeError,
+                  );
 
                   // Calculate delay and retry
-                  const delay = calculateRetryDelay(coreError, attempt, this.options);
+                  const delay = calculateRetryDelay(
+                    coreError,
+                    attempt,
+                    this.options,
+                  );
                   setTimeout(execute, delay);
                   return;
                 } else {
                   // No more retries, emit the error
-                  this.options.onRetryFailure?.(operation, cascadeError, attempt);
+                  this.options.onRetryFailure?.(
+                    operation,
+                    cascadeError,
+                    attempt,
+                  );
                   observer.error(cascadeError);
                   return;
                 }
@@ -103,7 +136,7 @@ export class CascadeErrorLink extends ApolloLink {
             // Convert Apollo error to CascadeError
             const cascadeError = CascadeError.fromApolloError(error, {
               operation: operation.operationName,
-              query: operation.query?.loc?.source.body
+              query: operation.query?.loc?.source.body,
             });
 
             // Convert to core error for retry logic
@@ -114,7 +147,11 @@ export class CascadeErrorLink extends ApolloLink {
               this.options.onRetryAttempt?.(operation, attempt, cascadeError);
 
               // Calculate delay and retry
-              const delay = calculateRetryDelay(coreError, attempt, this.options);
+              const delay = calculateRetryDelay(
+                coreError,
+                attempt,
+                this.options,
+              );
               setTimeout(execute, delay);
               return;
             } else {
@@ -127,7 +164,7 @@ export class CascadeErrorLink extends ApolloLink {
 
           complete: () => {
             observer.complete();
-          }
+          },
         });
       };
 
@@ -153,8 +190,8 @@ function toCoreCascadeError(apolloError: CascadeError): CoreCascadeError {
       severity: apolloError.severity,
       recoverable: apolloError.recoverable,
       context: apolloError.context,
-      timestamp: apolloError.timestamp
-    }
+      timestamp: apolloError.timestamp,
+    },
   };
 }
 
@@ -180,8 +217,6 @@ function mapToCoreErrorCode(code: CascadeErrorCode): CoreCascadeErrorCode {
   }
 }
 
-
-
 /**
  * Extract cascade error from a GraphQL response.
  *
@@ -195,14 +230,14 @@ export function extractCascadeError(result: FetchResult): CascadeError | null {
     const primaryError = cascadeErrors[0];
 
     return new CascadeError({
-      message: primaryError.message || 'Cascade operation failed',
+      message: primaryError.message || "Cascade operation failed",
       code: mapErrorCode(primaryError.code),
-      severity: primaryError.severity || 'error',
+      severity: primaryError.severity || "error",
       recoverable: primaryError.recoverable !== false,
       context: {
         cascade: extensions.cascade,
-        graphQLErrors: cascadeErrors
-      }
+        graphQLErrors: cascadeErrors,
+      },
     });
   }
 
@@ -216,17 +251,19 @@ export function extractCascadeError(result: FetchResult): CascadeError | null {
         return new CascadeError({
           message: gqlError.message,
           code: mapErrorCode(extensions.code),
-          severity: extensions.severity || 'error',
+          severity: extensions.severity || "error",
           recoverable: extensions.recoverable !== false,
           context: {
             cascade: extensions.cascade,
-            graphQLErrors: [{
-              message: gqlError.message,
-              path: gqlError.path,
-              extensions
-            }]
+            graphQLErrors: [
+              {
+                message: gqlError.message,
+                path: gqlError.path,
+                extensions,
+              },
+            ],
           },
-          originalError: gqlError as any
+          originalError: gqlError as any,
         });
       }
     }
@@ -243,38 +280,38 @@ function mapErrorCode(code?: string): CascadeErrorCode {
 
   // Direct mapping for v1.1 error codes
   switch (code.toUpperCase()) {
-    case 'VALIDATION_ERROR':
+    case "VALIDATION_ERROR":
       return CascadeErrorCode.VALIDATION_ERROR;
-    case 'NOT_FOUND':
+    case "NOT_FOUND":
       return CascadeErrorCode.NOT_FOUND;
-    case 'UNAUTHORIZED':
+    case "UNAUTHORIZED":
       return CascadeErrorCode.UNAUTHORIZED;
-    case 'FORBIDDEN':
+    case "FORBIDDEN":
       return CascadeErrorCode.FORBIDDEN;
-    case 'CONFLICT':
+    case "CONFLICT":
       return CascadeErrorCode.CONFLICT;
-    case 'INTERNAL_ERROR':
+    case "INTERNAL_ERROR":
       return CascadeErrorCode.INTERNAL_ERROR;
-    case 'TRANSACTION_FAILED':
+    case "TRANSACTION_FAILED":
       return CascadeErrorCode.TRANSACTION_FAILED;
-    case 'TIMEOUT':
+    case "TIMEOUT":
       return CascadeErrorCode.TIMEOUT;
-    case 'RATE_LIMITED':
+    case "RATE_LIMITED":
       return CascadeErrorCode.RATE_LIMITED;
-    case 'SERVICE_UNAVAILABLE':
+    case "SERVICE_UNAVAILABLE":
       return CascadeErrorCode.SERVICE_UNAVAILABLE;
     // Legacy mappings for backward compatibility
-    case 'CASCADE_INVALID_DATA':
+    case "CASCADE_INVALID_DATA":
       return CascadeErrorCode.INVALID_CASCADE_DATA;
-    case 'CASCADE_MISSING_DATA':
+    case "CASCADE_MISSING_DATA":
       return CascadeErrorCode.MISSING_CASCADE_DATA;
-    case 'CASCADE_TIMEOUT_ERROR':
+    case "CASCADE_TIMEOUT_ERROR":
       return CascadeErrorCode.TIMEOUT_ERROR;
-    case 'CASCADE_NETWORK_ERROR':
+    case "CASCADE_NETWORK_ERROR":
       return CascadeErrorCode.NETWORK_ERROR;
-    case 'CASCADE_CONFLICT':
+    case "CASCADE_CONFLICT":
       return CascadeErrorCode.CASCADE_CONFLICT;
-    case 'CASCADE_PARTIAL_FAILURE':
+    case "CASCADE_PARTIAL_FAILURE":
       return CascadeErrorCode.PARTIAL_CASCADE_FAILURE;
     default:
       return CascadeErrorCode.UNKNOWN_ERROR;
@@ -284,7 +321,9 @@ function mapErrorCode(code?: string): CascadeErrorCode {
 /**
  * Create a pre-configured cascade error handling link.
  */
-export function createCascadeErrorLink(options?: CascadeErrorLinkOptions): ApolloLink {
+export function createCascadeErrorLink(
+  options?: CascadeErrorLinkOptions,
+): ApolloLink {
   return new CascadeErrorLink(options);
 }
 
@@ -297,13 +336,20 @@ export function createDefaultCascadeErrorLink(): ApolloLink {
     baseDelay: 1000,
     exponentialBackoff: true,
     onRetryAttempt: (operation, attempt, error) => {
-      console.warn(`[Cascade] Retry attempt ${attempt} for ${operation.operationName}: ${error.message}`);
+      console.warn(
+        `[Cascade] Retry attempt ${attempt} for ${operation.operationName}: ${error.message}`,
+      );
     },
     onRetrySuccess: (operation, attempts) => {
-      console.info(`[Cascade] Operation ${operation.operationName} succeeded after ${attempts} attempts`);
+      console.info(
+        `[Cascade] Operation ${operation.operationName} succeeded after ${attempts} attempts`,
+      );
     },
     onRetryFailure: (operation, error, attempts) => {
-      console.error(`[Cascade] Operation ${operation.operationName} failed after ${attempts} attempts:`, error.message);
-    }
+      console.error(
+        `[Cascade] Operation ${operation.operationName} failed after ${attempts} attempts:`,
+        error.message,
+      );
+    },
   });
 }

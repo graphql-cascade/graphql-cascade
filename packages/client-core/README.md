@@ -25,6 +25,7 @@ This package provides the foundation for all GraphQL Cascade client integrations
 - You're implementing **framework-agnostic** cascade processing
 
 For specific framework integrations, use:
+
 - `@graphql-cascade/client-apollo` - Apollo Client
 - `@graphql-cascade/client-react-query` - React Query
 - `@graphql-cascade/client-relay` - Relay
@@ -33,8 +34,12 @@ For specific framework integrations, use:
 ## Basic Usage
 
 ```typescript
-import { CascadeClient, CascadeCache, CascadeResponse } from '@graphql-cascade/client';
-import { DocumentNode } from 'graphql';
+import {
+  CascadeClient,
+  CascadeCache,
+  CascadeResponse,
+} from "@graphql-cascade/client";
+import { DocumentNode } from "graphql";
 
 // Implement the CascadeCache interface for your cache
 class MyCacheAdapter implements CascadeCache {
@@ -67,16 +72,19 @@ class MyCacheAdapter implements CascadeCache {
 const cache = new MyCacheAdapter();
 const executor = async (query: DocumentNode, variables: any) => {
   // Execute GraphQL query/mutation
-  return fetch('/graphql', {
-    method: 'POST',
-    body: JSON.stringify({ query, variables })
-  }).then(r => r.json());
+  return fetch("/graphql", {
+    method: "POST",
+    body: JSON.stringify({ query, variables }),
+  }).then((r) => r.json());
 };
 
 const cascade = new CascadeClient(cache, executor);
 
 // Execute mutations - cascade updates are applied automatically
-const user = await cascade.mutate(UPDATE_USER_MUTATION, { id: '123', name: 'John' });
+const user = await cascade.mutate(UPDATE_USER_MUTATION, {
+  id: "123",
+  name: "John",
+});
 ```
 
 ## CascadeClient API
@@ -108,22 +116,22 @@ getCache(): CascadeCache
 For optimistic updates that provide immediate UI feedback:
 
 ```typescript
-import { OptimisticCascadeClient } from '@graphql-cascade/client';
+import { OptimisticCascadeClient } from "@graphql-cascade/client";
 
 const cascade = new OptimisticCascadeClient(cache, executor);
 
 // Execute with optimistic response
 const user = await cascade.mutateOptimistic(
   UPDATE_USER_MUTATION,
-  { id: '123', name: 'John' },
+  { id: "123", name: "John" },
   {
     // Optimistic data applied immediately
     optimisticResponse: {
-      __typename: 'User',
-      id: '123',
-      name: 'John'
-    }
-  }
+      __typename: "User",
+      id: "123",
+      name: "John",
+    },
+  },
 );
 ```
 
@@ -175,15 +183,15 @@ interface QueryInvalidation {
 }
 
 enum InvalidationStrategy {
-  INVALIDATE = 'INVALIDATE',  // Mark as stale
-  REFETCH = 'REFETCH',        // Refetch immediately
-  REMOVE = 'REMOVE'           // Remove from cache
+  INVALIDATE = "INVALIDATE", // Mark as stale
+  REFETCH = "REFETCH", // Refetch immediately
+  REMOVE = "REMOVE", // Remove from cache
 }
 
 enum InvalidationScope {
-  EXACT = 'EXACT',    // Exact query match
-  PREFIX = 'PREFIX',  // Query name prefix
-  ALL = 'ALL'         // All queries
+  EXACT = "EXACT", // Exact query match
+  PREFIX = "PREFIX", // Query name prefix
+  ALL = "ALL", // All queries
 }
 ```
 
@@ -198,7 +206,11 @@ To integrate with a new GraphQL client:
 Example for a hypothetical client:
 
 ```typescript
-import { CascadeClient, CascadeCache, QueryInvalidation } from '@graphql-cascade/client';
+import {
+  CascadeClient,
+  CascadeCache,
+  QueryInvalidation,
+} from "@graphql-cascade/client";
 
 class MyClientCache implements CascadeCache {
   constructor(private myClient: MyGraphQLClient) {}
@@ -230,9 +242,8 @@ class MyClientCache implements CascadeCache {
 
 export class MyCascadeClient extends CascadeClient {
   constructor(myClient: MyGraphQLClient) {
-    super(
-      new MyClientCache(myClient),
-      (query, variables) => myClient.execute(query, variables)
+    super(new MyClientCache(myClient), (query, variables) =>
+      myClient.execute(query, variables),
     );
   }
 }
@@ -243,7 +254,7 @@ export class MyCascadeClient extends CascadeClient {
 Enable debug logging for troubleshooting:
 
 ```typescript
-import { setLogLevel, LogLevel } from '@graphql-cascade/client';
+import { setLogLevel, LogLevel } from "@graphql-cascade/client";
 
 // Enable verbose logging
 setLogLevel(LogLevel.DEBUG);

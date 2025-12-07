@@ -8,24 +8,24 @@
  * Counter metrics for cumulative values.
  */
 export type CounterMetric =
-  | 'transactionsStarted'
-  | 'transactionsCompleted'
-  | 'transactionsFailed'
-  | 'entitiesTracked'
-  | 'entitiesTruncated';
+  | "transactionsStarted"
+  | "transactionsCompleted"
+  | "transactionsFailed"
+  | "entitiesTracked"
+  | "entitiesTruncated";
 
 /**
  * Gauge metrics for point-in-time values.
  */
-export type GaugeMetric = 'activeTransactions';
+export type GaugeMetric = "activeTransactions";
 
 /**
  * Histogram metrics for distribution tracking.
  */
 export type HistogramMetric =
-  | 'trackingTimeMs'
-  | 'constructionTimeMs'
-  | 'cascadeSize';
+  | "trackingTimeMs"
+  | "constructionTimeMs"
+  | "cascadeSize";
 
 /**
  * Snapshot of all cascade metrics.
@@ -129,13 +129,13 @@ export class DefaultMetricsCollector implements MetricsCollector {
 
   reset(): void {
     (Object.keys(this.counters) as CounterMetric[]).forEach(
-      (k) => (this.counters[k] = 0)
+      (k) => (this.counters[k] = 0),
     );
     (Object.keys(this.gauges) as GaugeMetric[]).forEach(
-      (k) => (this.gauges[k] = 0)
+      (k) => (this.gauges[k] = 0),
     );
     (Object.keys(this.histograms) as HistogramMetric[]).forEach(
-      (k) => (this.histograms[k] = [])
+      (k) => (this.histograms[k] = []),
     );
   }
 }
@@ -149,38 +149,42 @@ export function exportPrometheusMetrics(collector: MetricsCollector): string {
 
   // Counters
   lines.push(
-    '# HELP cascade_transactions_started_total Total cascade transactions started'
+    "# HELP cascade_transactions_started_total Total cascade transactions started",
   );
-  lines.push('# TYPE cascade_transactions_started_total counter');
-  lines.push(`cascade_transactions_started_total ${snapshot.transactionsStarted}`);
-
+  lines.push("# TYPE cascade_transactions_started_total counter");
   lines.push(
-    '# HELP cascade_transactions_completed_total Total cascade transactions completed'
-  );
-  lines.push('# TYPE cascade_transactions_completed_total counter');
-  lines.push(
-    `cascade_transactions_completed_total ${snapshot.transactionsCompleted}`
+    `cascade_transactions_started_total ${snapshot.transactionsStarted}`,
   );
 
   lines.push(
-    '# HELP cascade_transactions_failed_total Total cascade transactions failed'
+    "# HELP cascade_transactions_completed_total Total cascade transactions completed",
   );
-  lines.push('# TYPE cascade_transactions_failed_total counter');
-  lines.push(`cascade_transactions_failed_total ${snapshot.transactionsFailed}`);
+  lines.push("# TYPE cascade_transactions_completed_total counter");
+  lines.push(
+    `cascade_transactions_completed_total ${snapshot.transactionsCompleted}`,
+  );
 
-  lines.push('# HELP cascade_entities_tracked_total Total entities tracked');
-  lines.push('# TYPE cascade_entities_tracked_total counter');
+  lines.push(
+    "# HELP cascade_transactions_failed_total Total cascade transactions failed",
+  );
+  lines.push("# TYPE cascade_transactions_failed_total counter");
+  lines.push(
+    `cascade_transactions_failed_total ${snapshot.transactionsFailed}`,
+  );
+
+  lines.push("# HELP cascade_entities_tracked_total Total entities tracked");
+  lines.push("# TYPE cascade_entities_tracked_total counter");
   lines.push(`cascade_entities_tracked_total ${snapshot.entitiesTracked}`);
 
   lines.push(
-    '# HELP cascade_entities_truncated_total Total entities truncated due to limits'
+    "# HELP cascade_entities_truncated_total Total entities truncated due to limits",
   );
-  lines.push('# TYPE cascade_entities_truncated_total counter');
+  lines.push("# TYPE cascade_entities_truncated_total counter");
   lines.push(`cascade_entities_truncated_total ${snapshot.entitiesTruncated}`);
 
   // Gauges
-  lines.push('# HELP cascade_active_transactions Current active transactions');
-  lines.push('# TYPE cascade_active_transactions gauge');
+  lines.push("# HELP cascade_active_transactions Current active transactions");
+  lines.push("# TYPE cascade_active_transactions gauge");
   lines.push(`cascade_active_transactions ${snapshot.activeTransactions}`);
 
   // Histogram summaries (p50, p95, p99)
@@ -191,9 +195,9 @@ export function exportPrometheusMetrics(collector: MetricsCollector): string {
     const p99 = sorted[Math.floor(sorted.length * 0.99)] ?? 0;
 
     lines.push(
-      '# HELP cascade_tracking_duration_ms Tracking duration in milliseconds'
+      "# HELP cascade_tracking_duration_ms Tracking duration in milliseconds",
     );
-    lines.push('# TYPE cascade_tracking_duration_ms summary');
+    lines.push("# TYPE cascade_tracking_duration_ms summary");
     lines.push(`cascade_tracking_duration_ms{quantile="0.5"} ${p50}`);
     lines.push(`cascade_tracking_duration_ms{quantile="0.95"} ${p95}`);
     lines.push(`cascade_tracking_duration_ms{quantile="0.99"} ${p99}`);
@@ -206,9 +210,9 @@ export function exportPrometheusMetrics(collector: MetricsCollector): string {
     const p99 = sorted[Math.floor(sorted.length * 0.99)] ?? 0;
 
     lines.push(
-      '# HELP cascade_construction_duration_ms Construction duration in milliseconds'
+      "# HELP cascade_construction_duration_ms Construction duration in milliseconds",
     );
-    lines.push('# TYPE cascade_construction_duration_ms summary');
+    lines.push("# TYPE cascade_construction_duration_ms summary");
     lines.push(`cascade_construction_duration_ms{quantile="0.5"} ${p50}`);
     lines.push(`cascade_construction_duration_ms{quantile="0.95"} ${p95}`);
     lines.push(`cascade_construction_duration_ms{quantile="0.99"} ${p99}`);
@@ -220,12 +224,14 @@ export function exportPrometheusMetrics(collector: MetricsCollector): string {
     const p95 = sorted[Math.floor(sorted.length * 0.95)] ?? 0;
     const p99 = sorted[Math.floor(sorted.length * 0.99)] ?? 0;
 
-    lines.push('# HELP cascade_response_size Cascade response size in entities');
-    lines.push('# TYPE cascade_response_size summary');
+    lines.push(
+      "# HELP cascade_response_size Cascade response size in entities",
+    );
+    lines.push("# TYPE cascade_response_size summary");
     lines.push(`cascade_response_size{quantile="0.5"} ${p50}`);
     lines.push(`cascade_response_size{quantile="0.95"} ${p95}`);
     lines.push(`cascade_response_size{quantile="0.99"} ${p99}`);
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }

@@ -1,14 +1,21 @@
-import { Command } from 'commander';
-import { loadSchema, validateCascadeCompatibility } from '../lib/schema-validator';
+import { Command } from "commander";
+import {
+  loadSchema,
+  validateCascadeCompatibility,
+} from "../lib/schema-validator";
 
 interface ValidateOptions {
   strict?: boolean;
 }
 
-export const validateCommand = new Command('validate')
-  .description('Validate GraphQL schema for Cascade compatibility')
-  .argument('[schema]', 'Path to schema file (SDL or JSON introspection)', './schema.graphql')
-  .option('--strict', 'Treat warnings as errors')
+export const validateCommand = new Command("validate")
+  .description("Validate GraphQL schema for Cascade compatibility")
+  .argument(
+    "[schema]",
+    "Path to schema file (SDL or JSON introspection)",
+    "./schema.graphql",
+  )
+  .option("--strict", "Treat warnings as errors")
   .action(async (schemaPath: string, options: ValidateOptions) => {
     try {
       console.log(`\nValidating schema: ${schemaPath}\n`);
@@ -27,9 +34,10 @@ export const validateCommand = new Command('validate')
 
       // Handle exit conditions
       handleExitConditions(result, options);
-
     } catch (error) {
-      console.error(`\nError: ${error instanceof Error ? error.message : String(error)}\n`);
+      console.error(
+        `\nError: ${error instanceof Error ? error.message : String(error)}\n`,
+      );
       process.exit(1);
     }
   });
@@ -37,25 +45,28 @@ export const validateCommand = new Command('validate')
 /**
  * Display validation errors and warnings.
  */
-function displayValidationResults(result: { errors: string[]; warnings: string[] }): void {
+function displayValidationResults(result: {
+  errors: string[];
+  warnings: string[];
+}): void {
   if (result.errors.length > 0) {
-    console.log('✗ Errors:');
-    result.errors.forEach(error => {
+    console.log("✗ Errors:");
+    result.errors.forEach((error) => {
       console.log(`  - ${error}`);
     });
     console.log();
   }
 
   if (result.warnings.length > 0) {
-    console.log('⚠ Warnings:');
-    result.warnings.forEach(warning => {
+    console.log("⚠ Warnings:");
+    result.warnings.forEach((warning) => {
       console.log(`  - ${warning}`);
     });
     console.log();
   }
 
   if (result.errors.length === 0 && result.warnings.length === 0) {
-    console.log('✓ No issues found\n');
+    console.log("✓ No issues found\n");
   }
 }
 
@@ -66,13 +77,19 @@ function displayCompatibilityScore(compatibility: number): void {
   console.log(`Cascade Compatibility: ${compatibility}%\n`);
 
   if (compatibility === 100) {
-    console.log('Schema is fully compatible with GraphQL Cascade!\n');
+    console.log("Schema is fully compatible with GraphQL Cascade!\n");
   } else if (compatibility >= 80) {
-    console.log('Schema is mostly compatible. Fix the remaining issues for optimal Cascade performance.\n');
+    console.log(
+      "Schema is mostly compatible. Fix the remaining issues for optimal Cascade performance.\n",
+    );
   } else if (compatibility >= 50) {
-    console.log('Schema has significant compatibility issues. Review the errors above.\n');
+    console.log(
+      "Schema has significant compatibility issues. Review the errors above.\n",
+    );
   } else {
-    console.log('Schema requires substantial changes for Cascade compatibility.\n');
+    console.log(
+      "Schema requires substantial changes for Cascade compatibility.\n",
+    );
   }
 }
 
@@ -81,7 +98,7 @@ function displayCompatibilityScore(compatibility: number): void {
  */
 function handleExitConditions(
   result: { errors: string[]; warnings: string[] },
-  options: ValidateOptions
+  options: ValidateOptions,
 ): void {
   const hasErrors = result.errors.length > 0;
   const hasWarnings = result.warnings.length > 0;
@@ -91,7 +108,7 @@ function handleExitConditions(
   }
 
   if (options.strict && hasWarnings) {
-    console.log('Running in strict mode: treating warnings as errors\n');
+    console.log("Running in strict mode: treating warnings as errors\n");
     process.exit(1);
   }
 }

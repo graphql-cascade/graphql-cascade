@@ -21,11 +21,11 @@ The conformance test suite ensures that your GraphQL Cascade implementation (ser
 
 The test suite supports three conformance levels:
 
-| Level | Description |
-|-------|-------------|
-| **Basic** | Core cascade functionality - entity tracking and response format |
-| **Standard** | Basic + relationship tracking and invalidation hints |
-| **Complete** | Standard + optimistic updates, streaming, and advanced features |
+| Level        | Description                                                      |
+| ------------ | ---------------------------------------------------------------- |
+| **Basic**    | Core cascade functionality - entity tracking and response format |
+| **Standard** | Basic + relationship tracking and invalidation hints             |
+| **Complete** | Standard + optimistic updates, streaming, and advanced features  |
 
 ## Usage
 
@@ -44,11 +44,15 @@ npx cascade-conformance --target client --level basic
 #### Server Conformance Testing
 
 ```typescript
-import { runServerConformance, formatReport, printReport } from '@graphql-cascade/conformance';
+import {
+  runServerConformance,
+  formatReport,
+  printReport,
+} from "@graphql-cascade/conformance";
 
 const report = await runServerConformance({
-  endpoint: 'http://localhost:4000/graphql',
-  level: 'standard'
+  endpoint: "http://localhost:4000/graphql",
+  level: "standard",
 });
 
 // Print formatted report
@@ -61,11 +65,14 @@ console.log(`Achieved level: ${report.level.achieved}`);
 #### Client Conformance Testing
 
 ```typescript
-import { runClientConformance, formatReport } from '@graphql-cascade/conformance';
+import {
+  runClientConformance,
+  formatReport,
+} from "@graphql-cascade/conformance";
 
 const report = await runClientConformance({
   createClient: () => new YourCascadeClient(),
-  level: 'standard'
+  level: "standard",
 });
 
 // Format as string
@@ -76,26 +83,26 @@ console.log(output);
 ### Schema Validation
 
 ```typescript
-import { validateSchema } from '@graphql-cascade/conformance';
+import { validateSchema } from "@graphql-cascade/conformance";
 
 const result = validateSchema(schemaSDL);
 
 if (result.valid) {
   console.log(`Schema conforms to: ${result.level}`);
 } else {
-  console.log('Validation errors:', result.errors);
+  console.log("Validation errors:", result.errors);
 }
 ```
 
 ### Response Validation
 
 ```typescript
-import { validateResponse } from '@graphql-cascade/conformance';
+import { validateResponse } from "@graphql-cascade/conformance";
 
 const result = validateResponse(mutationResponse);
 
 if (!result.valid) {
-  console.log('Response validation errors:', result.errors);
+  console.log("Response validation errors:", result.errors);
 }
 ```
 
@@ -130,6 +137,7 @@ if (!result.valid) {
 Run conformance tests against a server implementation.
 
 **Options:**
+
 - `endpoint`: URL of the GraphQL endpoint
 - `level`: Target conformance level (`'basic'` | `'standard'` | `'complete'`)
 
@@ -140,6 +148,7 @@ Run conformance tests against a server implementation.
 Run conformance tests against a client implementation.
 
 **Options:**
+
 - `createClient`: Factory function returning your client instance
 - `level`: Target conformance level
 
@@ -184,10 +193,10 @@ Get an appropriate exit code based on report results.
 ```typescript
 interface ConformanceReport {
   timestamp: string;
-  target: 'server' | 'client';
+  target: "server" | "client";
   level: {
-    achieved: ConformanceLevel;  // Highest level passed
-    tested: ConformanceLevel;    // Level that was tested
+    achieved: ConformanceLevel; // Highest level passed
+    tested: ConformanceLevel; // Level that was tested
   };
   results: {
     basic: { passed: number; failed: number; skipped: number };

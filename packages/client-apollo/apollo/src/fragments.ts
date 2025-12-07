@@ -1,5 +1,5 @@
-import { gql, DocumentNode } from '@apollo/client';
-import { CascadeUpdates } from '@graphql-cascade/client';
+import { gql, DocumentNode } from "@apollo/client";
+import { CascadeUpdates } from "@graphql-cascade/client";
 
 /**
  * Fragment generation options
@@ -71,7 +71,7 @@ export class CascadeFragmentGenerator {
       excludeFields: options.excludeFields ?? [],
       includeFields: options.includeFields ?? [],
       customFragments: options.customFragments ?? new Map(),
-      includeTypename: options.includeTypename ?? true
+      includeTypename: options.includeTypename ?? true,
     };
   }
 
@@ -86,7 +86,7 @@ export class CascadeFragmentGenerator {
   generateFragment(
     typename: string,
     entity: Record<string, unknown>,
-    depth = 0
+    depth = 0,
   ): FragmentInfo {
     // Check custom fragments first
     if (this.options.customFragments.has(typename)) {
@@ -95,7 +95,7 @@ export class CascadeFragmentGenerator {
         name: `${typename}_Custom`,
         document: customDoc,
         fields: [],
-        nestedTypes: []
+        nestedTypes: [],
       };
     }
 
@@ -115,7 +115,7 @@ export class CascadeFragmentGenerator {
       if (this.options.excludeFields.includes(key)) continue;
 
       // Skip __typename (handled separately)
-      if (key === '__typename') continue;
+      if (key === "__typename") continue;
 
       // Handle nested entities
       if (this.isNestedEntity(value) && depth < this.options.maxDepth) {
@@ -126,18 +126,29 @@ export class CascadeFragmentGenerator {
           nestedTypes.push(nestedTypename);
 
           // Generate nested fragment
-          const nestedInfo = this.generateFragment(nestedTypename, nestedEntity, depth + 1);
+          const nestedInfo = this.generateFragment(
+            nestedTypename,
+            nestedEntity,
+            depth + 1,
+          );
           nestedFragments.push(nestedInfo.name);
 
           fields.push(`${key} { ...${nestedInfo.name} }`);
         } else {
           // Object without typename - include as inline
-          const inlineFields = this.generateInlineFields(nestedEntity, depth + 1);
+          const inlineFields = this.generateInlineFields(
+            nestedEntity,
+            depth + 1,
+          );
           fields.push(`${key} { ${inlineFields} }`);
         }
       }
       // Handle arrays of entities
-      else if (Array.isArray(value) && value.length > 0 && this.isNestedEntity(value[0])) {
+      else if (
+        Array.isArray(value) &&
+        value.length > 0 &&
+        this.isNestedEntity(value[0])
+      ) {
         if (depth < this.options.maxDepth) {
           const firstItem = value[0] as Record<string, unknown>;
           const itemTypename = firstItem.__typename as string;
@@ -145,12 +156,19 @@ export class CascadeFragmentGenerator {
           if (itemTypename) {
             nestedTypes.push(itemTypename);
 
-            const nestedInfo = this.generateFragment(itemTypename, firstItem, depth + 1);
+            const nestedInfo = this.generateFragment(
+              itemTypename,
+              firstItem,
+              depth + 1,
+            );
             nestedFragments.push(nestedInfo.name);
 
             fields.push(`${key} { ...${nestedInfo.name} }`);
           } else {
-            const inlineFields = this.generateInlineFields(firstItem, depth + 1);
+            const inlineFields = this.generateInlineFields(
+              firstItem,
+              depth + 1,
+            );
             fields.push(`${key} { ${inlineFields} }`);
           }
         }
@@ -163,7 +181,10 @@ export class CascadeFragmentGenerator {
 
     // Add always-included fields
     for (const field of this.options.includeFields) {
-      if (!fields.includes(field) && !this.options.excludeFields.includes(field)) {
+      if (
+        !fields.includes(field) &&
+        !this.options.excludeFields.includes(field)
+      ) {
         fields.push(field);
       }
     }
@@ -173,18 +194,20 @@ export class CascadeFragmentGenerator {
 
     // Build fragment body
     const fragmentFields = [
-      ...(this.options.includeTypename ? ['__typename'] : []),
-      ...fields
-    ].join('\n    ');
+      ...(this.options.includeTypename ? ["__typename"] : []),
+      ...fields,
+    ].join("\n    ");
 
     // Build the full fragment document with nested fragments
     const nestedDefs = nestedFragments
-      .map(name => {
-        const info = Array.from(this.fragmentCache.values()).find(f => f.name === name);
-        return info ? info.document.loc?.source.body : '';
+      .map((name) => {
+        const info = Array.from(this.fragmentCache.values()).find(
+          (f) => f.name === name,
+        );
+        return info ? info.document.loc?.source.body : "";
       })
       .filter(Boolean)
-      .join('\n');
+      .join("\n");
 
     const document = gql`
       fragment ${fragmentName} on ${typename} {
@@ -197,7 +220,7 @@ export class CascadeFragmentGenerator {
       name: fragmentName,
       document,
       fields,
-      nestedTypes
+      nestedTypes,
     };
 
     // Cache the fragment
@@ -212,7 +235,9 @@ export class CascadeFragmentGenerator {
    * @param cascade - The cascade updates
    * @returns Map of typename to fragment info
    */
-  generateFragmentsForCascade(cascade: CascadeUpdates): Map<string, FragmentInfo> {
+  generateFragmentsForCascade(
+    cascade: CascadeUpdates,
+  ): Map<string, FragmentInfo> {
     const fragments = new Map<string, FragmentInfo>();
 
     for (const updated of cascade.updated) {
@@ -247,7 +272,9 @@ export class CascadeFragmentGenerator {
     // Deduplicate fragments (in case of shared nested types)
     const uniqueFragments = [...new Set(fragmentDefs)];
 
-    return gql`${uniqueFragments.join('\n')}`;
+    return gql`
+      ${uniqueFragments.join("\n")}
+    `;
   }
 
   /**
@@ -288,7 +315,7 @@ export class CascadeFragmentGenerator {
   private isNestedEntity(value: unknown): value is Record<string, unknown> {
     return (
       value !== null &&
-      typeof value === 'object' &&
+      typeof value === "object" &&
       !Array.isArray(value) &&
       !(value instanceof Date)
     );
@@ -297,9 +324,12 @@ export class CascadeFragmentGenerator {
   /**
    * Generate inline field selections for objects without typename.
    */
-  private generateInlineFields(obj: Record<string, unknown>, depth: number): string {
+  private generateInlineFields(
+    obj: Record<string, unknown>,
+    depth: number,
+  ): string {
     if (depth >= this.options.maxDepth) {
-      return 'id';
+      return "id";
     }
 
     const fields: string[] = [];
@@ -310,7 +340,11 @@ export class CascadeFragmentGenerator {
       if (this.isNestedEntity(value)) {
         const nested = this.generateInlineFields(value, depth + 1);
         fields.push(`${key} { ${nested} }`);
-      } else if (Array.isArray(value) && value.length > 0 && this.isNestedEntity(value[0])) {
+      } else if (
+        Array.isArray(value) &&
+        value.length > 0 &&
+        this.isNestedEntity(value[0])
+      ) {
         const nested = this.generateInlineFields(value[0], depth + 1);
         fields.push(`${key} { ${nested} }`);
       } else {
@@ -318,14 +352,17 @@ export class CascadeFragmentGenerator {
       }
     }
 
-    return fields.join(' ');
+    return fields.join(" ");
   }
 
   /**
    * Generate a cache key based on typename and field structure.
    */
-  private getCacheKey(typename: string, entity: Record<string, unknown>): string {
-    const fieldKeys = Object.keys(entity).sort().join(',');
+  private getCacheKey(
+    typename: string,
+    entity: Record<string, unknown>,
+  ): string {
+    const fieldKeys = Object.keys(entity).sort().join(",");
     return `${typename}:${fieldKeys}`;
   }
 }
@@ -339,10 +376,10 @@ export class CascadeFragmentGenerator {
  */
 export function extractFieldsFromEntity(
   entity: Record<string, unknown>,
-  maxDepth = 3
+  maxDepth = 3,
 ): string[] {
   const generator = new CascadeFragmentGenerator({ maxDepth });
-  const typename = (entity.__typename as string) || 'Unknown';
+  const typename = (entity.__typename as string) || "Unknown";
   const info = generator.generateFragment(typename, entity);
   return info.fields;
 }
@@ -356,7 +393,7 @@ export function extractFieldsFromEntity(
  */
 export function createFragmentFromEntity(
   typename: string,
-  entity: Record<string, unknown>
+  entity: Record<string, unknown>,
 ): DocumentNode {
   const generator = new CascadeFragmentGenerator();
   const info = generator.generateFragment(typename, entity);

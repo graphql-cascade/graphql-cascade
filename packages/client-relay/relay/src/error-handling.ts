@@ -2,14 +2,14 @@
  * Error handling utilities for Relay network layer with GraphQL Cascade support.
  */
 
-import { Observable } from 'relay-runtime';
+import { Observable } from "relay-runtime";
 import {
   CascadeError,
   CascadeErrorCode,
   shouldRetry,
   calculateRetryDelay,
-  RetryOptions
-} from '@graphql-cascade/client';
+  RetryOptions,
+} from "@graphql-cascade/client";
 
 /**
  * Relay network error structure.
@@ -47,7 +47,7 @@ export function extractCascadeErrors(error: RelayNetworkError): CascadeError[] {
           message: gqlError.message,
           code: errorCode as any, // Will be validated by CascadeErrorCode enum
           path: gqlError.path,
-          extensions
+          extensions,
         });
       }
     }
@@ -58,7 +58,7 @@ export function extractCascadeErrors(error: RelayNetworkError): CascadeError[] {
     cascadeErrors.push({
       message: error.message,
       code: CascadeErrorCode.INTERNAL_ERROR,
-      extensions: error.source?.extensions
+      extensions: error.source?.extensions,
     });
   }
 
@@ -68,9 +68,15 @@ export function extractCascadeErrors(error: RelayNetworkError): CascadeError[] {
 /**
  * Determines if a Relay network error contains retryable cascade errors.
  */
-export function isRetryableRelayError(error: RelayNetworkError, attemptNumber: number, options?: RetryOptions): boolean {
+export function isRetryableRelayError(
+  error: RelayNetworkError,
+  attemptNumber: number,
+  options?: RetryOptions,
+): boolean {
   const cascadeErrors = extractCascadeErrors(error);
-  return cascadeErrors.some(cascadeError => shouldRetry(cascadeError, attemptNumber, options));
+  return cascadeErrors.some((cascadeError) =>
+    shouldRetry(cascadeError, attemptNumber, options),
+  );
 }
 
 /**
@@ -79,11 +85,13 @@ export function isRetryableRelayError(error: RelayNetworkError, attemptNumber: n
 export function getRelayRetryDelay(
   error: RelayNetworkError,
   attemptNumber: number,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): number {
   const cascadeErrors = extractCascadeErrors(error);
   // Use the first retryable error for delay calculation
-  const retryableError = cascadeErrors.find(err => shouldRetry(err, attemptNumber));
+  const retryableError = cascadeErrors.find((err) =>
+    shouldRetry(err, attemptNumber),
+  );
 
   if (retryableError) {
     return calculateRetryDelay(retryableError, attemptNumber, options);
@@ -97,9 +105,17 @@ export function getRelayRetryDelay(
  */
 export interface RelayRetryOptions extends RetryOptions {
   /** Function to determine if an error should trigger a retry */
-  shouldRetryFn?: (error: RelayNetworkError, attemptNumber: number, options?: RelayRetryOptions) => boolean;
+  shouldRetryFn?: (
+    error: RelayNetworkError,
+    attemptNumber: number,
+    options?: RelayRetryOptions,
+  ) => boolean;
   /** Function to calculate retry delay */
-  calculateDelayFn?: (error: RelayNetworkError, attemptNumber: number, options?: RelayRetryOptions) => number;
+  calculateDelayFn?: (
+    error: RelayNetworkError,
+    attemptNumber: number,
+    options?: RelayRetryOptions,
+  ) => number;
   /** Callback fired before each retry attempt */
   onRetry?: (error: RelayNetworkError, attemptNumber: number) => void;
 }
@@ -109,13 +125,13 @@ export interface RelayRetryOptions extends RetryOptions {
  */
 export function withCascadeRetry<T extends any[], R>(
   networkFn: (...args: T) => Observable<R>,
-  options: RelayRetryOptions = {}
+  options: RelayRetryOptions = {},
 ): (...args: T) => Observable<R> {
   const {
     maxRetries = 3,
     shouldRetryFn = isRetryableRelayError,
     calculateDelayFn = getRelayRetryDelay,
-    onRetry
+    onRetry,
   } = options;
 
   return (...args: T): Observable<R> => {
@@ -149,7 +165,7 @@ export function withCascadeRetry<T extends any[], R>(
           },
           complete: () => {
             sink.complete();
-          }
+          },
         });
 
         return () => {
@@ -170,7 +186,7 @@ export function withCascadeRetry<T extends any[], R>(
  */
 export function createCascadeNetwork<T extends any[], R>(
   baseNetworkFn: (...args: T) => Observable<R>,
-  options: RelayRetryOptions = {}
+  options: RelayRetryOptions = {},
 ): (...args: T) => Observable<R> {
   return withCascadeRetry(baseNetworkFn, options);
 }

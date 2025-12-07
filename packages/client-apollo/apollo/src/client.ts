@@ -1,6 +1,11 @@
-import { ApolloClient, InMemoryCache, gql, DocumentNode } from '@apollo/client';
-import { CascadeClient, QueryInvalidation, InvalidationStrategy, InvalidationScope } from '@graphql-cascade/client';
-import { ApolloCascadeCache } from './cache';
+import { ApolloClient, InMemoryCache, gql, DocumentNode } from "@apollo/client";
+import {
+  CascadeClient,
+  QueryInvalidation,
+  InvalidationStrategy,
+  InvalidationScope,
+} from "@graphql-cascade/client";
+import { ApolloCascadeCache } from "./cache";
 
 interface TrackedQuery {
   query: DocumentNode;
@@ -16,7 +21,7 @@ export class ApolloCascadeClient extends CascadeClient {
   constructor(private apollo: ApolloClient<any>) {
     super(
       new ApolloCascadeCache(apollo.cache as InMemoryCache),
-      (query, variables) => apollo.query({ query, variables })
+      (query, variables) => apollo.query({ query, variables }),
     );
   }
 
@@ -38,13 +43,10 @@ export class ApolloCascadeClient extends CascadeClient {
   /**
    * Execute a mutation with automatic cascade application.
    */
-  async mutate<T = any>(
-    mutation: DocumentNode,
-    variables?: any
-  ): Promise<T> {
+  async mutate<T = any>(mutation: DocumentNode, variables?: any): Promise<T> {
     const result = await this.apollo.mutate({
       mutation,
-      variables
+      variables,
     });
 
     const mutationName = Object.keys(result.data!)[0];
@@ -58,13 +60,10 @@ export class ApolloCascadeClient extends CascadeClient {
   /**
    * Execute a query (no cascade processing needed).
    */
-  async query<T = any>(
-    query: DocumentNode,
-    variables?: any
-  ): Promise<T> {
+  async query<T = any>(query: DocumentNode, variables?: any): Promise<T> {
     const result = await this.apollo.query({
       query,
-      variables
+      variables,
     });
     return result.data;
   }
@@ -119,13 +118,13 @@ export class ApolloCascadeClient extends CascadeClient {
     const matchingQueries = this.findMatchingQueries(invalidation);
 
     if (invalidation.scope === InvalidationScope.ALL) {
-      await this.apollo.refetchQueries({ include: 'active' });
+      await this.apollo.refetchQueries({ include: "active" });
       return;
     }
 
     if (matchingQueries.length > 0) {
       await this.apollo.refetchQueries({
-        include: matchingQueries
+        include: matchingQueries,
       });
     }
   }
@@ -176,7 +175,10 @@ export class ApolloCascadeClient extends CascadeClient {
   /**
    * Check if tracked query variables match the invalidation arguments.
    */
-  private variablesMatch(tracked?: any, required?: Record<string, any>): boolean {
+  private variablesMatch(
+    tracked?: any,
+    required?: Record<string, any>,
+  ): boolean {
     if (!required) return true;
     if (!tracked) return false;
     for (const [key, value] of Object.entries(required)) {
@@ -196,8 +198,8 @@ export class ApolloCascadeClient extends CascadeClient {
 // Usage example (would be in a separate example file)
 export const exampleUsage = () => {
   const client = new ApolloClient({
-    uri: 'http://localhost:4000/graphql',
-    cache: new InMemoryCache()
+    uri: "http://localhost:4000/graphql",
+    cache: new InMemoryCache(),
   });
 
   const cascade = new ApolloCascadeClient(client);
@@ -208,17 +210,39 @@ export const exampleUsage = () => {
       mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
         updateUser(id: $id, input: $input) {
           success
-          errors { message code }
-          data { id name email }
+          errors {
+            message
+            code
+          }
+          data {
+            id
+            name
+            email
+          }
           cascade {
-            updated { __typename id operation entity }
-            deleted { __typename id }
-            invalidations { queryName strategy scope }
-            metadata { timestamp affectedCount }
+            updated {
+              __typename
+              id
+              operation
+              entity
+            }
+            deleted {
+              __typename
+              id
+            }
+            invalidations {
+              queryName
+              strategy
+              scope
+            }
+            metadata {
+              timestamp
+              affectedCount
+            }
           }
         }
       }
     `,
-    { id: '123', input: { name: 'New Name' } }
+    { id: "123", input: { name: "New Name" } },
   );
 };

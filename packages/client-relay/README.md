@@ -28,18 +28,18 @@ npm install @graphql-cascade/client-relay relay-runtime react-relay
 ### Basic Setup
 
 ```typescript
-import { createCascadeRelayEnvironment } from '@graphql-cascade/client-relay';
-import { Network, Store, RecordSource } from 'relay-runtime';
+import { createCascadeRelayEnvironment } from "@graphql-cascade/client-relay";
+import { Network, Store, RecordSource } from "relay-runtime";
 
 // Your fetch function
 async function fetchQuery(operation, variables) {
-  const response = await fetch('/graphql', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const response = await fetch("/graphql", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       query: operation.text,
-      variables
-    })
+      variables,
+    }),
   });
   return response.json();
 }
@@ -56,8 +56,8 @@ const environment = createCascadeRelayEnvironment(network, store);
 ### React Integration
 
 ```tsx
-import { RelayEnvironmentProvider } from 'react-relay';
-import { createCascadeRelayEnvironment } from '@graphql-cascade/client-relay';
+import { RelayEnvironmentProvider } from "react-relay";
+import { createCascadeRelayEnvironment } from "@graphql-cascade/client-relay";
 
 function App() {
   return (
@@ -130,26 +130,26 @@ function CreateTodoButton() {
 Creates a Relay Environment that automatically processes cascade responses.
 
 ```typescript
-import { createCascadeRelayEnvironment } from '@graphql-cascade/client-relay';
+import { createCascadeRelayEnvironment } from "@graphql-cascade/client-relay";
 
 const environment = createCascadeRelayEnvironment(network, store, {
   // Enable debug logging
-  debug: process.env.NODE_ENV === 'development',
+  debug: process.env.NODE_ENV === "development",
 
   // Callback when cascade is processed
   onCascade: (cascade) => {
-    console.log('Cascade processed:', cascade);
+    console.log("Cascade processed:", cascade);
   },
 
   // Callback on errors
   onError: (error) => {
-    console.error('Cascade error:', error);
+    console.error("Cascade error:", error);
   },
 
   // Filter which cascades to process
   shouldProcessCascade: (cascade) => {
     return cascade.updated.length < 1000;
-  }
+  },
 });
 ```
 
@@ -182,11 +182,11 @@ By default, cascade updates are applied automatically:
 
 ```typescript
 commit({
-  variables: { input: { title: 'New Todo' } },
+  variables: { input: { title: "New Todo" } },
   // No updater needed! Cascade data automatically updates the store
   onCompleted: (response) => {
-    console.log('Store updated automatically');
-  }
+    console.log("Store updated automatically");
+  },
 });
 ```
 
@@ -196,28 +196,25 @@ You can combine cascade with manual updaters for edge cases:
 
 ```typescript
 commit({
-  variables: { input: { title: 'New Todo' } },
+  variables: { input: { title: "New Todo" } },
   updater: (store, response) => {
     // Cascade is applied first
     // Then your custom logic runs
 
     // Example: Add to a connection manually
     const root = store.getRoot();
-    const connection = ConnectionHandler.getConnection(
-      root,
-      'TodoList_todos'
-    );
+    const connection = ConnectionHandler.getConnection(root, "TodoList_todos");
 
     if (connection) {
       const newEdge = ConnectionHandler.createEdge(
         store,
         connection,
         store.get(response.createTodo.data.id),
-        'TodoEdge'
+        "TodoEdge",
       );
       ConnectionHandler.insertEdgeAfter(connection, newEdge);
     }
-  }
+  },
 });
 ```
 
@@ -244,32 +241,34 @@ cascade: {
 
 ```typescript
 commit({
-  variables: { id: '123', completed: true },
+  variables: { id: "123", completed: true },
   optimisticResponse: {
     toggleTodo: {
       success: true,
       data: {
-        id: '123',
-        completed: true
+        id: "123",
+        completed: true,
       },
       cascade: {
-        updated: [{
-          __typename: 'Todo',
-          id: '123',
-          operation: 'UPDATED',
-          entity: { completed: true }
-        }],
+        updated: [
+          {
+            __typename: "Todo",
+            id: "123",
+            operation: "UPDATED",
+            entity: { completed: true },
+          },
+        ],
         deleted: [],
-        invalidations: []
-      }
-    }
+        invalidations: [],
+      },
+    },
   },
   onCompleted: (response) => {
     // Server response replaces optimistic data
   },
   onError: (error) => {
     // Optimistic updates automatically rolled back
-  }
+  },
 });
 ```
 
@@ -277,17 +276,17 @@ commit({
 
 ```typescript
 commit({
-  variables: { id: '123', completed: true },
+  variables: { id: "123", completed: true },
   optimisticUpdater: (store) => {
-    const todo = store.get('123');
+    const todo = store.get("123");
     if (todo) {
-      todo.setValue(true, 'completed');
+      todo.setValue(true, "completed");
     }
   },
   // Regular updater runs on success
   updater: (store, response) => {
     // Cascade applied automatically, then this runs
-  }
+  },
 });
 ```
 
@@ -339,7 +338,7 @@ const TodoListQuery = graphql`
 function createCascadeRelayEnvironment(
   network: Network,
   store: Store,
-  config?: CascadeRelayConfig
+  config?: CascadeRelayConfig,
 ): Environment;
 ```
 
@@ -348,7 +347,7 @@ function createCascadeRelayEnvironment(
 Creates a store updater function from cascade data:
 
 ```typescript
-import { createCascadeUpdater } from '@graphql-cascade/client-relay';
+import { createCascadeUpdater } from "@graphql-cascade/client-relay";
 
 const updater = createCascadeUpdater(cascadeData);
 
@@ -361,7 +360,7 @@ commit({
   updater: (store) => {
     createCascadeUpdater(customCascade)(store);
     // Additional logic...
-  }
+  },
 });
 ```
 
@@ -370,15 +369,15 @@ commit({
 Manually process a cascade response:
 
 ```typescript
-import { processCascadeResponse } from '@graphql-cascade/client-relay';
+import { processCascadeResponse } from "@graphql-cascade/client-relay";
 
 processCascadeResponse(environment, cascadeData, {
   onEntityUpdated: (typename, id, data) => {
-    console.log('Updated:', typename, id);
+    console.log("Updated:", typename, id);
   },
   onEntityDeleted: (typename, id) => {
-    console.log('Deleted:', typename, id);
-  }
+    console.log("Deleted:", typename, id);
+  },
 });
 ```
 
@@ -387,23 +386,26 @@ processCascadeResponse(environment, cascadeData, {
 Full type safety with Relay Compiler generated types:
 
 ```typescript
-import type { CreateTodoMutation } from './__generated__/CreateTodoMutation.graphql';
-import type { CreateTodoMutation$variables } from './__generated__/CreateTodoMutation.graphql';
+import type { CreateTodoMutation } from "./__generated__/CreateTodoMutation.graphql";
+import type { CreateTodoMutation$variables } from "./__generated__/CreateTodoMutation.graphql";
 
 const [commit] = useMutation<CreateTodoMutation>(CreateTodoMutation);
 
 // Variables are type-checked
 commit({
   variables: {
-    input: { title: 'New Todo' } // Type-safe
-  }
+    input: { title: "New Todo" }, // Type-safe
+  },
 });
 ```
 
 ### Generic Types
 
 ```typescript
-import type { CascadeData, CascadeUpdatedEntity } from '@graphql-cascade/client-relay';
+import type {
+  CascadeData,
+  CascadeUpdatedEntity,
+} from "@graphql-cascade/client-relay";
 
 function handleCascade(cascade: CascadeData) {
   cascade.updated.forEach((entity: CascadeUpdatedEntity) => {
@@ -463,7 +465,7 @@ function TodoList() {
 const environment = createCascadeRelayEnvironment(network, store, {
   typeUpdaters: {
     Todo: (store, entity, operation) => {
-      if (operation === 'CREATED') {
+      if (operation === "CREATED") {
         // Custom handling for new todos
         const root = store.getRoot();
         // ... custom logic
@@ -471,8 +473,8 @@ const environment = createCascadeRelayEnvironment(network, store, {
     },
     User: (store, entity, operation) => {
       // Custom handling for users
-    }
-  }
+    },
+  },
 });
 ```
 
@@ -481,7 +483,7 @@ const environment = createCascadeRelayEnvironment(network, store, {
 ### Mock Cascade Responses
 
 ```typescript
-import { createMockEnvironment, MockPayloadGenerator } from 'relay-test-utils';
+import { createMockEnvironment, MockPayloadGenerator } from "relay-test-utils";
 
 const environment = createMockEnvironment();
 
@@ -492,16 +494,18 @@ environment.mock.resolveMostRecentOperation((operation) =>
       return {
         createTodo: {
           success: true,
-          data: { id: '1', title: 'Test', completed: false },
+          data: { id: "1", title: "Test", completed: false },
           cascade: {
-            updated: [{ __typename: 'Todo', id: '1', operation: 'CREATED', entity: {} }],
+            updated: [
+              { __typename: "Todo", id: "1", operation: "CREATED", entity: {} },
+            ],
             deleted: [],
-            invalidations: []
-          }
-        }
+            invalidations: [],
+          },
+        },
       };
-    }
-  })
+    },
+  }),
 );
 ```
 
@@ -519,16 +523,16 @@ environment.mock.resolveMostRecentOperation((operation) =>
 const environment = createCascadeRelayEnvironment(network, store, {
   debug: true,
   onCascade: (cascade) => {
-    console.log('Processing cascade:', cascade);
-    console.log('Updated:', cascade.updated.length, 'entities');
-    console.log('Deleted:', cascade.deleted.length, 'entities');
-  }
+    console.log("Processing cascade:", cascade);
+    console.log("Updated:", cascade.updated.length, "entities");
+    console.log("Deleted:", cascade.deleted.length, "entities");
+  },
 });
 ```
 
 ### Common Issues
 
-- **Missing __typename** - All entities must include `__typename`
+- **Missing \_\_typename** - All entities must include `__typename`
 - **ID format mismatch** - Entity IDs must match what Relay expects
 - **Connection not updating** - May need manual edge insertion for new items
 
@@ -537,26 +541,28 @@ const environment = createCascadeRelayEnvironment(network, store, {
 ### From Manual Updaters
 
 **Before (Manual Store Manipulation):**
+
 ```typescript
 commit({
   variables,
   updater: (store, response) => {
     const todo = store.get(response.createTodo.id);
     const root = store.getRoot();
-    const todos = root.getLinkedRecords('todos');
-    root.setLinkedRecords([...todos, todo], 'todos');
-  }
+    const todos = root.getLinkedRecords("todos");
+    root.setLinkedRecords([...todos, todo], "todos");
+  },
 });
 ```
 
 **After (With Cascade):**
+
 ```typescript
 commit({
   variables,
   // No updater needed! Cascade handles it
   onCompleted: (response) => {
-    console.log('Created:', response.createTodo.data);
-  }
+    console.log("Created:", response.createTodo.data);
+  },
 });
 ```
 

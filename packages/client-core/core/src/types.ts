@@ -55,9 +55,9 @@ export interface DeletedEntity {
  * Type of cascade operation.
  */
 export enum CascadeOperation {
-  CREATED = 'CREATED',
-  UPDATED = 'UPDATED',
-  DELETED = 'DELETED'
+  CREATED = "CREATED",
+  UPDATED = "UPDATED",
+  DELETED = "DELETED",
 }
 
 /**
@@ -75,16 +75,16 @@ export interface CascadeError {
  * Standard error codes for Cascade mutations.
  */
 export enum CascadeErrorCode {
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  NOT_FOUND = 'NOT_FOUND',
-  UNAUTHORIZED = 'UNAUTHORIZED',
-  FORBIDDEN = 'FORBIDDEN',
-  CONFLICT = 'CONFLICT',
-  INTERNAL_ERROR = 'INTERNAL_ERROR',
-  TRANSACTION_FAILED = 'TRANSACTION_FAILED',
-  TIMEOUT = 'TIMEOUT',
-  RATE_LIMITED = 'RATE_LIMITED',
-  SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE'
+  VALIDATION_ERROR = "VALIDATION_ERROR",
+  NOT_FOUND = "NOT_FOUND",
+  UNAUTHORIZED = "UNAUTHORIZED",
+  FORBIDDEN = "FORBIDDEN",
+  CONFLICT = "CONFLICT",
+  INTERNAL_ERROR = "INTERNAL_ERROR",
+  TRANSACTION_FAILED = "TRANSACTION_FAILED",
+  TIMEOUT = "TIMEOUT",
+  RATE_LIMITED = "RATE_LIMITED",
+  SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE",
 }
 
 /**
@@ -103,19 +103,19 @@ export interface QueryInvalidation {
  * Strategy for cache invalidation.
  */
 export enum InvalidationStrategy {
-  INVALIDATE = 'INVALIDATE',
-  REFETCH = 'REFETCH',
-  REMOVE = 'REMOVE'
+  INVALIDATE = "INVALIDATE",
+  REFETCH = "REFETCH",
+  REMOVE = "REMOVE",
 }
 
 /**
  * Scope of cache invalidation.
  */
 export enum InvalidationScope {
-  EXACT = 'EXACT',
-  PREFIX = 'PREFIX',
-  PATTERN = 'PATTERN',
-  ALL = 'ALL'
+  EXACT = "EXACT",
+  PREFIX = "PREFIX",
+  PATTERN = "PATTERN",
+  ALL = "ALL",
 }
 
 /**
@@ -164,7 +164,7 @@ export interface CascadeCache<T = Record<string, unknown>> {
  */
 export interface ConflictDetection {
   hasConflict: boolean;
-  conflictType?: 'VERSION_MISMATCH' | 'TIMESTAMP_MISMATCH' | 'FIELD_CONFLICT';
+  conflictType?: "VERSION_MISMATCH" | "TIMESTAMP_MISMATCH" | "FIELD_CONFLICT";
   localEntity?: Record<string, unknown>;
   serverEntity?: Record<string, unknown>;
   conflictingFields?: string[];

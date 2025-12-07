@@ -1,15 +1,15 @@
-import { ApolloClient, DocumentNode, FetchResult } from '@apollo/client';
-import { CascadeUpdates, CascadeResponse } from '@graphql-cascade/client';
-import { ApolloCascadeClient } from './client';
+import { ApolloClient, DocumentNode, FetchResult } from "@apollo/client";
+import { CascadeUpdates, CascadeResponse } from "@graphql-cascade/client";
+import { ApolloCascadeClient } from "./client";
 
 /**
  * Subscription cascade event types
  */
 export type CascadeSubscriptionEventType =
-  | 'ENTITY_UPDATED'
-  | 'ENTITY_DELETED'
-  | 'QUERY_INVALIDATED'
-  | 'BATCH_UPDATE';
+  | "ENTITY_UPDATED"
+  | "ENTITY_DELETED"
+  | "QUERY_INVALIDATED"
+  | "BATCH_UPDATE";
 
 /**
  * Subscription cascade event
@@ -97,7 +97,7 @@ export class CascadeSubscriptionManager {
 
   constructor(
     private cascadeClient: ApolloCascadeClient,
-    private apolloClient: ApolloClient<unknown>
+    private apolloClient: ApolloClient<unknown>,
   ) {}
 
   /**
@@ -109,7 +109,7 @@ export class CascadeSubscriptionManager {
    */
   subscribe<TData = unknown>(
     subscription: DocumentNode,
-    options: CascadeSubscriptionOptions<TData> = {}
+    options: CascadeSubscriptionOptions<TData> = {},
   ): CascadeSubscriptionHandle {
     const {
       onCascade,
@@ -117,7 +117,7 @@ export class CascadeSubscriptionManager {
       onComplete,
       autoApply = true,
       filter,
-      variables
+      variables,
     } = options;
 
     const subscriptionId = this.generateSubscriptionId();
@@ -126,7 +126,7 @@ export class CascadeSubscriptionManager {
 
     const observable = this.apolloClient.subscribe({
       query: subscription,
-      variables
+      variables,
     });
 
     const subscription$ = observable.subscribe({
@@ -146,14 +146,13 @@ export class CascadeSubscriptionManager {
             const mockResponse: CascadeResponse = {
               success: true,
               data: null,
-              cascade: cascadeEvent.cascade
+              cascade: cascadeEvent.cascade,
             };
             this.cascadeClient.applyCascade(mockResponse);
           }
 
           // Call user callback
           onCascade?.(cascadeEvent.cascade);
-
         } catch (err) {
           onError?.(err as Error);
         }
@@ -167,7 +166,7 @@ export class CascadeSubscriptionManager {
         isActive = false;
         this.activeSubscriptions.delete(subscriptionId);
         onComplete?.();
-      }
+      },
     });
 
     const handle: CascadeSubscriptionHandle = {
@@ -190,7 +189,7 @@ export class CascadeSubscriptionManager {
       },
       get isPaused() {
         return isPaused;
-      }
+      },
     };
 
     this.activeSubscriptions.set(subscriptionId, handle);
@@ -208,16 +207,16 @@ export class CascadeSubscriptionManager {
   subscribeToEntity(
     typename: string,
     subscription: DocumentNode,
-    options: CascadeSubscriptionOptions = {}
+    options: CascadeSubscriptionOptions = {},
   ): CascadeSubscriptionHandle {
     return this.subscribe(subscription, {
       ...options,
       filter: (event) => {
         const hasMatchingUpdate = event.cascade.updated.some(
-          u => u.__typename === typename
+          (u) => u.__typename === typename,
         );
         const hasMatchingDelete = event.cascade.deleted.some(
-          d => d.__typename === typename
+          (d) => d.__typename === typename,
         );
 
         const matches = hasMatchingUpdate || hasMatchingDelete;
@@ -228,7 +227,7 @@ export class CascadeSubscriptionManager {
         }
 
         return matches;
-      }
+      },
     });
   }
 
@@ -244,16 +243,16 @@ export class CascadeSubscriptionManager {
     typename: string,
     id: string,
     subscription: DocumentNode,
-    options: CascadeSubscriptionOptions = {}
+    options: CascadeSubscriptionOptions = {},
   ): CascadeSubscriptionHandle {
     return this.subscribe(subscription, {
       ...options,
       filter: (event) => {
         const hasMatchingUpdate = event.cascade.updated.some(
-          u => u.__typename === typename && u.id === id
+          (u) => u.__typename === typename && u.id === id,
         );
         const hasMatchingDelete = event.cascade.deleted.some(
-          d => d.__typename === typename && d.id === id
+          (d) => d.__typename === typename && d.id === id,
         );
 
         const matches = hasMatchingUpdate || hasMatchingDelete;
@@ -263,7 +262,7 @@ export class CascadeSubscriptionManager {
         }
 
         return matches;
-      }
+      },
     });
   }
 
@@ -278,7 +277,7 @@ export class CascadeSubscriptionManager {
    * Unsubscribe from all active subscriptions.
    */
   unsubscribeAll(): void {
-    this.activeSubscriptions.forEach(handle => handle.unsubscribe());
+    this.activeSubscriptions.forEach((handle) => handle.unsubscribe());
     this.activeSubscriptions.clear();
     this.pausedSubscriptions.clear();
   }
@@ -287,21 +286,21 @@ export class CascadeSubscriptionManager {
    * Pause all subscriptions.
    */
   pauseAll(): void {
-    this.activeSubscriptions.forEach(handle => handle.pause());
+    this.activeSubscriptions.forEach((handle) => handle.pause());
   }
 
   /**
    * Resume all subscriptions.
    */
   resumeAll(): void {
-    this.activeSubscriptions.forEach(handle => handle.resume());
+    this.activeSubscriptions.forEach((handle) => handle.resume());
   }
 
   /**
    * Extract cascade event from subscription result.
    */
   private extractCascadeEvent<TData>(
-    result: FetchResult<TData>
+    result: FetchResult<TData>,
   ): CascadeSubscriptionEvent | null {
     if (!result.data) return null;
 
@@ -317,7 +316,7 @@ export class CascadeSubscriptionManager {
         type: this.inferEventType(result.extensions.cascade as CascadeUpdates),
         cascade: result.extensions.cascade as CascadeUpdates,
         timestamp: new Date().toISOString(),
-        source: 'extensions'
+        source: "extensions",
       };
     }
 
@@ -331,35 +330,42 @@ export class CascadeSubscriptionManager {
         type: this.inferEventType(subscriptionData.cascade as CascadeUpdates),
         cascade: subscriptionData.cascade as CascadeUpdates,
         timestamp: new Date().toISOString(),
-        source: subscriptionName
+        source: subscriptionName,
       };
     }
 
     // Try to construct cascade from entity updates
-    if (subscriptionData && typeof subscriptionData === 'object') {
+    if (subscriptionData && typeof subscriptionData === "object") {
       const entity = subscriptionData as Record<string, unknown>;
       if (entity.__typename && entity.id) {
         // Import CascadeOperation from types
-        const CascadeOperation = { CREATED: 'CREATED', UPDATED: 'UPDATED', DELETED: 'DELETED' } as const;
+        const CascadeOperation = {
+          CREATED: "CREATED",
+          UPDATED: "UPDATED",
+          DELETED: "DELETED",
+        } as const;
         return {
-          type: 'ENTITY_UPDATED',
+          type: "ENTITY_UPDATED",
           cascade: {
-            updated: [{
-              __typename: entity.__typename as string,
-              id: entity.id as string,
-              operation: CascadeOperation.UPDATED as unknown as import('@graphql-cascade/client').CascadeOperation,
-              entity
-            }],
+            updated: [
+              {
+                __typename: entity.__typename as string,
+                id: entity.id as string,
+                operation:
+                  CascadeOperation.UPDATED as unknown as import("@graphql-cascade/client").CascadeOperation,
+                entity,
+              },
+            ],
             deleted: [],
             invalidations: [],
             metadata: {
               timestamp: new Date().toISOString(),
               depth: 1,
-              affectedCount: 1
-            }
+              affectedCount: 1,
+            },
           },
           timestamp: new Date().toISOString(),
-          source: subscriptionName
+          source: subscriptionName,
         };
       }
     }
@@ -370,21 +376,23 @@ export class CascadeSubscriptionManager {
   /**
    * Infer the event type from cascade updates.
    */
-  private inferEventType(cascade: CascadeUpdates): CascadeSubscriptionEventType {
+  private inferEventType(
+    cascade: CascadeUpdates,
+  ): CascadeSubscriptionEventType {
     const hasUpdates = cascade.updated.length > 0;
     const hasDeletes = cascade.deleted.length > 0;
     const hasInvalidations = cascade.invalidations.length > 0;
 
     if (hasUpdates && hasDeletes) {
-      return 'BATCH_UPDATE';
+      return "BATCH_UPDATE";
     }
     if (hasDeletes) {
-      return 'ENTITY_DELETED';
+      return "ENTITY_DELETED";
     }
     if (hasInvalidations && !hasUpdates) {
-      return 'QUERY_INVALIDATED';
+      return "QUERY_INVALIDATED";
     }
-    return 'ENTITY_UPDATED';
+    return "ENTITY_UPDATED";
   }
 
   /**
@@ -400,11 +408,11 @@ export class CascadeSubscriptionManager {
  * Note: This is a factory function - actual implementation requires React context.
  */
 export function createUseCascadeSubscription(
-  subscriptionManager: CascadeSubscriptionManager
+  subscriptionManager: CascadeSubscriptionManager,
 ) {
   return function useCascadeSubscription<TData = unknown>(
     subscription: DocumentNode,
-    options: CascadeSubscriptionOptions<TData> = {}
+    options: CascadeSubscriptionOptions<TData> = {},
   ) {
     // This would be implemented with React hooks in a React-specific file
     // For now, return the manager's subscribe method

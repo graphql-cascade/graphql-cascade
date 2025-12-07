@@ -5,16 +5,16 @@
  * request-scoped cascade tracking in NestJS applications.
  */
 
-import { Test, TestingModule } from '@nestjs/testing';
-import { CascadeModule, CascadeService } from './nestjs';
-import { CascadeResponse } from '../types';
+import { Test, TestingModule } from "@nestjs/testing";
+import { CascadeModule, CascadeService } from "./nestjs";
+import { CascadeResponse } from "../types";
 
 // Mock entity for testing
 class MockEntity {
   constructor(
     public id: number,
     public name: string,
-    public __typename: string = 'MockEntity'
+    public __typename: string = "MockEntity",
   ) {}
 
   toDict() {
@@ -25,7 +25,7 @@ class MockEntity {
   }
 }
 
-describe('CascadeService', () => {
+describe("CascadeService", () => {
   let service: CascadeService;
 
   beforeEach(async () => {
@@ -36,19 +36,19 @@ describe('CascadeService', () => {
     service = await module.resolve<CascadeService>(CascadeService);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  it('should have a tracker instance', () => {
+  it("should have a tracker instance", () => {
     expect(service.getTracker()).toBeDefined();
   });
 
-  it('should have a builder instance', () => {
+  it("should have a builder instance", () => {
     expect(service.getBuilder()).toBeDefined();
   });
 
-  describe('Entity Tracking', () => {
+  describe("Entity Tracking", () => {
     beforeEach(() => {
       service.startTransaction();
     });
@@ -62,42 +62,42 @@ describe('CascadeService', () => {
       }
     });
 
-    it('should track entity creation', () => {
-      const entity = new MockEntity(1, 'Test Entity');
+    it("should track entity creation", () => {
+      const entity = new MockEntity(1, "Test Entity");
       service.trackCreate(entity);
 
       const cascadeData = service.getCascadeData();
       expect(cascadeData.updated).toHaveLength(1);
-      expect(cascadeData.updated[0].operation).toBe('CREATED');
-      expect(cascadeData.updated[0].entity.name).toBe('Test Entity');
+      expect(cascadeData.updated[0].operation).toBe("CREATED");
+      expect(cascadeData.updated[0].entity.name).toBe("Test Entity");
     });
 
-    it('should track entity update', () => {
-      const entity = new MockEntity(1, 'Updated Entity');
+    it("should track entity update", () => {
+      const entity = new MockEntity(1, "Updated Entity");
       service.trackUpdate(entity);
 
       const cascadeData = service.getCascadeData();
       expect(cascadeData.updated).toHaveLength(1);
-      expect(cascadeData.updated[0].operation).toBe('UPDATED');
+      expect(cascadeData.updated[0].operation).toBe("UPDATED");
     });
 
-    it('should track entity deletion', () => {
-      service.trackDelete('MockEntity', '1');
+    it("should track entity deletion", () => {
+      service.trackDelete("MockEntity", "1");
 
       const cascadeData = service.getCascadeData();
       expect(cascadeData.deleted).toHaveLength(1);
-      expect(cascadeData.deleted[0].__typename).toBe('MockEntity');
-      expect(cascadeData.deleted[0].id).toBe('1');
+      expect(cascadeData.deleted[0].__typename).toBe("MockEntity");
+      expect(cascadeData.deleted[0].id).toBe("1");
     });
   });
 
-  describe('Response Building', () => {
+  describe("Response Building", () => {
     beforeEach(() => {
       service.startTransaction();
     });
 
-    it('should build success response', () => {
-      const entity = new MockEntity(1, 'Test Entity');
+    it("should build success response", () => {
+      const entity = new MockEntity(1, "Test Entity");
       service.trackCreate(entity);
 
       const response: CascadeResponse = service.buildResponse({ id: 1 });
@@ -108,16 +108,16 @@ describe('CascadeService', () => {
       expect(response.errors).toHaveLength(0);
     });
 
-    it('should build error response', () => {
-      const errors = [{ message: 'Test error', code: 'TEST_ERROR' }];
+    it("should build error response", () => {
+      const errors = [{ message: "Test error", code: "TEST_ERROR" }];
       const response: CascadeResponse = service.buildErrorResponse(errors);
 
       expect(response.success).toBe(false);
       expect(response.errors).toEqual(errors);
     });
 
-    it('should end transaction after building response', () => {
-      const entity = new MockEntity(1, 'Test Entity');
+    it("should end transaction after building response", () => {
+      const entity = new MockEntity(1, "Test Entity");
       service.trackCreate(entity);
       service.buildResponse({ id: 1 });
 
@@ -126,31 +126,33 @@ describe('CascadeService', () => {
     });
   });
 
-  describe('Transaction Management', () => {
-    it('should start transaction', () => {
+  describe("Transaction Management", () => {
+    it("should start transaction", () => {
       const transactionId = service.startTransaction();
-      expect(typeof transactionId).toBe('string');
-      expect(transactionId).toContain('cascade_');
+      expect(typeof transactionId).toBe("string");
+      expect(transactionId).toContain("cascade_");
     });
 
-    it('should end transaction', () => {
+    it("should end transaction", () => {
       service.startTransaction();
-      const entity = new MockEntity(1, 'Test');
+      const entity = new MockEntity(1, "Test");
       service.trackCreate(entity);
 
       const cascadeData = service.endTransaction();
       expect(cascadeData.updated).toHaveLength(1);
     });
 
-    it('should throw error when starting transaction twice', () => {
+    it("should throw error when starting transaction twice", () => {
       service.startTransaction();
-      expect(() => service.startTransaction()).toThrow('Transaction already in progress');
+      expect(() => service.startTransaction()).toThrow(
+        "Transaction already in progress",
+      );
     });
   });
 });
 
-describe('CascadeModule', () => {
-  it('should compile with default configuration', async () => {
+describe("CascadeModule", () => {
+  it("should compile with default configuration", async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [CascadeModule],
     }).compile();
@@ -158,7 +160,7 @@ describe('CascadeModule', () => {
     expect(module).toBeDefined();
   });
 
-  it('should provide CascadeService', async () => {
+  it("should provide CascadeService", async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [CascadeModule],
     }).compile();
@@ -168,12 +170,12 @@ describe('CascadeModule', () => {
     expect(service).toBeInstanceOf(CascadeService);
   });
 
-  it('should compile with custom configuration', async () => {
+  it("should compile with custom configuration", async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [
         CascadeModule.forRoot({
           maxDepth: 5,
-          excludeTypes: ['InternalType'],
+          excludeTypes: ["InternalType"],
           maxResponseSizeMb: 10,
         }),
       ],
@@ -184,7 +186,7 @@ describe('CascadeModule', () => {
     expect(service).toBeDefined();
   });
 
-  it('should be request-scoped', async () => {
+  it("should be request-scoped", async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [CascadeModule],
     }).compile();
@@ -195,11 +197,11 @@ describe('CascadeModule', () => {
 
     // Start separate transactions
     service1.startTransaction();
-    const entity1 = new MockEntity(1, 'Entity 1');
+    const entity1 = new MockEntity(1, "Entity 1");
     service1.trackCreate(entity1);
 
     service2.startTransaction();
-    const entity2 = new MockEntity(2, 'Entity 2');
+    const entity2 = new MockEntity(2, "Entity 2");
     service2.trackCreate(entity2);
 
     // Each service should track its own entities
@@ -208,8 +210,8 @@ describe('CascadeModule', () => {
 
     expect(data1.updated).toHaveLength(1);
     expect(data2.updated).toHaveLength(1);
-    expect(data1.updated[0].entity.name).toBe('Entity 1');
-    expect(data2.updated[0].entity.name).toBe('Entity 2');
+    expect(data1.updated[0].entity.name).toBe("Entity 1");
+    expect(data2.updated[0].entity.name).toBe("Entity 2");
 
     // Clean up
     service1.endTransaction();

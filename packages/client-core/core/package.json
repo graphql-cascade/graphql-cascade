@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "jest --coverage",
+    "test": "jest --maxWorkers=50% --coverage",
     "lint": "eslint src/**/*.ts"
   },
   "keywords": [
@@ -18,7 +18,9 @@
   ],
   "author": "GraphQL Cascade Team",
   "license": "MIT",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
     "@types/node": "^18.0.0",
     "typescript": "^5.0.0",

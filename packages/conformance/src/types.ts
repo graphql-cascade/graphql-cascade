@@ -1,7 +1,7 @@
 /**
  * Conformance level for GraphQL Cascade implementations
  */
-export type ConformanceLevel = 'basic' | 'standard' | 'complete' | 'none';
+export type ConformanceLevel = "basic" | "standard" | "complete" | "none";
 
 /**
  * Result of a single conformance test
@@ -37,7 +37,7 @@ export interface LevelResults {
  */
 export interface ConformanceReport {
   timestamp: string;
-  target: 'server' | 'client';
+  target: "server" | "client";
   level: {
     achieved: ConformanceLevel;
     tested: ConformanceLevel;

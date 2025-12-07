@@ -30,11 +30,13 @@ cascade init --client apollo --schema ./schema.graphql
 ```
 
 **Options:**
+
 - `-y, --yes`: Skip prompts and use defaults
 - `--client <type>`: GraphQL client (apollo, react-query, relay, urql)
 - `--schema <path>`: Path to GraphQL schema
 
 **Example output:**
+
 ```
 Detected package.json ✓
 Configuration file created: cascade.config.ts ✓
@@ -63,9 +65,11 @@ cascade validate --strict
 ```
 
 **Options:**
+
 - `--strict`: Treat warnings as errors (useful for CI/CD)
 
 **Example output:**
+
 ```
 Validating schema: ./schema.graphql
 
@@ -84,6 +88,7 @@ cascade doctor
 ```
 
 **Checks for:**
+
 - Installed cascade packages
 - Package version compatibility
 - Configuration file existence
@@ -91,6 +96,7 @@ cascade doctor
 - Client library setup
 
 **Example output:**
+
 ```
 Running diagnostics...
 
@@ -108,20 +114,20 @@ Health Score: 100/100
 The `cascade.config.ts` file controls how GraphQL Cascade works in your project:
 
 ```typescript
-import { CascadeConfig } from '@graphql-cascade/core';
+import { CascadeConfig } from "@graphql-cascade/core";
 
 const config: CascadeConfig = {
-  client: 'apollo',           // GraphQL client type
-  schema: './schema.graphql', // Path to schema
+  client: "apollo", // GraphQL client type
+  schema: "./schema.graphql", // Path to schema
   output: {
-    directory: './src/generated',
-    typescript: true
+    directory: "./src/generated",
+    typescript: true,
   },
   features: {
     dataFetching: true,
     caching: true,
-    optimisticUpdates: true
-  }
+    optimisticUpdates: true,
+  },
 };
 
 export default config;
@@ -153,13 +159,13 @@ Add to your `package.json`:
 
 ## Exit Codes
 
-| Command | Code | Meaning |
-|---------|------|---------|
-| `validate` | 0 | Schema is valid |
-| `validate` | 1 | Validation errors found |
-| `validate --strict` | 1 | Errors or warnings found |
-| `doctor` | 0 | All checks passed |
-| `doctor` | 1 | Errors detected |
+| Command             | Code | Meaning                  |
+| ------------------- | ---- | ------------------------ |
+| `validate`          | 0    | Schema is valid          |
+| `validate`          | 1    | Validation errors found  |
+| `validate --strict` | 1    | Errors or warnings found |
+| `doctor`            | 0    | All checks passed        |
+| `doctor`            | 1    | Errors detected          |
 
 ## Development
 

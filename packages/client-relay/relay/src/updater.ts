@@ -1,4 +1,4 @@
-import { RecordSourceSelectorProxy } from 'relay-runtime';
+import { RecordSourceSelectorProxy } from "relay-runtime";
 import {
   CascadeUpdates,
   UpdatedEntity,
@@ -6,9 +6,9 @@ import {
   CascadeOperation,
   QueryInvalidation,
   InvalidationStrategy,
-  InvalidationScope
-} from '@graphql-cascade/client';
-import { CascadeStoreUpdater } from './types';
+  InvalidationScope,
+} from "@graphql-cascade/client";
+import { CascadeStoreUpdater } from "./types";
 
 /**
  * Create a Relay store updater that applies cascade updates to the normalized store.
@@ -18,22 +18,24 @@ import { CascadeStoreUpdater } from './types';
  * - Deleted entities: removes records from the store
  * - Invalidations: marks records as stale via invalidateRecord()
  */
-export function createCascadeUpdater(cascade: CascadeUpdates): CascadeStoreUpdater {
+export function createCascadeUpdater(
+  cascade: CascadeUpdates,
+): CascadeStoreUpdater {
   return (store: RecordSourceSelectorProxy) => {
     // Apply entity updates
-    cascade.updated.forEach(entity => {
+    cascade.updated.forEach((entity) => {
       applyEntityUpdate(store, entity);
     });
 
     // Apply entity deletions
-    cascade.deleted.forEach(entity => {
+    cascade.deleted.forEach((entity) => {
       applyEntityDeletion(store, entity);
     });
 
     // Apply invalidations
     // Note: Relay doesn't have query-level invalidation like other clients
     // We can invalidate records if the invalidation specifies entities
-    cascade.invalidations.forEach(invalidation => {
+    cascade.invalidations.forEach((invalidation) => {
       applyInvalidation(store, invalidation);
     });
   };
@@ -42,7 +44,10 @@ export function createCascadeUpdater(cascade: CascadeUpdates): CascadeStoreUpdat
 /**
  * Apply an entity update to the Relay store.
  */
-function applyEntityUpdate(store: RecordSourceSelectorProxy, entity: UpdatedEntity): void {
+function applyEntityUpdate(
+  store: RecordSourceSelectorProxy,
+  entity: UpdatedEntity,
+): void {
   const recordId = `${entity.__typename}:${entity.id}`;
   let record = store.get(recordId);
 
@@ -52,8 +57,8 @@ function applyEntityUpdate(store: RecordSourceSelectorProxy, entity: UpdatedEnti
   }
 
   // Update record fields
-  Object.keys(entity.entity).forEach(key => {
-    if (key !== '__typename' && key !== 'id') {
+  Object.keys(entity.entity).forEach((key) => {
+    if (key !== "__typename" && key !== "id") {
       record.setValue(entity.entity[key], key);
     }
   });
@@ -62,15 +67,17 @@ function applyEntityUpdate(store: RecordSourceSelectorProxy, entity: UpdatedEnti
   switch (entity.operation) {
     case CascadeOperation.CREATED:
       // Ensure the record is marked as created
-      record.setValue(true, '__isCreated');
+      record.setValue(true, "__isCreated");
       break;
     case CascadeOperation.UPDATED:
       // Ensure the record is marked as updated
-      record.setValue(true, '__isUpdated');
+      record.setValue(true, "__isUpdated");
       break;
     case CascadeOperation.DELETED:
       // This shouldn't happen here, but handle gracefully
-      console.warn(`Received DELETED operation in updated entities for ${recordId}`);
+      console.warn(
+        `Received DELETED operation in updated entities for ${recordId}`,
+      );
       break;
   }
 }
@@ -78,14 +85,17 @@ function applyEntityUpdate(store: RecordSourceSelectorProxy, entity: UpdatedEnti
 /**
  * Apply an entity deletion to the Relay store.
  */
-function applyEntityDeletion(store: RecordSourceSelectorProxy, entity: DeletedEntity): void {
+function applyEntityDeletion(
+  store: RecordSourceSelectorProxy,
+  entity: DeletedEntity,
+): void {
   const recordId = `${entity.__typename}:${entity.id}`;
   const record = store.get(recordId);
 
   if (record) {
     // Mark as deleted and set deletion timestamp
-    record.setValue(true, '__isDeleted');
-    record.setValue(entity.deletedAt, 'deletedAt');
+    record.setValue(true, "__isDeleted");
+    record.setValue(entity.deletedAt, "deletedAt");
 
     // Optionally remove from connections
     // This would require additional connection-specific logic
@@ -100,7 +110,10 @@ function applyEntityDeletion(store: RecordSourceSelectorProxy, entity: DeletedEn
  * - For REFETCH strategy, the application should handle refetching separately
  * - For REMOVE strategy, we can delete records (similar to eviction)
  */
-function applyInvalidation(store: RecordSourceSelectorProxy, invalidation: QueryInvalidation): void {
+function applyInvalidation(
+  store: RecordSourceSelectorProxy,
+  invalidation: QueryInvalidation,
+): void {
   // Relay doesn't have direct query invalidation like Apollo or React Query
   // However, we can invalidate the root Query record or specific field records
 
@@ -146,7 +159,7 @@ function applyInvalidation(store: RecordSourceSelectorProxy, invalidation: Query
  */
 export function applyCascadeToStore(
   store: RecordSourceSelectorProxy,
-  cascade: CascadeUpdates
+  cascade: CascadeUpdates,
 ): void {
   const updater = createCascadeUpdater(cascade);
   updater(store);

@@ -1,5 +1,5 @@
 // Type declarations for relay-runtime
-declare module 'relay-runtime' {
+declare module "relay-runtime" {
   export interface RecordSourceSelectorProxy {
     get(dataID: string): any;
     getRoot(): any;
@@ -23,10 +23,7 @@ declare module 'relay-runtime' {
   }
 
   export class Environment {
-    constructor(config: {
-      network: Network;
-      store: Store;
-    });
+    constructor(config: { network: Network; store: Store });
     execute(config: { operation: any }): Observable<any>;
   }
 
@@ -40,7 +37,12 @@ declare module 'relay-runtime' {
   }
 
   export class Network {
-    static create(fetchFn: (operation: any, variables: any) => Observable<any> | Promise<any>): Network;
+    static create(
+      fetchFn: (
+        operation: any,
+        variables: any,
+      ) => Observable<any> | Promise<any>,
+    ): Network;
     execute(operation: any, variables: any): Observable<any>;
   }
 

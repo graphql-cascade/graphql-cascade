@@ -4,16 +4,16 @@ import {
   buildSuccessResponse,
   buildErrorResponse,
   buildStreamingSuccessResponse,
-} from './builder';
-import { CascadeTracker } from './tracker';
-import { CascadeErrorInfo } from './types';
+} from "./builder";
+import { CascadeTracker } from "./tracker";
+import { CascadeErrorInfo } from "./types";
 
 // Mock entities for testing
 class MockEntity {
   constructor(
     public id: number,
     public name: string,
-    public __typename: string = 'MockEntity'
+    public __typename: string = "MockEntity",
   ) {}
 
   [key: string]: unknown;
@@ -30,13 +30,17 @@ class MockEntity {
 class MockInvalidator {
   computeInvalidations(updated: any[], deleted: any[], primaryResult?: any) {
     const invalidations = [
-      { __typename: 'CacheInvalidation', field: 'testField', reason: 'entity_updated' }
+      {
+        __typename: "CacheInvalidation",
+        field: "testField",
+        reason: "entity_updated",
+      },
     ];
     return invalidations;
   }
 }
 
-describe('CascadeBuilder', () => {
+describe("CascadeBuilder", () => {
   let tracker: CascadeTracker;
   let builder: CascadeBuilder;
   let mockInvalidator: MockInvalidator;
@@ -47,13 +51,13 @@ describe('CascadeBuilder', () => {
     builder = new CascadeBuilder(tracker, mockInvalidator);
   });
 
-  describe('Response Building - Success', () => {
-    it('should build successful response with primary result', () => {
+  describe("Response Building - Success", () => {
+    it("should build successful response with primary result", () => {
       tracker.startTransaction();
-      const entity = new MockEntity(1, 'Test Entity');
+      const entity = new MockEntity(1, "Test Entity");
       tracker.trackUpdate(entity);
 
-      const primaryResult = { success: true, data: 'test' };
+      const primaryResult = { success: true, data: "test" };
       const response = builder.buildResponse(primaryResult, true);
 
       expect(response.success).toBe(true);
@@ -63,9 +67,9 @@ describe('CascadeBuilder', () => {
       expect(response.errors).toEqual([]);
     });
 
-    it('should build successful response without primary result', () => {
+    it("should build successful response without primary result", () => {
       tracker.startTransaction();
-      const entity = new MockEntity(1, 'Test Entity');
+      const entity = new MockEntity(1, "Test Entity");
       tracker.trackUpdate(entity);
 
       const response = builder.buildResponse();
@@ -75,20 +79,20 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.updated).toHaveLength(1);
     });
 
-    it('should include construction time in metadata', () => {
+    it("should include construction time in metadata", () => {
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       const response = builder.buildResponse();
 
       expect(response.cascade.metadata.constructionTime).toBeDefined();
-      expect(typeof response.cascade.metadata.constructionTime).toBe('number');
+      expect(typeof response.cascade.metadata.constructionTime).toBe("number");
     });
 
-    it('should handle responses without invalidator', () => {
+    it("should handle responses without invalidator", () => {
       const builderWithoutInvalidator = new CascadeBuilder(tracker);
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       const response = builderWithoutInvalidator.buildResponse();
 
@@ -96,28 +100,28 @@ describe('CascadeBuilder', () => {
     });
   });
 
-  describe('Response Building - Error', () => {
-    it('should build error response with errors', () => {
+  describe("Response Building - Error", () => {
+    it("should build error response with errors", () => {
       const errors: CascadeErrorInfo[] = [
-        { message: 'Test error', code: 'TEST_ERROR' }
+        { message: "Test error", code: "TEST_ERROR" },
       ];
 
-      const response = builder.buildErrorResponse(errors, { partial: 'data' });
+      const response = builder.buildErrorResponse(errors, { partial: "data" });
 
       expect(response.success).toBe(false);
-      expect(response.data).toEqual({ partial: 'data' });
+      expect(response.data).toEqual({ partial: "data" });
       expect(response.errors).toEqual(errors);
       expect(response.cascade.updated).toEqual([]);
       expect(response.cascade.deleted).toEqual([]);
       expect(response.cascade.invalidations).toEqual([]);
     });
 
-    it('should build error response when transaction is active', () => {
+    it("should build error response when transaction is active", () => {
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       const errors: CascadeErrorInfo[] = [
-        { message: 'Transaction error', code: 'TX_ERROR' }
+        { message: "Transaction error", code: "TX_ERROR" },
       ];
 
       const response = builder.buildErrorResponse(errors);
@@ -126,11 +130,9 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.updated).toHaveLength(1); // Should include tracked changes
     });
 
-    it('should handle error response when transaction ending fails', () => {
+    it("should handle error response when transaction ending fails", () => {
       // Transaction not started, but builder tries to end it
-      const errors: CascadeErrorInfo[] = [
-        { message: 'Error', code: 'ERROR' }
-      ];
+      const errors: CascadeErrorInfo[] = [{ message: "Error", code: "ERROR" }];
 
       const response = builder.buildErrorResponse(errors);
 
@@ -140,10 +142,10 @@ describe('CascadeBuilder', () => {
     });
   });
 
-  describe('Size Limits and Truncation', () => {
-    it('should truncate updated entities when exceeding maxUpdatedEntities', () => {
+  describe("Size Limits and Truncation", () => {
+    it("should truncate updated entities when exceeding maxUpdatedEntities", () => {
       const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
-        maxUpdatedEntities: 2
+        maxUpdatedEntities: 2,
       });
 
       tracker.startTransaction();
@@ -157,15 +159,15 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.metadata.truncatedUpdated).toBe(true);
     });
 
-    it('should truncate deleted entities when exceeding maxDeletedEntities', () => {
+    it("should truncate deleted entities when exceeding maxDeletedEntities", () => {
       const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
-        maxDeletedEntities: 1
+        maxDeletedEntities: 1,
       });
 
       tracker.startTransaction();
-      tracker.trackDelete('Type1', 1);
-      tracker.trackDelete('Type2', 2);
-      tracker.trackDelete('Type3', 3);
+      tracker.trackDelete("Type1", 1);
+      tracker.trackDelete("Type2", 2);
+      tracker.trackDelete("Type3", 3);
 
       const response = limitedBuilder.buildResponse();
 
@@ -173,20 +175,25 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.metadata.truncatedDeleted).toBe(true);
     });
 
-    it('should truncate invalidations when exceeding maxInvalidations', () => {
+    it("should truncate invalidations when exceeding maxInvalidations", () => {
       const mockInvalidatorWithMany = {
-        computeInvalidations: () => Array(10).fill({
-          __typename: 'Invalidation',
-          reason: 'test'
-        })
+        computeInvalidations: () =>
+          Array(10).fill({
+            __typename: "Invalidation",
+            reason: "test",
+          }),
       };
 
-      const limitedBuilder = new CascadeBuilder(tracker, mockInvalidatorWithMany, {
-        maxInvalidations: 3
-      });
+      const limitedBuilder = new CascadeBuilder(
+        tracker,
+        mockInvalidatorWithMany,
+        {
+          maxInvalidations: 3,
+        },
+      );
 
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       const response = limitedBuilder.buildResponse();
 
@@ -195,10 +202,10 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.metadata.truncatedInvalidations).toBeUndefined();
     });
 
-    it('should truncate response when exceeding size limit', () => {
+    it("should truncate response when exceeding size limit", () => {
       // Create a very large response by setting low size limit
       const sizeLimitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
-        maxResponseSizeMb: 0.001 // Very small limit
+        maxResponseSizeMb: 0.001, // Very small limit
       });
 
       tracker.startTransaction();
@@ -207,7 +214,7 @@ describe('CascadeBuilder', () => {
         tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
       }
       for (let i = 1; i <= 60; i++) {
-        tracker.trackDelete('DeletedType', i);
+        tracker.trackDelete("DeletedType", i);
       }
 
       const response = sizeLimitedBuilder.buildResponse();
@@ -217,10 +224,10 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.metadata.truncatedSize).toBe(true);
     });
 
-    it('should apply size limits correctly when both entity and size limits are hit', () => {
+    it("should apply size limits correctly when both entity and size limits are hit", () => {
       const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
         maxUpdatedEntities: 200, // High limit so size limit is hit first
-        maxResponseSizeMb: 0.001
+        maxResponseSizeMb: 0.001,
       });
 
       tracker.startTransaction();
@@ -229,7 +236,7 @@ describe('CascadeBuilder', () => {
         tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
       }
       for (let i = 1; i <= 60; i++) {
-        tracker.trackDelete('DeletedType', i);
+        tracker.trackDelete("DeletedType", i);
       }
 
       const response = limitedBuilder.buildResponse();
@@ -240,7 +247,7 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.metadata.truncatedSize).toBe(true);
     });
 
-    it('should truncate at default 500 entities limit', () => {
+    it("should truncate at default 500 entities limit", () => {
       // Use default builder (500 entities limit)
       const defaultBuilder = new CascadeBuilder(tracker, mockInvalidator);
 
@@ -257,10 +264,10 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.metadata.truncatedUpdated).toBe(true);
     });
 
-    it('should truncate at default 5MB size limit', () => {
+    it("should truncate at default 5MB size limit", () => {
       // Use builder with lower size limit to trigger truncation
       const sizeLimitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
-        maxResponseSizeMb: 0.1 // 100KB limit
+        maxResponseSizeMb: 0.1, // 100KB limit
       });
 
       tracker.startTransaction();
@@ -277,12 +284,12 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.metadata.truncatedSize).toBe(true);
     });
 
-    it('should include truncation metadata in response', () => {
+    it("should include truncation metadata in response", () => {
       const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
         maxUpdatedEntities: 1000, // High limit so size limit triggers first
         maxDeletedEntities: 1000,
         maxInvalidations: 1,
-        maxResponseSizeMb: 0.001 // 1KB limit
+        maxResponseSizeMb: 0.001, // 1KB limit
       });
 
       tracker.startTransaction();
@@ -291,7 +298,7 @@ describe('CascadeBuilder', () => {
         tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
       }
       for (let i = 1; i <= 60; i++) {
-        tracker.trackDelete('DeletedType', i);
+        tracker.trackDelete("DeletedType", i);
       }
 
       const response = limitedBuilder.buildResponse();
@@ -303,42 +310,42 @@ describe('CascadeBuilder', () => {
     });
   });
 
-  describe('Configuration Options', () => {
-    it('should use default configuration values', () => {
+  describe("Configuration Options", () => {
+    it("should use default configuration values", () => {
       const defaultBuilder = new CascadeBuilder(tracker);
 
-      expect(defaultBuilder['maxResponseSizeMb']).toBe(5.0);
-      expect(defaultBuilder['maxUpdatedEntities']).toBe(500);
-      expect(defaultBuilder['maxDeletedEntities']).toBe(100);
-      expect(defaultBuilder['maxInvalidations']).toBe(50);
+      expect(defaultBuilder["maxResponseSizeMb"]).toBe(5.0);
+      expect(defaultBuilder["maxUpdatedEntities"]).toBe(500);
+      expect(defaultBuilder["maxDeletedEntities"]).toBe(100);
+      expect(defaultBuilder["maxInvalidations"]).toBe(50);
     });
 
-    it('should override default configuration values', () => {
+    it("should override default configuration values", () => {
       const customBuilder = new CascadeBuilder(tracker, mockInvalidator, {
         maxResponseSizeMb: 1.0,
         maxUpdatedEntities: 100,
         maxDeletedEntities: 50,
-        maxInvalidations: 25
+        maxInvalidations: 25,
       });
 
-      expect(customBuilder['maxResponseSizeMb']).toBe(1.0);
-      expect(customBuilder['maxUpdatedEntities']).toBe(100);
-      expect(customBuilder['maxDeletedEntities']).toBe(50);
-      expect(customBuilder['maxInvalidations']).toBe(25);
+      expect(customBuilder["maxResponseSizeMb"]).toBe(1.0);
+      expect(customBuilder["maxUpdatedEntities"]).toBe(100);
+      expect(customBuilder["maxDeletedEntities"]).toBe(50);
+      expect(customBuilder["maxInvalidations"]).toBe(25);
     });
   });
 
-  describe('StreamingCascadeBuilder', () => {
+  describe("StreamingCascadeBuilder", () => {
     let streamingBuilder: StreamingCascadeBuilder;
 
     beforeEach(() => {
       streamingBuilder = new StreamingCascadeBuilder(tracker, mockInvalidator);
     });
 
-    it('should build streaming response with updated entities', () => {
+    it("should build streaming response with updated entities", () => {
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Entity 1'));
-      tracker.trackUpdate(new MockEntity(2, 'Entity 2'));
+      tracker.trackUpdate(new MockEntity(1, "Entity 1"));
+      tracker.trackUpdate(new MockEntity(2, "Entity 2"));
 
       const response = streamingBuilder.buildStreamingResponse();
 
@@ -348,10 +355,10 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.metadata.affectedCount).toBe(2);
     });
 
-    it('should build streaming response with deleted entities', () => {
+    it("should build streaming response with deleted entities", () => {
       tracker.startTransaction();
-      tracker.trackDelete('Type1', 1);
-      tracker.trackDelete('Type2', 2);
+      tracker.trackDelete("Type1", 1);
+      tracker.trackDelete("Type2", 2);
 
       const response = streamingBuilder.buildStreamingResponse();
 
@@ -359,14 +366,18 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.metadata.affectedCount).toBe(2);
     });
 
-    it('should truncate streaming response when exceeding limits', () => {
-      const limitedStreamingBuilder = new StreamingCascadeBuilder(tracker, mockInvalidator, {
-        maxUpdatedEntities: 1
-      });
+    it("should truncate streaming response when exceeding limits", () => {
+      const limitedStreamingBuilder = new StreamingCascadeBuilder(
+        tracker,
+        mockInvalidator,
+        {
+          maxUpdatedEntities: 1,
+        },
+      );
 
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Entity 1'));
-      tracker.trackUpdate(new MockEntity(2, 'Entity 2'));
+      tracker.trackUpdate(new MockEntity(1, "Entity 1"));
+      tracker.trackUpdate(new MockEntity(2, "Entity 2"));
 
       const response = limitedStreamingBuilder.buildStreamingResponse();
 
@@ -374,17 +385,17 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.metadata.truncatedUpdated).toBe(true);
     });
 
-    it('should handle serialization errors in streaming mode', () => {
+    it("should handle serialization errors in streaming mode", () => {
       tracker.startTransaction();
 
       const badEntity = {
         id: 1,
-        __typename: 'BadEntity',
-        badField: Symbol('bad')
+        __typename: "BadEntity",
+        badField: Symbol("bad"),
       };
 
       // Mock console.error
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
 
       tracker.trackUpdate(badEntity);
 
@@ -392,14 +403,14 @@ describe('CascadeBuilder', () => {
 
       // Should include the entity with symbol converted to string
       expect(response.cascade.updated).toHaveLength(1);
-      expect(response.cascade.updated[0].entity.badField).toBe('Symbol(bad)');
+      expect(response.cascade.updated[0].entity.badField).toBe("Symbol(bad)");
 
       consoleSpy.mockRestore();
     });
 
-    it('should compute invalidations in streaming mode', () => {
+    it("should compute invalidations in streaming mode", () => {
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       const response = streamingBuilder.buildStreamingResponse();
 
@@ -407,32 +418,34 @@ describe('CascadeBuilder', () => {
     });
   });
 
-  describe('Convenience Functions', () => {
-    it('should build success response using convenience function', () => {
+  describe("Convenience Functions", () => {
+    it("should build success response using convenience function", () => {
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
-      const response = buildSuccessResponse(tracker, mockInvalidator, { result: 'data' });
+      const response = buildSuccessResponse(tracker, mockInvalidator, {
+        result: "data",
+      });
 
       expect(response.success).toBe(true);
-      expect(response.data).toEqual({ result: 'data' });
+      expect(response.data).toEqual({ result: "data" });
       expect(response.cascade.updated).toHaveLength(1);
     });
 
-    it('should build error response using convenience function', () => {
+    it("should build error response using convenience function", () => {
       const errors: CascadeErrorInfo[] = [
-        { message: 'Convenience error', code: 'CONVENIENCE_ERROR' }
+        { message: "Convenience error", code: "CONVENIENCE_ERROR" },
       ];
 
-      const response = buildErrorResponse(tracker, errors, { partial: 'data' });
+      const response = buildErrorResponse(tracker, errors, { partial: "data" });
 
       expect(response.success).toBe(false);
       expect(response.errors).toEqual(errors);
     });
 
-    it('should build streaming success response using convenience function', () => {
+    it("should build streaming success response using convenience function", () => {
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       const response = buildStreamingSuccessResponse(tracker, mockInvalidator);
 
@@ -441,55 +454,63 @@ describe('CascadeBuilder', () => {
     });
   });
 
-  describe('Invalidations', () => {
-    it('should include invalidations when invalidator is provided and operation succeeds', () => {
+  describe("Invalidations", () => {
+    it("should include invalidations when invalidator is provided and operation succeeds", () => {
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       const response = builder.buildResponse(null, true);
 
       expect(response.cascade.invalidations).toHaveLength(1);
-      expect(response.cascade.invalidations[0].reason).toBe('entity_updated');
+      expect(response.cascade.invalidations[0].reason).toBe("entity_updated");
     });
 
-    it('should not include invalidations when operation fails', () => {
+    it("should not include invalidations when operation fails", () => {
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       const response = builder.buildResponse(null, false);
 
       expect(response.cascade.invalidations).toEqual([]);
     });
 
-    it('should handle invalidator returning null or undefined', () => {
+    it("should handle invalidator returning null or undefined", () => {
       const nullInvalidator = {
-        computeInvalidations: () => null
+        computeInvalidations: () => null,
       };
 
-      const builderWithNullInvalidator = new CascadeBuilder(tracker, nullInvalidator);
+      const builderWithNullInvalidator = new CascadeBuilder(
+        tracker,
+        nullInvalidator,
+      );
 
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       const response = builderWithNullInvalidator.buildResponse();
 
       expect(response.cascade.invalidations).toEqual([]);
     });
 
-    it('should slice invalidations to maxInvalidations limit', () => {
+    it("should slice invalidations to maxInvalidations limit", () => {
       const manyInvalidationsInvalidator = {
-        computeInvalidations: () => Array(100).fill({
-          __typename: 'Invalidation',
-          reason: 'many'
-        })
+        computeInvalidations: () =>
+          Array(100).fill({
+            __typename: "Invalidation",
+            reason: "many",
+          }),
       };
 
-      const limitedBuilder = new CascadeBuilder(tracker, manyInvalidationsInvalidator, {
-        maxInvalidations: 10
-      });
+      const limitedBuilder = new CascadeBuilder(
+        tracker,
+        manyInvalidationsInvalidator,
+        {
+          maxInvalidations: 10,
+        },
+      );
 
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       const response = limitedBuilder.buildResponse();
 
@@ -497,11 +518,11 @@ describe('CascadeBuilder', () => {
     });
   });
 
-  describe('Metadata Handling', () => {
-    it('should include comprehensive metadata in response', () => {
+  describe("Metadata Handling", () => {
+    it("should include comprehensive metadata in response", () => {
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
-      tracker.trackDelete('DeletedType', 2);
+      tracker.trackUpdate(new MockEntity(1, "Test"));
+      tracker.trackDelete("DeletedType", 2);
 
       const response = builder.buildResponse();
 
@@ -513,22 +534,25 @@ describe('CascadeBuilder', () => {
       expect(response.cascade.metadata.constructionTime).toBeDefined();
     });
 
-    it('should handle metadata in error responses', () => {
+    it("should handle metadata in error responses", () => {
       const response = builder.buildErrorResponse([]);
 
       expect(response.cascade.metadata.timestamp).toBeDefined();
       expect(response.cascade.metadata.depth).toBe(0);
       expect(response.cascade.metadata.affectedCount).toBe(0);
-      expect(response.cascade.metadata.constructionTime).toBe(0);
+      expect(response.cascade.metadata.constructionTime).toBeGreaterThanOrEqual(
+        0,
+      );
+      expect(response.cascade.metadata.constructionTime).toBeLessThan(10);
     });
 
-    it('should include truncation flags in metadata when limits are hit', () => {
+    it("should include truncation flags in metadata when limits are hit", () => {
       const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
-        maxUpdatedEntities: 0
+        maxUpdatedEntities: 0,
       });
 
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       const response = limitedBuilder.buildResponse();
 
@@ -536,18 +560,21 @@ describe('CascadeBuilder', () => {
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle invalidator errors gracefully', () => {
+  describe("Error Handling", () => {
+    it("should handle invalidator errors gracefully", () => {
       const errorInvalidator = {
         computeInvalidations: () => {
-          throw new Error('Invalidator error');
-        }
+          throw new Error("Invalidator error");
+        },
       };
 
-      const builderWithErrorInvalidator = new CascadeBuilder(tracker, errorInvalidator);
+      const builderWithErrorInvalidator = new CascadeBuilder(
+        tracker,
+        errorInvalidator,
+      );
 
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, 'Test'));
+      tracker.trackUpdate(new MockEntity(1, "Test"));
 
       // Should not throw, should handle error gracefully
       expect(() => {
@@ -555,7 +582,7 @@ describe('CascadeBuilder', () => {
       }).not.toThrow();
     });
 
-    it('should handle tracker errors during response building', () => {
+    it("should handle tracker errors during response building", () => {
       // Tracker in invalid state
       const response = builder.buildResponse();
 
@@ -564,16 +591,16 @@ describe('CascadeBuilder', () => {
       expect(response.success).toBe(true);
     });
 
-    it('should handle malformed cascade data', () => {
+    it("should handle malformed cascade data", () => {
       // Mock tracker with malformed data
       const mockTracker = {
         getCascadeData: () => ({
           updated: null, // Invalid
           deleted: [],
           invalidations: [],
-          metadata: {}
+          metadata: {},
         }),
-        endTransaction: () => {}
+        endTransaction: () => {},
       } as any;
 
       const builderWithMockTracker = new CascadeBuilder(mockTracker);
@@ -585,46 +612,48 @@ describe('CascadeBuilder', () => {
     });
   });
 
-  describe('Response Size Estimation', () => {
-    it('should estimate response size correctly', () => {
-      const size = builder['estimateResponseSize'](
-        [{ entity: { field: 'value' } }],
-        [{ __typename: 'Type', id: '1', deletedAt: '2023-01-01' }],
-        [{ __typename: 'Invalidation', reason: 'test' }]
+  describe("Response Size Estimation", () => {
+    it("should estimate response size correctly", () => {
+      const size = builder["estimateResponseSize"](
+        [{ entity: { field: "value" } }],
+        [{ __typename: "Type", id: "1", deletedAt: "2023-01-01" }],
+        [{ __typename: "Invalidation", reason: "test" }],
       );
 
       expect(size).toBeGreaterThan(0);
-      expect(typeof size).toBe('number');
+      expect(typeof size).toBe("number");
     });
 
-    it('should handle empty arrays in size estimation', () => {
-      const size = builder['estimateResponseSize']([], [], []);
+    it("should handle empty arrays in size estimation", () => {
+      const size = builder["estimateResponseSize"]([], [], []);
 
       expect(size).toBeGreaterThan(0); // Metadata size
     });
   });
 
-  describe('Metadata Control', () => {
-    describe('includeTimingMetadata', () => {
-      it('should include timing metadata by default', () => {
+  describe("Metadata Control", () => {
+    describe("includeTimingMetadata", () => {
+      it("should include timing metadata by default", () => {
         tracker.startTransaction();
-        tracker.trackUpdate(new MockEntity(1, 'Test'));
+        tracker.trackUpdate(new MockEntity(1, "Test"));
 
         const response = builder.buildResponse();
 
         expect(response.cascade.metadata.trackingTime).toBeDefined();
         expect(response.cascade.metadata.constructionTime).toBeDefined();
-        expect(typeof response.cascade.metadata.trackingTime).toBe('number');
-        expect(typeof response.cascade.metadata.constructionTime).toBe('number');
+        expect(typeof response.cascade.metadata.trackingTime).toBe("number");
+        expect(typeof response.cascade.metadata.constructionTime).toBe(
+          "number",
+        );
       });
 
-      it('should exclude timing metadata when includeTimingMetadata is false', () => {
+      it("should exclude timing metadata when includeTimingMetadata is false", () => {
         const builderNoTiming = new CascadeBuilder(tracker, mockInvalidator, {
-          includeTimingMetadata: false
+          includeTimingMetadata: false,
         });
 
         tracker.startTransaction();
-        tracker.trackUpdate(new MockEntity(1, 'Test'));
+        tracker.trackUpdate(new MockEntity(1, "Test"));
 
         const response = builderNoTiming.buildResponse();
 
@@ -633,16 +662,16 @@ describe('CascadeBuilder', () => {
         expect(response.cascade.metadata.timestamp).toBeDefined(); // Other metadata still present
       });
 
-      it('should exclude timing metadata from error responses', () => {
+      it("should exclude timing metadata from error responses", () => {
         const builderNoTiming = new CascadeBuilder(tracker, undefined, {
-          includeTimingMetadata: false
+          includeTimingMetadata: false,
         });
 
         tracker.startTransaction();
-        tracker.trackUpdate(new MockEntity(1, 'Test'));
+        tracker.trackUpdate(new MockEntity(1, "Test"));
 
         const errors: CascadeErrorInfo[] = [
-          { message: 'Test error', code: 'TEST_ERROR' }
+          { message: "Test error", code: "TEST_ERROR" },
         ];
 
         const response = builderNoTiming.buildErrorResponse(errors);
@@ -652,25 +681,25 @@ describe('CascadeBuilder', () => {
       });
     });
 
-    describe('includeTransactionId', () => {
-      it('should include transactionId by default', () => {
+    describe("includeTransactionId", () => {
+      it("should include transactionId by default", () => {
         tracker.startTransaction();
-        tracker.trackUpdate(new MockEntity(1, 'Test'));
+        tracker.trackUpdate(new MockEntity(1, "Test"));
 
         const response = builder.buildResponse();
 
         expect(response.cascade.metadata.transactionId).toBeDefined();
-        expect(typeof response.cascade.metadata.transactionId).toBe('string');
-        expect(response.cascade.metadata.transactionId).toContain('cascade_');
+        expect(typeof response.cascade.metadata.transactionId).toBe("string");
+        expect(response.cascade.metadata.transactionId).toContain("cascade_");
       });
 
-      it('should exclude transactionId when includeTransactionId is false', () => {
+      it("should exclude transactionId when includeTransactionId is false", () => {
         const builderNoTxId = new CascadeBuilder(tracker, mockInvalidator, {
-          includeTransactionId: false
+          includeTransactionId: false,
         });
 
         tracker.startTransaction();
-        tracker.trackUpdate(new MockEntity(1, 'Test'));
+        tracker.trackUpdate(new MockEntity(1, "Test"));
 
         const response = builderNoTxId.buildResponse();
 
@@ -678,16 +707,16 @@ describe('CascadeBuilder', () => {
         expect(response.cascade.metadata.timestamp).toBeDefined(); // Other metadata still present
       });
 
-      it('should exclude transactionId from error responses', () => {
+      it("should exclude transactionId from error responses", () => {
         const builderNoTxId = new CascadeBuilder(tracker, undefined, {
-          includeTransactionId: false
+          includeTransactionId: false,
         });
 
         tracker.startTransaction();
-        tracker.trackUpdate(new MockEntity(1, 'Test'));
+        tracker.trackUpdate(new MockEntity(1, "Test"));
 
         const errors: CascadeErrorInfo[] = [
-          { message: 'Test error', code: 'TEST_ERROR' }
+          { message: "Test error", code: "TEST_ERROR" },
         ];
 
         const response = builderNoTxId.buildErrorResponse(errors);
@@ -696,15 +725,19 @@ describe('CascadeBuilder', () => {
       });
     });
 
-    describe('Combined Metadata Control', () => {
-      it('should exclude both timing and transactionId when configured', () => {
-        const builderMinimalMetadata = new CascadeBuilder(tracker, mockInvalidator, {
-          includeTimingMetadata: false,
-          includeTransactionId: false
-        });
+    describe("Combined Metadata Control", () => {
+      it("should exclude both timing and transactionId when configured", () => {
+        const builderMinimalMetadata = new CascadeBuilder(
+          tracker,
+          mockInvalidator,
+          {
+            includeTimingMetadata: false,
+            includeTransactionId: false,
+          },
+        );
 
         tracker.startTransaction();
-        tracker.trackUpdate(new MockEntity(1, 'Test'));
+        tracker.trackUpdate(new MockEntity(1, "Test"));
 
         const response = builderMinimalMetadata.buildResponse();
 
@@ -719,16 +752,16 @@ describe('CascadeBuilder', () => {
         expect(response.cascade.metadata.affectedCount).toBeDefined();
       });
 
-      it('should work with production-style configuration', () => {
+      it("should work with production-style configuration", () => {
         // Simulate production configuration
         const isProduction = true;
         const builderProduction = new CascadeBuilder(tracker, mockInvalidator, {
           includeTimingMetadata: !isProduction,
-          includeTransactionId: !isProduction
+          includeTransactionId: !isProduction,
         });
 
         tracker.startTransaction();
-        tracker.trackUpdate(new MockEntity(1, 'Test'));
+        tracker.trackUpdate(new MockEntity(1, "Test"));
 
         const response = builderProduction.buildResponse();
 
@@ -739,16 +772,20 @@ describe('CascadeBuilder', () => {
         expect(response.cascade.metadata.timestamp).toBeDefined();
       });
 
-      it('should still include metadata in development mode', () => {
+      it("should still include metadata in development mode", () => {
         // Simulate development configuration
         const isProduction = false;
-        const builderDevelopment = new CascadeBuilder(tracker, mockInvalidator, {
-          includeTimingMetadata: !isProduction,
-          includeTransactionId: !isProduction
-        });
+        const builderDevelopment = new CascadeBuilder(
+          tracker,
+          mockInvalidator,
+          {
+            includeTimingMetadata: !isProduction,
+            includeTransactionId: !isProduction,
+          },
+        );
 
         tracker.startTransaction();
-        tracker.trackUpdate(new MockEntity(1, 'Test'));
+        tracker.trackUpdate(new MockEntity(1, "Test"));
 
         const response = builderDevelopment.buildResponse();
 

@@ -83,11 +83,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Run TypeScript
-        run: pnpm -r --if-present typecheck
-
       - name: Build packages
         run: pnpm -r build
+
+      - name: Run TypeScript
+        run: pnpm -r --if-present typecheck
 
       - name: Check package exports
         run: |

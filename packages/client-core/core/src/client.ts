@@ -1,9 +1,5 @@
-import { DocumentNode } from 'graphql';
-import {
-  CascadeCache,
-  CascadeResponse,
-  InvalidationStrategy
-} from './types';
+import { DocumentNode } from "graphql";
+import { CascadeCache, CascadeResponse, InvalidationStrategy } from "./types";
 
 /**
  * Generic GraphQL Cascade client.
@@ -11,7 +7,7 @@ import {
 export class CascadeClient {
   constructor(
     protected cache: CascadeCache,
-    protected executor: (query: DocumentNode, variables: any) => Promise<any>
+    protected executor: (query: DocumentNode, variables: any) => Promise<any>,
   ) {}
 
   /**
@@ -21,7 +17,12 @@ export class CascadeClient {
     const { data, cascade } = response;
 
     // 1. Write primary result
-    if (data && typeof data === 'object' && '__typename' in data && 'id' in data) {
+    if (
+      data &&
+      typeof data === "object" &&
+      "__typename" in data &&
+      "id" in data
+    ) {
       const typename = (data as Record<string, unknown>).__typename as string;
       const id = (data as Record<string, unknown>).id as string;
       this.cache.write(typename, id, data as Record<string, unknown>);
@@ -38,7 +39,7 @@ export class CascadeClient {
     });
 
     // 4. Process invalidations
-    cascade.invalidations.forEach(invalidation => {
+    cascade.invalidations.forEach((invalidation) => {
       switch (invalidation.strategy) {
         case InvalidationStrategy.INVALIDATE:
           this.cache.invalidate(invalidation);
@@ -56,10 +57,7 @@ export class CascadeClient {
   /**
    * Execute a mutation and apply the cascade automatically.
    */
-  async mutate<T = any>(
-    mutation: DocumentNode,
-    variables?: any
-  ): Promise<T> {
+  async mutate<T = any>(mutation: DocumentNode, variables?: any): Promise<T> {
     const result = await this.executor(mutation, variables);
 
     // Extract the mutation result (first field in data)
@@ -76,10 +74,7 @@ export class CascadeClient {
   /**
    * Execute a query (no cascade processing needed).
    */
-  async query<T = any>(
-    query: DocumentNode,
-    variables?: any
-  ): Promise<T> {
+  async query<T = any>(query: DocumentNode, variables?: any): Promise<T> {
     const result = await this.executor(query, variables);
     return result.data;
   }

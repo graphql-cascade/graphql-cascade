@@ -4,7 +4,7 @@
  * Constructs CascadeResponse objects from tracked entity changes.
  */
 
-import { CascadeTracker } from './tracker';
+import { CascadeTracker } from "./tracker";
 import {
   CascadeResponse,
   CascadeErrorInfo,
@@ -13,8 +13,8 @@ import {
   CascadeDeletedEntity,
   CascadeInvalidation,
   Invalidator,
-} from './types';
-import type { MetricsCollector } from './metrics';
+} from "./types";
+import type { MetricsCollector } from "./metrics";
 
 /**
  * Builds GraphQL Cascade responses from tracked changes.
@@ -36,7 +36,7 @@ export class CascadeBuilder {
   constructor(
     tracker: CascadeTracker,
     invalidator?: Invalidator,
-    config: CascadeBuilderConfig = {}
+    config: CascadeBuilderConfig = {},
   ) {
     this.tracker = tracker;
     this.invalidator = invalidator;
@@ -56,7 +56,7 @@ export class CascadeBuilder {
   buildResponse<T = unknown>(
     primaryResult: T | null = null,
     success: boolean = true,
-    errors: CascadeErrorInfo[] = []
+    errors: CascadeErrorInfo[] = [],
   ): CascadeResponse {
     const startTime = Date.now();
 
@@ -86,9 +86,10 @@ export class CascadeBuilder {
         const invalidations = this.invalidator.computeInvalidations(
           cascadeData.updated,
           cascadeData.deleted,
-          primaryResult
+          primaryResult,
         );
-        cascadeData.invalidations = invalidations?.slice(0, this.maxInvalidations) ?? [];
+        cascadeData.invalidations =
+          invalidations?.slice(0, this.maxInvalidations) ?? [];
       } catch (e) {
         if (this.onInvalidationError) {
           this.onInvalidationError(e as Error);
@@ -128,7 +129,7 @@ export class CascadeBuilder {
     }
 
     // Record construction time metric
-    this.metrics?.histogram('constructionTimeMs', constructionTime);
+    this.metrics?.histogram("constructionTimeMs", constructionTime);
 
     return response;
   }
@@ -136,7 +137,10 @@ export class CascadeBuilder {
   /**
    * Build an error response.
    */
-  buildErrorResponse(errors: CascadeErrorInfo[], primaryResult: any = null): CascadeResponse {
+  buildErrorResponse(
+    errors: CascadeErrorInfo[],
+    primaryResult: any = null,
+  ): CascadeResponse {
     const startTime = Date.now();
 
     // For errors, we still want to track the transaction if it was started
@@ -174,7 +178,7 @@ export class CascadeBuilder {
     }
 
     // Record construction time metric
-    this.metrics?.histogram('constructionTimeMs', constructionTime);
+    this.metrics?.histogram("constructionTimeMs", constructionTime);
 
     return {
       success: false,
@@ -213,7 +217,11 @@ export class CascadeBuilder {
     }
 
     // Check response size
-    const responseSize = this.estimateResponseSize(updated, deleted, invalidations);
+    const responseSize = this.estimateResponseSize(
+      updated,
+      deleted,
+      invalidations,
+    );
 
     if (responseSize > this.maxResponseSizeMb * 1024 * 1024) {
       // Truncate further if needed
@@ -233,7 +241,8 @@ export class CascadeBuilder {
     // Update metadata
     if (truncatedUpdated) cascadeData.metadata.truncatedUpdated = true;
     if (truncatedDeleted) cascadeData.metadata.truncatedDeleted = true;
-    if (truncatedInvalidations) cascadeData.metadata.truncatedInvalidations = true;
+    if (truncatedInvalidations)
+      cascadeData.metadata.truncatedInvalidations = true;
 
     return cascadeData;
   }
@@ -241,7 +250,11 @@ export class CascadeBuilder {
   /**
    * Estimate the JSON size of the cascade data.
    */
-  private estimateResponseSize(updated: any[], deleted: any[], invalidations: any[]): number {
+  private estimateResponseSize(
+    updated: any[],
+    deleted: any[],
+    invalidations: any[],
+  ): number {
     // Rough estimation: assume average 1KB per entity/invalidation
     const entitySize = (updated.length + deleted.length) * 1024;
     const invalidationSize = invalidations.length * 512;
@@ -261,7 +274,7 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
   buildStreamingResponse(
     primaryResult: any = null,
     success: boolean = true,
-    errors: CascadeErrorInfo[] = []
+    errors: CascadeErrorInfo[] = [],
   ): CascadeResponse {
     const startTime = Date.now();
 
@@ -325,9 +338,10 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
       const invalidations = this.invalidator.computeInvalidations(
         cascadeData.updated,
         cascadeData.deleted,
-        primaryResult
+        primaryResult,
       );
-      cascadeData.invalidations = invalidations?.slice(0, this.maxInvalidations) ?? [];
+      cascadeData.invalidations =
+        invalidations?.slice(0, this.maxInvalidations) ?? [];
     }
 
     // Add construction time to metadata
@@ -344,7 +358,7 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
     }
 
     // Record construction time metric
-    this.metrics?.histogram('constructionTimeMs', constructionTime);
+    this.metrics?.histogram("constructionTimeMs", constructionTime);
 
     return {
       success,
@@ -358,12 +372,12 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
    * Convert entity to dictionary (streaming version).
    */
   private entityToDict(entity: any): Record<string, any> {
-    if (typeof entity.toDict === 'function') {
+    if (typeof entity.toDict === "function") {
       return entity.toDict();
-    } else if (entity && typeof entity === 'object') {
+    } else if (entity && typeof entity === "object") {
       const result: Record<string, any> = {};
       for (const [key, value] of Object.entries(entity)) {
-        if (!key.startsWith('_')) {
+        if (!key.startsWith("_")) {
           result[key] = this.serializeValue(value);
         }
       }
@@ -379,13 +393,17 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
   private serializeValue(value: any): any {
     if (value == null) {
       return null;
-    } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    } else if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
       return value;
     } else if (value instanceof Date) {
       return value.toISOString();
     } else if (Array.isArray(value)) {
-      return value.map(item => this.serializeValue(item));
-    } else if (typeof value === 'object' && value.constructor === Object) {
+      return value.map((item) => this.serializeValue(item));
+    } else if (typeof value === "object" && value.constructor === Object) {
       const result: Record<string, any> = {};
       for (const [k, v] of Object.entries(value)) {
         result[k] = this.serializeValue(v);
@@ -405,7 +423,7 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
     } else if (entity._typename) {
       return entity._typename;
     } else {
-      return entity.constructor?.name ?? 'Unknown';
+      return entity.constructor?.name ?? "Unknown";
     }
   }
 
@@ -431,7 +449,7 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
 export function buildSuccessResponse(
   tracker: CascadeTracker,
   invalidator?: any,
-  primaryResult: any = null
+  primaryResult: any = null,
 ): CascadeResponse {
   const builder = new CascadeBuilder(tracker, invalidator);
   return builder.buildResponse(primaryResult, true);
@@ -443,7 +461,7 @@ export function buildSuccessResponse(
 export function buildErrorResponse(
   tracker: CascadeTracker,
   errors: CascadeErrorInfo[],
-  primaryResult: any = null
+  primaryResult: any = null,
 ): CascadeResponse {
   const builder = new CascadeBuilder(tracker);
   return builder.buildErrorResponse(errors, primaryResult);
@@ -455,7 +473,7 @@ export function buildErrorResponse(
 export function buildStreamingSuccessResponse(
   tracker: CascadeTracker,
   invalidator?: any,
-  primaryResult: any = null
+  primaryResult: any = null,
 ): CascadeResponse {
   const builder = new StreamingCascadeBuilder(tracker, invalidator);
   return builder.buildStreamingResponse(primaryResult, true);

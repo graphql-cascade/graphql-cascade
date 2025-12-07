@@ -5,14 +5,18 @@
  * Command-line interface for running conformance tests.
  */
 
-import { runServerConformance, runClientConformance } from './runner';
-import { formatReport, getExitCode, type ReporterOptions } from './reporter';
-import type { ConformanceLevel, ServerConformanceOptions, ClientConformanceOptions } from './types';
+import { runServerConformance, runClientConformance } from "./runner";
+import { formatReport, getExitCode, type ReporterOptions } from "./reporter";
+import type {
+  ConformanceLevel,
+  ServerConformanceOptions,
+  ClientConformanceOptions,
+} from "./types";
 
 interface CLIOptions {
-  target: 'server' | 'client';
+  target: "server" | "client";
   level: ConformanceLevel;
-  format: ReporterOptions['format'];
+  format: ReporterOptions["format"];
   verbose: boolean;
   colors: boolean;
   config?: string;
@@ -43,9 +47,9 @@ Examples:
 
 function parseArgs(args: string[]): CLIOptions {
   const options: CLIOptions = {
-    target: 'server',
-    level: 'complete',
-    format: 'console',
+    target: "server",
+    level: "complete",
+    format: "console",
     verbose: false,
     colors: true,
   };
@@ -56,54 +60,60 @@ function parseArgs(args: string[]): CLIOptions {
     const arg = args[i];
 
     switch (arg) {
-      case '--target':
+      case "--target":
         const target = args[++i];
-        if (target !== 'server' && target !== 'client') {
-          console.error(`Invalid target: ${target}. Must be 'server' or 'client'.`);
+        if (target !== "server" && target !== "client") {
+          console.error(
+            `Invalid target: ${target}. Must be 'server' or 'client'.`,
+          );
           process.exit(1);
         }
         options.target = target;
         hasTarget = true;
         break;
 
-      case '--level':
+      case "--level":
         const level = args[++i] as ConformanceLevel;
-        if (!['basic', 'standard', 'complete'].includes(level)) {
-          console.error(`Invalid level: ${level}. Must be 'basic', 'standard', or 'complete'.`);
+        if (!["basic", "standard", "complete"].includes(level)) {
+          console.error(
+            `Invalid level: ${level}. Must be 'basic', 'standard', or 'complete'.`,
+          );
           process.exit(1);
         }
         options.level = level;
         break;
 
-      case '--format':
-        const format = args[++i] as ReporterOptions['format'];
-        if (!['console', 'json', 'markdown'].includes(format)) {
-          console.error(`Invalid format: ${format}. Must be 'console', 'json', or 'markdown'.`);
+      case "--format":
+        const format = args[++i] as ReporterOptions["format"];
+        if (!["console", "json", "markdown"].includes(format)) {
+          console.error(
+            `Invalid format: ${format}. Must be 'console', 'json', or 'markdown'.`,
+          );
           process.exit(1);
         }
         options.format = format;
         break;
 
-      case '--verbose':
+      case "--verbose":
         options.verbose = true;
         break;
 
-      case '--no-colors':
+      case "--no-colors":
         options.colors = false;
         break;
 
-      case '--config':
+      case "--config":
         options.config = args[++i];
         break;
 
-      case '--help':
-      case '-h':
+      case "--help":
+      case "-h":
         printUsage();
         process.exit(0);
         break;
 
       default:
-        if (arg.startsWith('-')) {
+        if (arg.startsWith("-")) {
           console.error(`Unknown option: ${arg}`);
           printUsage();
           process.exit(1);
@@ -112,7 +122,7 @@ function parseArgs(args: string[]): CLIOptions {
   }
 
   if (!hasTarget) {
-    console.error('Error: --target is required');
+    console.error("Error: --target is required");
     printUsage();
     process.exit(1);
   }
@@ -120,7 +130,9 @@ function parseArgs(args: string[]): CLIOptions {
   return options;
 }
 
-async function loadConfig(configPath: string): Promise<Record<string, unknown>> {
+async function loadConfig(
+  configPath: string,
+): Promise<Record<string, unknown>> {
   try {
     // Dynamic import for ESM compatibility
     const config = await import(configPath);
@@ -158,7 +170,7 @@ async function main(): Promise<void> {
   };
 
   try {
-    if (options.target === 'server') {
+    if (options.target === "server") {
       const serverOptions: ServerConformanceOptions = {
         level: options.level,
         createServer: serverFactory,
@@ -169,7 +181,9 @@ async function main(): Promise<void> {
       process.exit(getExitCode(report));
     } else {
       if (!clientFactory) {
-        console.error('Error: Client conformance requires a createClient factory in config');
+        console.error(
+          "Error: Client conformance requires a createClient factory in config",
+        );
         process.exit(1);
       }
 
@@ -183,7 +197,7 @@ async function main(): Promise<void> {
       process.exit(getExitCode(report));
     }
   } catch (error) {
-    console.error('Error running conformance tests:', error);
+    console.error("Error running conformance tests:", error);
     process.exit(1);
   }
 }

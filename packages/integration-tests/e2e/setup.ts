@@ -1,5 +1,9 @@
-import { CascadeTracker, CascadeBuilder } from '@graphql-cascade/server';
-import { CascadeResponse, CascadeOperation, InvalidationStrategy } from '@graphql-cascade/client';
+import { CascadeTracker, CascadeBuilder } from "@graphql-cascade/server";
+import {
+  CascadeResponse,
+  CascadeOperation,
+  InvalidationStrategy,
+} from "@graphql-cascade/client";
 
 /**
  * Test setup utilities for GraphQL Cascade E2E tests
@@ -9,7 +13,7 @@ import { CascadeResponse, CascadeOperation, InvalidationStrategy } from '@graphq
  * Sample entity types for testing
  */
 export interface User {
-  __typename: 'User';
+  __typename: "User";
   id: string;
   name: string;
   email: string;
@@ -18,7 +22,7 @@ export interface User {
 }
 
 export interface Post {
-  __typename: 'Post';
+  __typename: "Post";
   id: string;
   title: string;
   content: string;
@@ -29,7 +33,7 @@ export interface Post {
 }
 
 export interface Comment {
-  __typename: 'Comment';
+  __typename: "Comment";
   id: string;
   content: string;
   postId: string;
@@ -43,11 +47,13 @@ export interface Comment {
 /**
  * Create a configured CascadeTracker for testing
  */
-export function createTestTracker(config: Partial<{
-  maxDepth: number;
-  enableRelationshipTracking: boolean;
-  maxEntities: number;
-}> = {}): CascadeTracker {
+export function createTestTracker(
+  config: Partial<{
+    maxDepth: number;
+    enableRelationshipTracking: boolean;
+    maxEntities: number;
+  }> = {},
+): CascadeTracker {
   return new CascadeTracker({
     maxDepth: config.maxDepth ?? 2,
     enableRelationshipTracking: config.enableRelationshipTracking ?? true,
@@ -75,10 +81,10 @@ export function createTestBuilder(tracker: CascadeTracker): CascadeBuilder {
 export function createUser(overrides: Partial<User> = {}): User {
   const now = new Date().toISOString();
   return {
-    __typename: 'User',
+    __typename: "User",
     id: `user_${Math.random().toString(36).substring(2, 11)}`,
-    name: 'Test User',
-    email: 'test@example.com',
+    name: "Test User",
+    email: "test@example.com",
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -88,10 +94,10 @@ export function createUser(overrides: Partial<User> = {}): User {
 export function createPost(overrides: Partial<Post> = {}): Post {
   const now = new Date().toISOString();
   return {
-    __typename: 'Post',
+    __typename: "Post",
     id: `post_${Math.random().toString(36).substring(2, 11)}`,
-    title: 'Test Post',
-    content: 'Test content',
+    title: "Test Post",
+    content: "Test content",
     authorId: `user_${Math.random().toString(36).substring(2, 11)}`,
     createdAt: now,
     updatedAt: now,
@@ -102,9 +108,9 @@ export function createPost(overrides: Partial<Post> = {}): Post {
 export function createComment(overrides: Partial<Comment> = {}): Comment {
   const now = new Date().toISOString();
   return {
-    __typename: 'Comment',
+    __typename: "Comment",
     id: `comment_${Math.random().toString(36).substring(2, 11)}`,
-    content: 'Test comment',
+    content: "Test comment",
     postId: `post_${Math.random().toString(36).substring(2, 11)}`,
     authorId: `user_${Math.random().toString(36).substring(2, 11)}`,
     createdAt: now,
@@ -119,7 +125,7 @@ export function createComment(overrides: Partial<Comment> = {}): Comment {
 export function linkEntities(user: User, post: Post, comment?: Comment): void {
   post.authorId = user.id;
   post.author = user;
-  
+
   if (comment) {
     comment.postId = post.id;
     comment.post = post;
@@ -132,20 +138,20 @@ export function linkEntities(user: User, post: Post, comment?: Comment): void {
  * Helper to assert CascadeResponse structure
  */
 export function assertValidCascadeResponse(response: CascadeResponse): void {
-  expect(response).toHaveProperty('success');
-  expect(response).toHaveProperty('data');
-  expect(response).toHaveProperty('cascade');
-  
-  expect(response.cascade).toHaveProperty('updated');
-  expect(response.cascade).toHaveProperty('deleted');
-  expect(response.cascade).toHaveProperty('invalidations');
-  expect(response.cascade).toHaveProperty('metadata');
-  
+  expect(response).toHaveProperty("success");
+  expect(response).toHaveProperty("data");
+  expect(response).toHaveProperty("cascade");
+
+  expect(response.cascade).toHaveProperty("updated");
+  expect(response.cascade).toHaveProperty("deleted");
+  expect(response.cascade).toHaveProperty("invalidations");
+  expect(response.cascade).toHaveProperty("metadata");
+
   expect(Array.isArray(response.cascade.updated)).toBe(true);
   expect(Array.isArray(response.cascade.deleted)).toBe(true);
   expect(Array.isArray(response.cascade.invalidations)).toBe(true);
-  
-  expect(response.cascade.metadata).toHaveProperty('timestamp');
-  expect(response.cascade.metadata).toHaveProperty('depth');
-  expect(response.cascade.metadata).toHaveProperty('affectedCount');
+
+  expect(response.cascade.metadata).toHaveProperty("timestamp");
+  expect(response.cascade.metadata).toHaveProperty("depth");
+  expect(response.cascade.metadata).toHaveProperty("affectedCount");
 }

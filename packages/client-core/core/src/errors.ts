@@ -2,13 +2,15 @@
  * Error handling utilities for GraphQL Cascade client.
  */
 
-import { CascadeError } from './types';
+import { CascadeError } from "./types";
 
 /**
  * Determines if an error is retryable based on its error code.
  */
 export function isRetryableError(error: CascadeError): boolean {
-  return ['TIMEOUT', 'SERVICE_UNAVAILABLE', 'RATE_LIMITED'].includes(error.code);
+  return ["TIMEOUT", "SERVICE_UNAVAILABLE", "RATE_LIMITED"].includes(
+    error.code,
+  );
 }
 
 /**
@@ -22,7 +24,7 @@ export function getRetryDelay(error: CascadeError): number | undefined {
  * Determines if an error is authentication-related.
  */
 export function isAuthError(error: CascadeError): boolean {
-  return ['UNAUTHORIZED', 'FORBIDDEN'].includes(error.code);
+  return ["UNAUTHORIZED", "FORBIDDEN"].includes(error.code);
 }
 
 /**
@@ -30,11 +32,11 @@ export function isAuthError(error: CascadeError): boolean {
  */
 export function isClientError(error: CascadeError): boolean {
   return [
-    'VALIDATION_ERROR',
-    'NOT_FOUND',
-    'UNAUTHORIZED',
-    'FORBIDDEN',
-    'CONFLICT',
+    "VALIDATION_ERROR",
+    "NOT_FOUND",
+    "UNAUTHORIZED",
+    "FORBIDDEN",
+    "CONFLICT",
   ].includes(error.code);
 }
 
@@ -54,9 +56,13 @@ export interface RetryOptions {
 export function calculateRetryDelay(
   error: CascadeError,
   attemptNumber: number,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): number {
-  const { baseDelay = 1000, maxDelay = 30000, exponentialBackoff = true } = options;
+  const {
+    baseDelay = 1000,
+    maxDelay = 30000,
+    exponentialBackoff = true,
+  } = options;
 
   const retryAfter = getRetryDelay(error);
   if (retryAfter !== undefined) {
@@ -77,7 +83,7 @@ export function calculateRetryDelay(
 export function shouldRetry(
   error: CascadeError,
   attemptNumber: number,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): boolean {
   const { maxRetries = 3 } = options;
   if (attemptNumber >= maxRetries) return false;

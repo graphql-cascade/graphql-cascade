@@ -5,15 +5,15 @@
  * GraphQL response extensions.
  */
 
-import { createCascadePlugin, CascadePluginOptions } from './apollo';
-import { CascadeTracker } from '../tracker';
+import { createCascadePlugin, CascadePluginOptions } from "./apollo";
+import { CascadeTracker } from "../tracker";
 
 // Mock entity for testing
 class MockEntity {
   constructor(
     public id: number,
     public name: string,
-    public __typename: string = 'MockEntity'
+    public __typename: string = "MockEntity",
   ) {}
 
   [key: string]: unknown;
@@ -34,7 +34,7 @@ interface MockRequestContext {
   };
   response: {
     body: {
-      kind: 'single';
+      kind: "single";
       singleResult: {
         data?: any;
         errors?: any[];
@@ -46,12 +46,16 @@ interface MockRequestContext {
 }
 
 // Helper to create mock request context
-function _createMockRequestContext(query: string, data?: any, errors?: any[]): MockRequestContext {
+function _createMockRequestContext(
+  query: string,
+  data?: any,
+  errors?: any[],
+): MockRequestContext {
   return {
     request: { query },
     response: {
       body: {
-        kind: 'single',
+        kind: "single",
         singleResult: { data, errors },
       },
     },
@@ -59,24 +63,24 @@ function _createMockRequestContext(query: string, data?: any, errors?: any[]): M
   };
 }
 
-describe('createCascadePlugin', () => {
-  it('should create an Apollo Server plugin', () => {
+describe("createCascadePlugin", () => {
+  it("should create an Apollo Server plugin", () => {
     const plugin = createCascadePlugin();
     expect(plugin).toBeDefined();
     expect(plugin.requestDidStart).toBeDefined();
   });
 
-  it('should accept configuration options', () => {
+  it("should accept configuration options", () => {
     const options: CascadePluginOptions = {
       maxDepth: 5,
-      excludeTypes: ['InternalType'],
+      excludeTypes: ["InternalType"],
     };
     const plugin = createCascadePlugin(options);
     expect(plugin).toBeDefined();
   });
 
-  describe('Request Lifecycle', () => {
-    it('should initialize tracker on request start', async () => {
+  describe("Request Lifecycle", () => {
+    it("should initialize tracker on request start", async () => {
       const plugin = createCascadePlugin();
       const requestListener = await plugin.requestDidStart!({} as any);
 
@@ -87,20 +91,20 @@ describe('createCascadePlugin', () => {
       }
     });
 
-    it('should inject cascade data into response extensions', async () => {
+    it("should inject cascade data into response extensions", async () => {
       const plugin = createCascadePlugin();
       const requestListener = await plugin.requestDidStart!({} as any);
 
       // Create a mock request context
       const requestContext: MockRequestContext = {
         request: {
-          query: 'mutation { updateUser(id: 1) { id name } }',
+          query: "mutation { updateUser(id: 1) { id name } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
-              data: { updateUser: { id: 1, name: 'Updated' } },
+              data: { updateUser: { id: 1, name: "Updated" } },
             },
           },
         },
@@ -110,7 +114,7 @@ describe('createCascadePlugin', () => {
       // Simulate tracking in the resolver (would be done by user)
       const tracker = new CascadeTracker();
       tracker.startTransaction();
-      const entity = new MockEntity(1, 'Updated');
+      const entity = new MockEntity(1, "Updated");
       tracker.trackUpdate(entity);
 
       // Store tracker in context (this is how it would be passed)
@@ -122,25 +126,33 @@ describe('createCascadePlugin', () => {
       }
 
       // Check that cascade data was injected
-      expect(requestContext.response.body.singleResult.extensions).toBeDefined();
-      expect(requestContext.response.body.singleResult.extensions?.cascade).toBeDefined();
-      expect(requestContext.response.body.singleResult.extensions?.cascade.updated).toHaveLength(1);
-      expect(requestContext.response.body.singleResult.extensions?.cascade.metadata).toBeDefined();
+      expect(
+        requestContext.response.body.singleResult.extensions,
+      ).toBeDefined();
+      expect(
+        requestContext.response.body.singleResult.extensions?.cascade,
+      ).toBeDefined();
+      expect(
+        requestContext.response.body.singleResult.extensions?.cascade.updated,
+      ).toHaveLength(1);
+      expect(
+        requestContext.response.body.singleResult.extensions?.cascade.metadata,
+      ).toBeDefined();
     });
 
-    it('should handle requests without cascade tracking', async () => {
+    it("should handle requests without cascade tracking", async () => {
       const plugin = createCascadePlugin();
       const requestListener = await plugin.requestDidStart!({} as any);
 
       const requestContext: MockRequestContext = {
         request: {
-          query: 'query { users { id name } }',
+          query: "query { users { id name } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
-              data: { users: [{ id: 1, name: 'User' }] },
+              data: { users: [{ id: 1, name: "User" }] },
             },
           },
         },
@@ -153,22 +165,24 @@ describe('createCascadePlugin', () => {
       }
 
       // Should not crash, extensions should be empty or not have cascade
-      expect(requestContext.response.body.singleResult.extensions?.cascade).toBeUndefined();
+      expect(
+        requestContext.response.body.singleResult.extensions?.cascade,
+      ).toBeUndefined();
     });
 
-    it('should handle errors during cascade data extraction', async () => {
+    it("should handle errors during cascade data extraction", async () => {
       const plugin = createCascadePlugin();
       const requestListener = await plugin.requestDidStart!({} as any);
 
       const requestContext: MockRequestContext = {
         request: {
-          query: 'mutation { updateUser(id: 1) { id name } }',
+          query: "mutation { updateUser(id: 1) { id name } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
-              data: { updateUser: { id: 1, name: 'Updated' } },
+              data: { updateUser: { id: 1, name: "Updated" } },
             },
           },
         },
@@ -180,16 +194,16 @@ describe('createCascadePlugin', () => {
 
       // Should not crash
       await expect(
-        requestListener!.willSendResponse!(requestContext as any)
+        requestListener!.willSendResponse!(requestContext as any),
       ).resolves.not.toThrow();
     });
   });
 
-  describe('Configuration Options', () => {
-    it('should use custom tracker configuration', async () => {
+  describe("Configuration Options", () => {
+    it("should use custom tracker configuration", async () => {
       const plugin = createCascadePlugin({
         maxDepth: 10,
-        excludeTypes: ['PrivateType'],
+        excludeTypes: ["PrivateType"],
       });
 
       const requestListener = await plugin.requestDidStart!({} as any);
@@ -198,22 +212,22 @@ describe('createCascadePlugin', () => {
       // The plugin should create tracker with these options internally
     });
 
-    it('should use custom context key', async () => {
+    it("should use custom context key", async () => {
       const plugin = createCascadePlugin({
-        contextKey: 'myCustomTracker',
+        contextKey: "myCustomTracker",
       });
 
       const requestListener = await plugin.requestDidStart!({} as any);
 
       const requestContext: MockRequestContext = {
         request: {
-          query: 'mutation { updateUser(id: 1) { id name } }',
+          query: "mutation { updateUser(id: 1) { id name } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
-              data: { updateUser: { id: 1, name: 'Updated' } },
+              data: { updateUser: { id: 1, name: "Updated" } },
             },
           },
         },
@@ -222,7 +236,7 @@ describe('createCascadePlugin', () => {
 
       const tracker = new CascadeTracker();
       tracker.startTransaction();
-      const entity = new MockEntity(1, 'Updated');
+      const entity = new MockEntity(1, "Updated");
       tracker.trackUpdate(entity);
 
       // Store tracker with custom key
@@ -232,10 +246,12 @@ describe('createCascadePlugin', () => {
         await requestListener.willSendResponse(requestContext as any);
       }
 
-      expect(requestContext.response.body.singleResult.extensions?.cascade).toBeDefined();
+      expect(
+        requestContext.response.body.singleResult.extensions?.cascade,
+      ).toBeDefined();
     });
 
-    it('should disable auto-inject if configured', async () => {
+    it("should disable auto-inject if configured", async () => {
       const plugin = createCascadePlugin({
         autoInject: false,
       });
@@ -244,13 +260,13 @@ describe('createCascadePlugin', () => {
 
       const requestContext: MockRequestContext = {
         request: {
-          query: 'mutation { updateUser(id: 1) { id name } }',
+          query: "mutation { updateUser(id: 1) { id name } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
-              data: { updateUser: { id: 1, name: 'Updated' } },
+              data: { updateUser: { id: 1, name: "Updated" } },
             },
           },
         },
@@ -259,7 +275,7 @@ describe('createCascadePlugin', () => {
 
       const tracker = new CascadeTracker();
       tracker.startTransaction();
-      const entity = new MockEntity(1, 'Updated');
+      const entity = new MockEntity(1, "Updated");
       tracker.trackUpdate(entity);
       requestContext.contextValue.cascadeTracker = tracker;
 
@@ -268,24 +284,26 @@ describe('createCascadePlugin', () => {
       }
 
       // Should not inject when autoInject is false
-      expect(requestContext.response.body.singleResult.extensions?.cascade).toBeUndefined();
+      expect(
+        requestContext.response.body.singleResult.extensions?.cascade,
+      ).toBeUndefined();
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle GraphQL errors gracefully', async () => {
+  describe("Error Handling", () => {
+    it("should handle GraphQL errors gracefully", async () => {
       const plugin = createCascadePlugin();
       const requestListener = await plugin.requestDidStart!({} as any);
 
       const requestContext: MockRequestContext = {
         request: {
-          query: 'mutation { updateUser(id: 1) { id name } }',
+          query: "mutation { updateUser(id: 1) { id name } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
-              errors: [{ message: 'User not found' }],
+              errors: [{ message: "User not found" }],
             },
           },
         },
@@ -301,22 +319,24 @@ describe('createCascadePlugin', () => {
         await requestListener.willSendResponse(requestContext as any);
       }
 
-      expect(requestContext.response.body.singleResult.extensions?.cascade).toBeDefined();
+      expect(
+        requestContext.response.body.singleResult.extensions?.cascade,
+      ).toBeDefined();
     });
 
-    it('should handle tracker errors gracefully', async () => {
+    it("should handle tracker errors gracefully", async () => {
       const plugin = createCascadePlugin();
       const requestListener = await plugin.requestDidStart!({} as any);
 
       const requestContext: MockRequestContext = {
         request: {
-          query: 'mutation { updateUser(id: 1) { id name } }',
+          query: "mutation { updateUser(id: 1) { id name } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
-              data: { updateUser: { id: 1, name: 'Updated' } },
+              data: { updateUser: { id: 1, name: "Updated" } },
             },
           },
         },
@@ -329,24 +349,24 @@ describe('createCascadePlugin', () => {
 
       // Should not crash even if tracker is in invalid state
       await expect(
-        requestListener!.willSendResponse!(requestContext as any)
+        requestListener!.willSendResponse!(requestContext as any),
       ).resolves.not.toThrow();
     });
 
-    it('should log warning when tracker is missing from context', async () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+    it("should log warning when tracker is missing from context", async () => {
+      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
       const plugin = createCascadePlugin();
       const requestListener = await plugin.requestDidStart!({} as any);
 
       const requestContext: MockRequestContext = {
         request: {
-          query: 'mutation { updateUser(id: 1) { id name } }',
+          query: "mutation { updateUser(id: 1) { id name } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
-              data: { updateUser: { id: 1, name: 'Updated' } },
+              data: { updateUser: { id: 1, name: "Updated" } },
             },
           },
         },
@@ -359,26 +379,28 @@ describe('createCascadePlugin', () => {
       }
 
       // Should not inject cascade data and should not crash
-      expect(requestContext.response.body.singleResult.extensions?.cascade).toBeUndefined();
+      expect(
+        requestContext.response.body.singleResult.extensions?.cascade,
+      ).toBeUndefined();
       expect(consoleSpy).not.toHaveBeenCalled(); // No warning for missing tracker
 
       consoleSpy.mockRestore();
     });
 
-    it('should handle invalid cascade data without crashing server', async () => {
+    it("should handle invalid cascade data without crashing server", async () => {
       const errorHandler = jest.fn();
       const plugin = createCascadePlugin({ onInjectionError: errorHandler });
       const requestListener = await plugin.requestDidStart!({} as any);
 
       const requestContext: MockRequestContext = {
         request: {
-          query: 'mutation { updateUser(id: 1) { id name } }',
+          query: "mutation { updateUser(id: 1) { id name } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
-              data: { updateUser: { id: 1, name: 'Updated' } },
+              data: { updateUser: { id: 1, name: "Updated" } },
             },
           },
         },
@@ -389,32 +411,32 @@ describe('createCascadePlugin', () => {
       const invalidTracker = {
         inTransaction: true,
         getCascadeData: () => {
-          throw new Error('Invalid cascade data');
+          throw new Error("Invalid cascade data");
         },
       };
       requestContext.contextValue.cascadeTracker = invalidTracker as any;
 
       // Should not crash, should call error handler
       await expect(
-        requestListener!.willSendResponse!(requestContext as any)
+        requestListener!.willSendResponse!(requestContext as any),
       ).resolves.not.toThrow();
 
       expect(errorHandler).toHaveBeenCalledWith(expect.any(Error));
     });
 
-    it('should still return mutation data when cascade injection fails', async () => {
+    it("should still return mutation data when cascade injection fails", async () => {
       const errorHandler = jest.fn();
       const plugin = createCascadePlugin({ onInjectionError: errorHandler });
       const requestListener = await plugin.requestDidStart!({} as any);
 
-      const originalData = { updateUser: { id: 1, name: 'Updated' } };
+      const originalData = { updateUser: { id: 1, name: "Updated" } };
       const requestContext: MockRequestContext = {
         request: {
-          query: 'mutation { updateUser(id: 1) { id name } }',
+          query: "mutation { updateUser(id: 1) { id name } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
               data: originalData,
             },
@@ -427,14 +449,14 @@ describe('createCascadePlugin', () => {
       const failingTracker = {
         inTransaction: true,
         getCascadeData: () => {
-          throw new Error('Cascade injection failure');
+          throw new Error("Cascade injection failure");
         },
       };
       requestContext.contextValue.cascadeTracker = failingTracker as any;
 
       // Should not crash and should preserve original data
       await expect(
-        requestListener!.willSendResponse!(requestContext as any)
+        requestListener!.willSendResponse!(requestContext as any),
       ).resolves.not.toThrow();
 
       expect(requestContext.response.body.singleResult.data).toBe(originalData);
@@ -442,18 +464,18 @@ describe('createCascadePlugin', () => {
     });
   });
 
-  describe('Multiple Operations', () => {
-    it('should handle mutations with multiple entity changes', async () => {
+  describe("Multiple Operations", () => {
+    it("should handle mutations with multiple entity changes", async () => {
       const plugin = createCascadePlugin();
       const requestListener = await plugin.requestDidStart!({} as any);
 
       const requestContext: MockRequestContext = {
         request: {
-          query: 'mutation { batchUpdate { success } }',
+          query: "mutation { batchUpdate { success } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
               data: { batchUpdate: { success: true } },
             },
@@ -477,20 +499,22 @@ describe('createCascadePlugin', () => {
         await requestListener.willSendResponse(requestContext as any);
       }
 
-      expect(requestContext.response.body.singleResult.extensions?.cascade.updated).toHaveLength(5);
+      expect(
+        requestContext.response.body.singleResult.extensions?.cascade.updated,
+      ).toHaveLength(5);
     });
 
-    it('should handle deletions in cascade data', async () => {
+    it("should handle deletions in cascade data", async () => {
       const plugin = createCascadePlugin();
       const requestListener = await plugin.requestDidStart!({} as any);
 
       const requestContext: MockRequestContext = {
         request: {
-          query: 'mutation { deleteUser(id: 1) { success } }',
+          query: "mutation { deleteUser(id: 1) { success } }",
         },
         response: {
           body: {
-            kind: 'single',
+            kind: "single",
             singleResult: {
               data: { deleteUser: { success: true } },
             },
@@ -501,7 +525,7 @@ describe('createCascadePlugin', () => {
 
       const tracker = new CascadeTracker();
       tracker.startTransaction();
-      tracker.trackDelete('User', '1');
+      tracker.trackDelete("User", "1");
 
       requestContext.contextValue.cascadeTracker = tracker;
 
@@ -509,10 +533,15 @@ describe('createCascadePlugin', () => {
         await requestListener.willSendResponse(requestContext as any);
       }
 
-      expect(requestContext.response.body.singleResult.extensions?.cascade.deleted).toHaveLength(1);
-      expect(requestContext.response.body.singleResult.extensions?.cascade.deleted[0]).toMatchObject({
-        __typename: 'User',
-        id: '1',
+      expect(
+        requestContext.response.body.singleResult.extensions?.cascade.deleted,
+      ).toHaveLength(1);
+      expect(
+        requestContext.response.body.singleResult.extensions?.cascade
+          .deleted[0],
+      ).toMatchObject({
+        __typename: "User",
+        id: "1",
       });
     });
   });

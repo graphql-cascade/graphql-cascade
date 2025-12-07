@@ -1,6 +1,6 @@
-import * as fc from 'fast-check';
-import { CascadeTracker } from './tracker';
-import { CascadeBuilder } from './builder';
+import * as fc from "fast-check";
+import { CascadeTracker } from "./tracker";
+import { CascadeBuilder } from "./builder";
 
 /**
  * Property-based tests for GraphQL Cascade server functionality.
@@ -11,24 +11,24 @@ import { CascadeBuilder } from './builder';
 
 // Entity arbitrary - generates test entities with required fields
 const entityArb = fc.record({
-  __typename: fc.constantFrom('User', 'Post', 'Comment', 'Todo', 'Project'),
+  __typename: fc.constantFrom("User", "Post", "Comment", "Todo", "Project"),
   id: fc.string({ minLength: 1, maxLength: 10 }),
-  name: fc.string({ minLength: 1, maxLength: 50 })
+  name: fc.string({ minLength: 1, maxLength: 50 }),
 });
 
 // Entity with more fields for serialization testing
 const richEntityArb = fc.record({
-  __typename: fc.constant('User'),
+  __typename: fc.constant("User"),
   id: fc.string({ minLength: 1, maxLength: 10 }),
   name: fc.string({ minLength: 1, maxLength: 50 }),
   age: fc.integer({ min: 1, max: 100 }),
   active: fc.boolean(),
-  score: fc.double({ min: 0, max: 100, noNaN: true })
+  score: fc.double({ min: 0, max: 100, noNaN: true }),
 });
 
-describe('Property-based tests for server', () => {
-  describe('Tracker idempotency', () => {
-    it('tracking same entity twice produces same result', () => {
+describe("Property-based tests for server", () => {
+  describe("Tracker idempotency", () => {
+    it("tracking same entity twice produces same result", () => {
       fc.assert(
         fc.property(entityArb, (entity) => {
           const tracker = new CascadeTracker();
@@ -44,11 +44,11 @@ describe('Property-based tests for server', () => {
           // Should have same number of updated entities (deduplicated by key)
           return firstData.updated.length === secondData.updated.length;
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
-    it('trackUpdate on same entity multiple times keeps entity count stable', () => {
+    it("trackUpdate on same entity multiple times keeps entity count stable", () => {
       fc.assert(
         fc.property(entityArb, (entity) => {
           const tracker = new CascadeTracker();
@@ -66,13 +66,13 @@ describe('Property-based tests for server', () => {
           // All counts should be equal (deduplicated)
           return count1 === count2 && count2 === count3;
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
 
-  describe('Builder response consistency', () => {
-    it('same input produces same output structure', () => {
+  describe("Builder response consistency", () => {
+    it("same input produces same output structure", () => {
       fc.assert(
         fc.property(entityArb, (entity) => {
           const tracker1 = new CascadeTracker();
@@ -89,14 +89,15 @@ describe('Property-based tests for server', () => {
 
           return (
             response1.success === response2.success &&
-            response1.cascade.updated.length === response2.cascade.updated.length
+            response1.cascade.updated.length ===
+              response2.cascade.updated.length
           );
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
-    it('builder response always has required cascade structure', () => {
+    it("builder response always has required cascade structure", () => {
       fc.assert(
         fc.property(entityArb, (entity) => {
           const tracker = new CascadeTracker();
@@ -107,27 +108,29 @@ describe('Property-based tests for server', () => {
 
           // Response must have required structure
           return (
-            typeof response.success === 'boolean' &&
+            typeof response.success === "boolean" &&
             Array.isArray(response.cascade.updated) &&
             Array.isArray(response.cascade.deleted) &&
-            typeof response.cascade.metadata === 'object' &&
-            typeof response.cascade.metadata.timestamp === 'string'
+            typeof response.cascade.metadata === "object" &&
+            typeof response.cascade.metadata.timestamp === "string"
           );
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
 
-  describe('Order independence', () => {
-    it('entity tracking order does not affect final count', () => {
+  describe("Order independence", () => {
+    it("entity tracking order does not affect final count", () => {
       fc.assert(
         fc.property(
           fc.array(entityArb, { minLength: 1, maxLength: 10 }),
           (entities) => {
             // Deduplicate by typename+id
             const uniqueEntities = Array.from(
-              new Map(entities.map(e => [`${e.__typename}:${e.id}`, e])).values()
+              new Map(
+                entities.map((e) => [`${e.__typename}:${e.id}`, e]),
+              ).values(),
             );
 
             const tracker1 = new CascadeTracker();
@@ -145,20 +148,22 @@ describe('Property-based tests for server', () => {
             const data2 = tracker2.getCascadeData();
 
             return data1.updated.length === data2.updated.length;
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
-    it('mixed create/update order does not affect entity count', () => {
+    it("mixed create/update order does not affect entity count", () => {
       fc.assert(
         fc.property(
           fc.array(entityArb, { minLength: 2, maxLength: 5 }),
           (entities) => {
             // Deduplicate entities
             const uniqueEntities = Array.from(
-              new Map(entities.map(e => [`${e.__typename}:${e.id}`, e])).values()
+              new Map(
+                entities.map((e) => [`${e.__typename}:${e.id}`, e]),
+              ).values(),
             );
 
             // Tracker 1: all creates then all updates
@@ -182,15 +187,15 @@ describe('Property-based tests for server', () => {
             const count2 = tracker2.getCascadeData().updated.length;
 
             return count1 === count2;
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
 
-  describe('Serialization round-trip', () => {
-    it('entity data survives serialization', () => {
+  describe("Serialization round-trip", () => {
+    it("entity data survives serialization", () => {
       fc.assert(
         fc.property(richEntityArb, (entity) => {
           const tracker = new CascadeTracker();
@@ -209,11 +214,11 @@ describe('Property-based tests for server', () => {
             deserialized.updated[0].id === entity.id
           );
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
-    it('cascade response survives full serialization round-trip', () => {
+    it("cascade response survives full serialization round-trip", () => {
       fc.assert(
         fc.property(richEntityArb, (entity) => {
           const tracker = new CascadeTracker();
@@ -229,16 +234,18 @@ describe('Property-based tests for server', () => {
           // All key properties should survive
           return (
             deserialized.success === response.success &&
-            deserialized.cascade.updated.length === response.cascade.updated.length &&
-            deserialized.cascade.deleted.length === response.cascade.deleted.length &&
-            typeof deserialized.cascade.metadata.timestamp === 'string'
+            deserialized.cascade.updated.length ===
+              response.cascade.updated.length &&
+            deserialized.cascade.deleted.length ===
+              response.cascade.deleted.length &&
+            typeof deserialized.cascade.metadata.timestamp === "string"
           );
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
-    it('entity field values are preserved through serialization', () => {
+    it("entity field values are preserved through serialization", () => {
       fc.assert(
         fc.property(richEntityArb, (entity) => {
           const tracker = new CascadeTracker();
@@ -260,17 +267,19 @@ describe('Property-based tests for server', () => {
             originalEntity.active === deserializedEntity.active
           );
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
 
-  describe('Deletion tracking', () => {
-    it('trackDelete adds entity to deleted list', () => {
+  describe("Deletion tracking", () => {
+    it("trackDelete adds entity to deleted list", () => {
       fc.assert(
         fc.property(
-          fc.constantFrom('User', 'Post', 'Comment'),
-          fc.string({ minLength: 1, maxLength: 10 }).filter(s => !s.includes(':')), // Avoid : in id
+          fc.constantFrom("User", "Post", "Comment"),
+          fc
+            .string({ minLength: 1, maxLength: 10 })
+            .filter((s) => !s.includes(":")), // Avoid : in id
           (typename, id) => {
             const tracker = new CascadeTracker();
             tracker.startTransaction();
@@ -281,23 +290,25 @@ describe('Property-based tests for server', () => {
 
             // Should be in deleted list
             const entityInDeleted = data.deleted.some(
-              (e: any) => e.__typename === typename && e.id === id
+              (e: any) => e.__typename === typename && e.id === id,
             );
 
             return entityInDeleted && data.deleted.length === 1;
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
-    it('trackDelete removes entity from updated list if it was tracked', () => {
+    it("trackDelete removes entity from updated list if it was tracked", () => {
       fc.assert(
         fc.property(
           fc.record({
-            __typename: fc.constantFrom('User', 'Post', 'Comment'),
-            id: fc.string({ minLength: 1, maxLength: 10 }).filter(s => !s.includes(':')),
-            name: fc.string({ minLength: 1, maxLength: 50 })
+            __typename: fc.constantFrom("User", "Post", "Comment"),
+            id: fc
+              .string({ minLength: 1, maxLength: 10 })
+              .filter((s) => !s.includes(":")),
+            name: fc.string({ minLength: 1, maxLength: 50 }),
           }),
           (entity) => {
             const tracker = new CascadeTracker();
@@ -312,24 +323,26 @@ describe('Property-based tests for server', () => {
 
             // After deletion, entity should not be in updated list
             const entityInUpdated = data.updated.some(
-              (e: any) => e.__typename === entity.__typename && e.id === entity.id
+              (e: any) =>
+                e.__typename === entity.__typename && e.id === entity.id,
             );
 
             // Should be in deleted list
             const entityInDeleted = data.deleted.some(
-              (e: any) => e.__typename === entity.__typename && e.id === entity.id
+              (e: any) =>
+                e.__typename === entity.__typename && e.id === entity.id,
             );
 
             return !entityInUpdated && entityInDeleted;
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
 
-  describe('Transaction isolation', () => {
-    it('concurrent trackers do not interfere with each other', () => {
+  describe("Transaction isolation", () => {
+    it("concurrent trackers do not interfere with each other", () => {
       fc.assert(
         fc.property(
           fc.array(entityArb, { minLength: 1, maxLength: 5 }),
@@ -337,10 +350,14 @@ describe('Property-based tests for server', () => {
           (entities1, entities2) => {
             // Deduplicate each set
             const unique1 = Array.from(
-              new Map(entities1.map(e => [`${e.__typename}:${e.id}`, e])).values()
+              new Map(
+                entities1.map((e) => [`${e.__typename}:${e.id}`, e]),
+              ).values(),
             );
             const unique2 = Array.from(
-              new Map(entities2.map(e => [`${e.__typename}:${e.id}`, e])).values()
+              new Map(
+                entities2.map((e) => [`${e.__typename}:${e.id}`, e]),
+              ).values(),
             );
 
             const tracker1 = new CascadeTracker();
@@ -365,13 +382,13 @@ describe('Property-based tests for server', () => {
               data1.updated.length === unique1.length &&
               data2.updated.length === unique2.length
             );
-          }
+          },
         ),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
-    it('ending one transaction does not affect another', () => {
+    it("ending one transaction does not affect another", () => {
       fc.assert(
         fc.property(entityArb, entityArb, (entity1, entity2) => {
           const tracker1 = new CascadeTracker();
@@ -389,18 +406,15 @@ describe('Property-based tests for server', () => {
           // tracker2 should still be able to get data
           const data2 = tracker2.getCascadeData();
 
-          return (
-            result1.updated.length === 1 &&
-            data2.updated.length === 1
-          );
+          return result1.updated.length === 1 && data2.updated.length === 1;
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
 
-  describe('Configuration limits', () => {
-    it('tracker respects maxEntities configuration', () => {
+  describe("Configuration limits", () => {
+    it("tracker respects maxEntities configuration", () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 5, max: 20 }),
@@ -408,12 +422,14 @@ describe('Property-based tests for server', () => {
           (maxEntities, entities) => {
             // Deduplicate and ensure we have enough unique entities
             const uniqueEntities = Array.from(
-              new Map(entities.map(e => [`${e.__typename}:${e.id}`, e])).values()
+              new Map(
+                entities.map((e) => [`${e.__typename}:${e.id}`, e]),
+              ).values(),
             );
 
             const tracker = new CascadeTracker({
               maxEntities,
-              enableRelationshipTracking: false
+              enableRelationshipTracking: false,
             });
             tracker.startTransaction();
 
@@ -425,20 +441,22 @@ describe('Property-based tests for server', () => {
 
             // Should not exceed maxEntities
             return data.updated.length <= maxEntities;
-          }
+          },
         ),
-        { numRuns: 50 }
+        { numRuns: 50 },
       );
     });
 
-    it('tracker indicates when limit was reached', () => {
+    it("tracker indicates when limit was reached", () => {
       fc.assert(
         fc.property(
           fc.array(entityArb, { minLength: 20, maxLength: 30 }),
           (entities) => {
             // Deduplicate
             const uniqueEntities = Array.from(
-              new Map(entities.map(e => [`${e.__typename}:${e.id}`, e])).values()
+              new Map(
+                entities.map((e) => [`${e.__typename}:${e.id}`, e]),
+              ).values(),
             );
 
             if (uniqueEntities.length <= 10) {
@@ -447,7 +465,7 @@ describe('Property-based tests for server', () => {
 
             const tracker = new CascadeTracker({
               maxEntities: 10,
-              enableRelationshipTracking: false
+              enableRelationshipTracking: false,
             });
             tracker.startTransaction();
 
@@ -459,15 +477,15 @@ describe('Property-based tests for server', () => {
 
             // Should indicate truncation occurred
             return data.metadata.truncatedUpdated === true;
-          }
+          },
         ),
-        { numRuns: 50 }
+        { numRuns: 50 },
       );
     });
   });
 
-  describe('Builder size limits', () => {
-    it('builder respects maxUpdatedEntities configuration', () => {
+  describe("Builder size limits", () => {
+    it("builder respects maxUpdatedEntities configuration", () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 5, max: 15 }),
@@ -475,10 +493,14 @@ describe('Property-based tests for server', () => {
           (maxUpdated, entities) => {
             // Deduplicate
             const uniqueEntities = Array.from(
-              new Map(entities.map(e => [`${e.__typename}:${e.id}`, e])).values()
+              new Map(
+                entities.map((e) => [`${e.__typename}:${e.id}`, e]),
+              ).values(),
             );
 
-            const tracker = new CascadeTracker({ enableRelationshipTracking: false });
+            const tracker = new CascadeTracker({
+              enableRelationshipTracking: false,
+            });
             tracker.startTransaction();
 
             for (const entity of uniqueEntities) {
@@ -486,33 +508,37 @@ describe('Property-based tests for server', () => {
             }
 
             const builder = new CascadeBuilder(tracker, undefined, {
-              maxUpdatedEntities: maxUpdated
+              maxUpdatedEntities: maxUpdated,
             });
             const response = builder.buildResponse(null, true);
 
             // Builder should respect max limit
             return response.cascade.updated.length <= maxUpdated;
-          }
+          },
         ),
-        { numRuns: 50 }
+        { numRuns: 50 },
       );
     });
 
-    it('builder marks truncation when limit exceeded', () => {
+    it("builder marks truncation when limit exceeded", () => {
       fc.assert(
         fc.property(
           fc.array(entityArb, { minLength: 30, maxLength: 50 }),
           (entities) => {
             // Deduplicate
             const uniqueEntities = Array.from(
-              new Map(entities.map(e => [`${e.__typename}:${e.id}`, e])).values()
+              new Map(
+                entities.map((e) => [`${e.__typename}:${e.id}`, e]),
+              ).values(),
             );
 
             if (uniqueEntities.length <= 10) {
               return true; // Skip if not enough unique
             }
 
-            const tracker = new CascadeTracker({ enableRelationshipTracking: false });
+            const tracker = new CascadeTracker({
+              enableRelationshipTracking: false,
+            });
             tracker.startTransaction();
 
             for (const entity of uniqueEntities) {
@@ -520,33 +546,37 @@ describe('Property-based tests for server', () => {
             }
 
             const builder = new CascadeBuilder(tracker, undefined, {
-              maxUpdatedEntities: 10
+              maxUpdatedEntities: 10,
             });
             const response = builder.buildResponse(null, true);
 
             // Should indicate truncation
             return response.cascade.metadata.truncatedUpdated === true;
-          }
+          },
         ),
-        { numRuns: 50 }
+        { numRuns: 50 },
       );
     });
 
-    it('builder respects maxDeletedEntities configuration', () => {
+    it("builder respects maxDeletedEntities configuration", () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 3, max: 10 }),
           fc.array(
             fc.record({
-              typename: fc.constantFrom('User', 'Post', 'Comment'),
-              id: fc.string({ minLength: 1, maxLength: 10 }).filter(s => !s.includes(':'))
+              typename: fc.constantFrom("User", "Post", "Comment"),
+              id: fc
+                .string({ minLength: 1, maxLength: 10 })
+                .filter((s) => !s.includes(":")),
             }),
-            { minLength: 20, maxLength: 30 }
+            { minLength: 20, maxLength: 30 },
           ),
           (maxDeleted, deletions) => {
             // Deduplicate
             const uniqueDeletions = Array.from(
-              new Map(deletions.map(d => [`${d.typename}:${d.id}`, d])).values()
+              new Map(
+                deletions.map((d) => [`${d.typename}:${d.id}`, d]),
+              ).values(),
             );
 
             const tracker = new CascadeTracker();
@@ -557,14 +587,14 @@ describe('Property-based tests for server', () => {
             }
 
             const builder = new CascadeBuilder(tracker, undefined, {
-              maxDeletedEntities: maxDeleted
+              maxDeletedEntities: maxDeleted,
             });
             const response = builder.buildResponse(null, true);
 
             return response.cascade.deleted.length <= maxDeleted;
-          }
+          },
         ),
-        { numRuns: 50 }
+        { numRuns: 50 },
       );
     });
   });

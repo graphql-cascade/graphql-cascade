@@ -9,6 +9,7 @@ npm install @graphql-cascade/client-react-query @tanstack/react-query
 ```
 
 **Peer Dependencies:**
+
 - `@tanstack/react-query: ^4.0.0`
 - `graphql: ^16.0.0`
 - `react: ^16.8.0`
@@ -28,7 +29,7 @@ npm install @graphql-cascade/client-react-query @tanstack/react-query
 Configure React Query with appropriate defaults for GraphQL Cascade:
 
 ```typescript
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient } from "@tanstack/react-query";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,12 +40,12 @@ const queryClient = new QueryClient({
         // Don't retry on GraphQL errors
         if (error?.graphQLErrors?.length > 0) return false;
         return failureCount < 3;
-      }
+      },
     },
     mutations: {
       retry: false, // Mutations typically shouldn't be retried
-    }
-  }
+    },
+  },
 });
 ```
 
@@ -53,10 +54,10 @@ const queryClient = new QueryClient({
 Create a cascade client instance with your GraphQL executor:
 
 ```typescript
-import { ReactQueryCascadeClient } from '@graphql-cascade/client-react-query';
-import { GraphQLClient } from 'graphql-request'; // or your preferred GraphQL client
+import { ReactQueryCascadeClient } from "@graphql-cascade/client-react-query";
+import { GraphQLClient } from "graphql-request"; // or your preferred GraphQL client
 
-const graphqlClient = new GraphQLClient('/graphql');
+const graphqlClient = new GraphQLClient("/graphql");
 
 // Executor function that returns GraphQL response
 const executor = async (query: DocumentNode, variables: any) => {
@@ -67,6 +68,7 @@ const cascadeClient = new ReactQueryCascadeClient(queryClient, executor);
 ```
 
 **TypeScript:**
+
 ```typescript
 interface GraphQLResponse<T = any> {
   data?: T;
@@ -75,7 +77,7 @@ interface GraphQLResponse<T = any> {
 
 const executor = async (
   query: DocumentNode,
-  variables: Record<string, any>
+  variables: Record<string, any>,
 ): Promise<GraphQLResponse> => {
   return graphqlClient.request(query, variables);
 };
@@ -208,63 +210,83 @@ function TodoItem({ todo }: { todo: { id: string; title: string; completed: bool
 GraphQL Cascade automatically handles cache invalidation based on cascade hints from your GraphQL server. The React Query integration supports several invalidation strategies:
 
 ### Exact Invalidation
+
 Invalidates queries with exact matching keys:
+
 ```typescript
 // Invalidates query: ['getUser', { id: '123' }]
 cascade: {
-  invalidations: [{
-    queryName: 'getUser',
-    scope: 'EXACT',
-    arguments: { id: '123' }
-  }]
+  invalidations: [
+    {
+      queryName: "getUser",
+      scope: "EXACT",
+      arguments: { id: "123" },
+    },
+  ];
 }
 ```
 
 ### Prefix Invalidation
+
 Invalidates all queries starting with a prefix:
+
 ```typescript
 // Invalidates all queries starting with 'listUsers'
 cascade: {
-  invalidations: [{
-    queryName: 'listUsers',
-    scope: 'PREFIX'
-  }]
+  invalidations: [
+    {
+      queryName: "listUsers",
+      scope: "PREFIX",
+    },
+  ];
 }
 ```
 
 ### Pattern Invalidation
+
 Invalidates queries matching glob patterns:
+
 ```typescript
 // Invalidates queries like 'getUserById', 'getUserProfile', etc.
 cascade: {
-  invalidations: [{
-    queryName: 'getUser*',
-    scope: 'PATTERN'
-  }]
+  invalidations: [
+    {
+      queryName: "getUser*",
+      scope: "PATTERN",
+    },
+  ];
 }
 ```
 
 ### Entity Updates
+
 Updates specific entities within cached query data:
+
 ```typescript
 cascade: {
-  updated: [{
-    __typename: 'User',
-    id: '123',
-    field: 'name',
-    value: 'Updated Name'
-  }]
+  updated: [
+    {
+      __typename: "User",
+      id: "123",
+      field: "name",
+      value: "Updated Name",
+    },
+  ];
 }
 ```
 
 ### Entity Deletion
+
 Removes entities from cached query data:
+
 ```typescript
 cascade: {
-  deleted: [{
-    __typename: 'Todo',
-    id: '456'
-  }]
+  deleted: [
+    {
+      __typename: "Todo",
+      id: "456",
+    },
+  ];
 }
 ```
 
@@ -273,7 +295,10 @@ cascade: {
 The package is fully typed and provides excellent TypeScript support:
 
 ```typescript
-import { ReactQueryCascadeClient, useCascadeMutation } from '@graphql-cascade/client-react-query';
+import {
+  ReactQueryCascadeClient,
+  useCascadeMutation,
+} from "@graphql-cascade/client-react-query";
 
 // Strongly typed mutation hook
 const mutation = useCascadeMutation<
@@ -286,11 +311,10 @@ const optimisticMutation = useOptimisticCascadeMutation<
   { toggleTodo: { id: string; completed: boolean } },
   { id: string },
   { id: string; completed: boolean } // Optimistic response type
->(
-  cascadeClient,
-  TOGGLE_TODO,
-  (variables) => ({ id: variables.id, completed: true })
-);
+>(cascadeClient, TOGGLE_TODO, (variables) => ({
+  id: variables.id,
+  completed: true,
+}));
 ```
 
 ## Advanced Usage
@@ -305,12 +329,12 @@ const mutation = useCascadeMutation(cascadeClient, UPDATE_USER, {
 
   // Custom success handler
   onSuccess: (data, variables) => {
-    toast.success('User updated successfully');
+    toast.success("User updated successfully");
   },
 
   // Custom error handler
   onError: (error, variables) => {
-    if (error.graphQLErrors?.[0]?.extensions?.code === 'UNAUTHORIZED') {
+    if (error.graphQLErrors?.[0]?.extensions?.code === "UNAUTHORIZED") {
       // Handle auth errors
       redirectToLogin();
     }
@@ -318,8 +342,8 @@ const mutation = useCascadeMutation(cascadeClient, UPDATE_USER, {
 
   // Custom settled handler (runs after success or error)
   onSettled: () => {
-    queryClient.invalidateQueries(['userPreferences']);
-  }
+    queryClient.invalidateQueries(["userPreferences"]);
+  },
 });
 ```
 

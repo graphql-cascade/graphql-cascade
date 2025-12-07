@@ -1,23 +1,17 @@
-import { validateResponse } from './response';
+import { validateResponse } from "./response";
 
-describe('validateResponse', () => {
-  it('valid complete response passes', () => {
+describe("validateResponse", () => {
+  it("valid complete response passes", () => {
     const response = {
       success: true,
       cascade: {
-        updated: [
-          { __typename: 'User', id: '1', operation: 'CREATE' }
-        ],
-        deleted: [
-          { __typename: 'Post', id: '2' }
-        ],
-        invalidations: [
-          { queryName: 'getUsers' }
-        ],
+        updated: [{ __typename: "User", id: "1", operation: "CREATE" }],
+        deleted: [{ __typename: "Post", id: "2" }],
+        invalidations: [{ queryName: "getUsers" }],
         metadata: {
-          timestamp: Date.now()
-        }
-      }
+          timestamp: Date.now(),
+        },
+      },
     };
 
     const result = validateResponse(response);
@@ -25,134 +19,134 @@ describe('validateResponse', () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it('response missing success fails', () => {
+  it("response missing success fails", () => {
     const response = {
       cascade: {
         updated: [],
         deleted: [],
         invalidations: [],
-        metadata: { timestamp: Date.now() }
-      }
+        metadata: { timestamp: Date.now() },
+      },
     };
 
     const result = validateResponse(response);
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual({
-      code: 'MISSING_SUCCESS',
-      message: 'Response must have success: boolean',
-      path: 'success'
+      code: "MISSING_SUCCESS",
+      message: "Response must have success: boolean",
+      path: "success",
     });
   });
 
-  it('response missing cascade fails', () => {
+  it("response missing cascade fails", () => {
     const response = {
-      success: true
+      success: true,
     };
 
     const result = validateResponse(response);
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual({
-      code: 'MISSING_CASCADE',
-      message: 'Response must have cascade: CascadeUpdates',
-      path: 'cascade'
+      code: "MISSING_CASCADE",
+      message: "Response must have cascade: CascadeUpdates",
+      path: "cascade",
     });
   });
 
-  it('invalid updated entity fails (missing __typename)', () => {
+  it("invalid updated entity fails (missing __typename)", () => {
     const response = {
       success: true,
       cascade: {
         updated: [
-          { id: '1', operation: 'CREATE' } // missing __typename
+          { id: "1", operation: "CREATE" }, // missing __typename
         ],
         deleted: [],
         invalidations: [],
-        metadata: { timestamp: Date.now() }
-      }
+        metadata: { timestamp: Date.now() },
+      },
     };
 
     const result = validateResponse(response);
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual({
-      code: 'MISSING_TYPENAME',
-      message: 'UpdatedEntity must have __typename',
-      path: 'cascade.updated[0].__typename'
+      code: "MISSING_TYPENAME",
+      message: "UpdatedEntity must have __typename",
+      path: "cascade.updated[0].__typename",
     });
   });
 
-  it('invalid deleted entity fails (missing id)', () => {
+  it("invalid deleted entity fails (missing id)", () => {
     const response = {
       success: true,
       cascade: {
         updated: [],
         deleted: [
-          { __typename: 'Post' } // missing id
+          { __typename: "Post" }, // missing id
         ],
         invalidations: [],
-        metadata: { timestamp: Date.now() }
-      }
+        metadata: { timestamp: Date.now() },
+      },
     };
 
     const result = validateResponse(response);
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual({
-      code: 'MISSING_ID',
-      message: 'DeletedEntity must have id',
-      path: 'cascade.deleted[0].id'
+      code: "MISSING_ID",
+      message: "DeletedEntity must have id",
+      path: "cascade.deleted[0].id",
     });
   });
 
-  it('invalid invalidation fails (missing queryName)', () => {
+  it("invalid invalidation fails (missing queryName)", () => {
     const response = {
       success: true,
       cascade: {
         updated: [],
         deleted: [],
         invalidations: [
-          {} // missing queryName
+          {}, // missing queryName
         ],
-        metadata: { timestamp: Date.now() }
-      }
+        metadata: { timestamp: Date.now() },
+      },
     };
 
     const result = validateResponse(response);
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual({
-      code: 'MISSING_QUERY_NAME',
-      message: 'QueryInvalidation must have queryName',
-      path: 'cascade.invalidations[0].queryName'
+      code: "MISSING_QUERY_NAME",
+      message: "QueryInvalidation must have queryName",
+      path: "cascade.invalidations[0].queryName",
     });
   });
 
-  it('invalid metadata fails (missing timestamp)', () => {
+  it("invalid metadata fails (missing timestamp)", () => {
     const response = {
       success: true,
       cascade: {
         updated: [],
         deleted: [],
         invalidations: [],
-        metadata: {} // missing timestamp
-      }
+        metadata: {}, // missing timestamp
+      },
     };
 
     const result = validateResponse(response);
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual({
-      code: 'MISSING_TIMESTAMP',
-      message: 'metadata must have timestamp',
-      path: 'cascade.metadata.timestamp'
+      code: "MISSING_TIMESTAMP",
+      message: "metadata must have timestamp",
+      path: "cascade.metadata.timestamp",
     });
   });
 
-  it('empty cascade arrays are valid', () => {
+  it("empty cascade arrays are valid", () => {
     const response = {
       success: true,
       cascade: {
         updated: [],
         deleted: [],
         invalidations: [],
-        metadata: { timestamp: Date.now() }
-      }
+        metadata: { timestamp: Date.now() },
+      },
     };
 
     const result = validateResponse(response);
@@ -160,15 +154,15 @@ describe('validateResponse', () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it('error response with success=false is valid', () => {
+  it("error response with success=false is valid", () => {
     const response = {
       success: false,
       cascade: {
         updated: [],
         deleted: [],
         invalidations: [],
-        metadata: { timestamp: Date.now() }
-      }
+        metadata: { timestamp: Date.now() },
+      },
     };
 
     const result = validateResponse(response);
@@ -176,15 +170,15 @@ describe('validateResponse', () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it('strict mode catches additional issues (placeholder)', () => {
+  it("strict mode catches additional issues (placeholder)", () => {
     const response = {
       success: true,
       cascade: {
         updated: [],
         deleted: [],
         invalidations: [],
-        metadata: { timestamp: Date.now() }
-      }
+        metadata: { timestamp: Date.now() },
+      },
     };
 
     const result = validateResponse(response, { strict: true });

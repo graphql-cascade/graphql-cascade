@@ -1,9 +1,7 @@
-import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
+import { ApolloClient, InMemoryCache, gql } from "@apollo/client";
 
-import { ApolloCascadeClient } from './client';
-import {
-  CascadeSubscriptionManager
-} from './subscriptions';
+import { ApolloCascadeClient } from "./client";
+import { CascadeSubscriptionManager } from "./subscriptions";
 
 // Mock subscription
 const mockSubscription = gql`
@@ -15,7 +13,7 @@ const mockSubscription = gql`
   }
 `;
 
-describe('CascadeSubscriptionManager', () => {
+describe("CascadeSubscriptionManager", () => {
   let apolloClient: ApolloClient<unknown>;
   let cascadeClient: ApolloCascadeClient;
   let manager: CascadeSubscriptionManager;
@@ -23,7 +21,7 @@ describe('CascadeSubscriptionManager', () => {
   beforeEach(() => {
     apolloClient = new ApolloClient({
       cache: new InMemoryCache(),
-      devtools: { enabled: false }
+      devtools: { enabled: false },
     });
 
     cascadeClient = new ApolloCascadeClient(apolloClient as ApolloClient<any>);
@@ -34,13 +32,13 @@ describe('CascadeSubscriptionManager', () => {
     manager.unsubscribeAll();
   });
 
-  describe('subscribe', () => {
-    it('should create subscription handle', () => {
+  describe("subscribe", () => {
+    it("should create subscription handle", () => {
       // Mock the subscribe method
-      jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
         subscribe: jest.fn(() => ({
-          unsubscribe: jest.fn()
-        }))
+          unsubscribe: jest.fn(),
+        })),
       } as any);
 
       const handle = manager.subscribe(mockSubscription);
@@ -48,20 +46,20 @@ describe('CascadeSubscriptionManager', () => {
       expect(handle).toBeDefined();
       expect(handle.isActive).toBe(true);
       expect(handle.isPaused).toBe(false);
-      expect(typeof handle.unsubscribe).toBe('function');
-      expect(typeof handle.pause).toBe('function');
-      expect(typeof handle.resume).toBe('function');
+      expect(typeof handle.unsubscribe).toBe("function");
+      expect(typeof handle.pause).toBe("function");
+      expect(typeof handle.resume).toBe("function");
     });
 
-    it('should call onCascade callback when cascade data received', () => {
+    it("should call onCascade callback when cascade data received", () => {
       const onCascade = jest.fn();
       let subscriber: any;
 
-      jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
         subscribe: jest.fn((sub) => {
           subscriber = sub;
           return { unsubscribe: jest.fn() };
-        })
+        }),
       } as any);
 
       manager.subscribe(mockSubscription, { onCascade });
@@ -71,46 +69,57 @@ describe('CascadeSubscriptionManager', () => {
         data: {
           userUpdated: {
             cascade: {
-              updated: [{ __typename: 'User', id: '1', operation: 'UPDATED', entity: { id: '1' } }],
+              updated: [
+                {
+                  __typename: "User",
+                  id: "1",
+                  operation: "UPDATED",
+                  entity: { id: "1" },
+                },
+              ],
               deleted: [],
               invalidations: [],
-              metadata: { timestamp: new Date().toISOString(), depth: 1, affectedCount: 1 }
-            }
-          }
-        }
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
       });
 
       expect(onCascade).toHaveBeenCalled();
     });
 
-    it('should call onError callback on subscription error', () => {
+    it("should call onError callback on subscription error", () => {
       const onError = jest.fn();
       let subscriber: any;
 
-      jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
         subscribe: jest.fn((sub) => {
           subscriber = sub;
           return { unsubscribe: jest.fn() };
-        })
+        }),
       } as any);
 
       manager.subscribe(mockSubscription, { onError });
 
       // Simulate error
-      subscriber.error(new Error('Connection failed'));
+      subscriber.error(new Error("Connection failed"));
 
       expect(onError).toHaveBeenCalledWith(expect.any(Error));
     });
 
-    it('should call onComplete callback when subscription completes', () => {
+    it("should call onComplete callback when subscription completes", () => {
       const onComplete = jest.fn();
       let subscriber: any;
 
-      jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
         subscribe: jest.fn((sub) => {
           subscriber = sub;
           return { unsubscribe: jest.fn() };
-        })
+        }),
       } as any);
 
       const handle = manager.subscribe(mockSubscription, { onComplete });
@@ -122,20 +131,20 @@ describe('CascadeSubscriptionManager', () => {
       expect(handle.isActive).toBe(false);
     });
 
-    it('should apply filter to cascade events', () => {
+    it("should apply filter to cascade events", () => {
       const onCascade = jest.fn();
       let subscriber: any;
 
-      jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
         subscribe: jest.fn((sub) => {
           subscriber = sub;
           return { unsubscribe: jest.fn() };
-        })
+        }),
       } as any);
 
       manager.subscribe(mockSubscription, {
         onCascade,
-        filter: (event) => event.type === 'ENTITY_DELETED'
+        filter: (event) => event.type === "ENTITY_DELETED",
       });
 
       // Send update event (should be filtered out)
@@ -143,27 +152,38 @@ describe('CascadeSubscriptionManager', () => {
         data: {
           userUpdated: {
             cascade: {
-              updated: [{ __typename: 'User', id: '1', operation: 'UPDATED', entity: { id: '1' } }],
+              updated: [
+                {
+                  __typename: "User",
+                  id: "1",
+                  operation: "UPDATED",
+                  entity: { id: "1" },
+                },
+              ],
               deleted: [],
               invalidations: [],
-              metadata: { timestamp: new Date().toISOString(), depth: 1, affectedCount: 1 }
-            }
-          }
-        }
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
       });
 
       expect(onCascade).not.toHaveBeenCalled();
     });
 
-    it('should not process events when paused', () => {
+    it("should not process events when paused", () => {
       const onCascade = jest.fn();
       let subscriber: any;
 
-      jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
         subscribe: jest.fn((sub) => {
           subscriber = sub;
           return { unsubscribe: jest.fn() };
-        })
+        }),
       } as any);
 
       const _handle = manager.subscribe(mockSubscription, { onCascade });
@@ -174,35 +194,49 @@ describe('CascadeSubscriptionManager', () => {
           userUpdated: {
             cascade: {
               updated: [
-                { __typename: 'User', id: '1', operation: 'UPDATED', entity: { id: '1' } },
-                { __typename: 'User', id: '2', operation: 'CREATED', entity: { id: '2' } }
+                {
+                  __typename: "User",
+                  id: "1",
+                  operation: "UPDATED",
+                  entity: { id: "1" },
+                },
+                {
+                  __typename: "User",
+                  id: "2",
+                  operation: "CREATED",
+                  entity: { id: "2" },
+                },
               ],
               deleted: [],
               invalidations: [],
-              metadata: { timestamp: new Date().toISOString(), depth: 1, affectedCount: 2 }
-            }
-          }
-        }
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 2,
+              },
+            },
+          },
+        },
       });
 
       expect(onCascade).toHaveBeenCalledTimes(1);
       expect(onCascade).toHaveBeenCalledWith(
         expect.objectContaining({
           updated: expect.arrayContaining([
-            expect.objectContaining({ __typename: 'User', id: '1' }),
-            expect.objectContaining({ __typename: 'User', id: '2' })
-          ])
-        })
+            expect.objectContaining({ __typename: "User", id: "1" }),
+            expect.objectContaining({ __typename: "User", id: "2" }),
+          ]),
+        }),
       );
     });
   });
 
-  describe('Cleanup Tests', () => {
-    it('should cleanup subscription on unsubscribe', () => {
+  describe("Cleanup Tests", () => {
+    it("should cleanup subscription on unsubscribe", () => {
       const unsubscribeFn = jest.fn();
 
-      jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
-        subscribe: jest.fn(() => ({ unsubscribe: unsubscribeFn }))
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
+        subscribe: jest.fn(() => ({ unsubscribe: unsubscribeFn })),
       } as any);
 
       const handle = manager.subscribe(mockSubscription);
@@ -217,11 +251,11 @@ describe('CascadeSubscriptionManager', () => {
       expect(unsubscribeFn).toHaveBeenCalledTimes(1);
     });
 
-    it('should not leak memory on repeated subscribe/unsubscribe cycles', () => {
+    it("should not leak memory on repeated subscribe/unsubscribe cycles", () => {
       const unsubscribeFn = jest.fn();
 
-      jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
-        subscribe: jest.fn(() => ({ unsubscribe: unsubscribeFn }))
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
+        subscribe: jest.fn(() => ({ unsubscribe: unsubscribeFn })),
       } as any);
 
       // Perform multiple subscribe/unsubscribe cycles
@@ -242,37 +276,44 @@ describe('CascadeSubscriptionManager', () => {
     });
   });
 
-  describe('Concurrent Subscription Tests', () => {
-    it('should handle rapid subscription updates without race conditions', () => {
+  describe("Concurrent Subscription Tests", () => {
+    it("should handle rapid subscription updates without race conditions", () => {
       const onCascade1 = jest.fn();
       const onCascade2 = jest.fn();
       let _subscriber1: any;
       let _subscriber2: any;
       let subscriber3: any;
 
-      jest.spyOn(apolloClient, 'subscribe')
+      jest
+        .spyOn(apolloClient, "subscribe")
         .mockReturnValueOnce({
           subscribe: jest.fn((sub) => {
             subscriber1 = sub;
             return { unsubscribe: jest.fn() };
-          })
+          }),
         } as any)
         .mockReturnValueOnce({
           subscribe: jest.fn((sub) => {
             subscriber2 = sub;
             return { unsubscribe: jest.fn() };
-          })
+          }),
         } as any)
         .mockReturnValueOnce({
           subscribe: jest.fn((sub) => {
             subscriber3 = sub;
             return { unsubscribe: jest.fn() };
-          })
+          }),
         } as any);
 
-      const handle1 = manager.subscribe(mockSubscription, { onCascade: onCascade1 });
-      const handle2 = manager.subscribe(mockSubscription, { onCascade: onCascade2 });
-      const handle3 = manager.subscribe(mockSubscription, { onCascade: onCascade3 });
+      const handle1 = manager.subscribe(mockSubscription, {
+        onCascade: onCascade1,
+      });
+      const handle2 = manager.subscribe(mockSubscription, {
+        onCascade: onCascade2,
+      });
+      const handle3 = manager.subscribe(mockSubscription, {
+        onCascade: onCascade3,
+      });
 
       // Pause one, unsubscribe another, leave one active
       handle1.pause();
@@ -288,13 +329,24 @@ describe('CascadeSubscriptionManager', () => {
         data: {
           userUpdated: {
             cascade: {
-              updated: [{ __typename: 'User', id: '1', operation: 'UPDATED', entity: { id: '1' } }],
+              updated: [
+                {
+                  __typename: "User",
+                  id: "1",
+                  operation: "UPDATED",
+                  entity: { id: "1" },
+                },
+              ],
               deleted: [],
               invalidations: [],
-              metadata: { timestamp: new Date().toISOString(), depth: 1, affectedCount: 1 }
-            }
-          }
-        }
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
       });
 
       expect(onCascade1).not.toHaveBeenCalled();
@@ -302,7 +354,7 @@ describe('CascadeSubscriptionManager', () => {
       expect(onCascade3).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle mixed subscription types concurrently', () => {
+    it("should handle mixed subscription types concurrently", () => {
       const onCascade1 = jest.fn();
       const onCascade2 = jest.fn();
       const onCascade3 = jest.fn();
@@ -310,43 +362,59 @@ describe('CascadeSubscriptionManager', () => {
       let subscriber2: any;
       let subscriber3: any;
 
-      jest.spyOn(apolloClient, 'subscribe')
+      jest
+        .spyOn(apolloClient, "subscribe")
         .mockReturnValueOnce({
           subscribe: jest.fn((sub) => {
             subscriber1 = sub;
             return { unsubscribe: jest.fn() };
-          })
+          }),
         } as any)
         .mockReturnValueOnce({
           subscribe: jest.fn((sub) => {
             subscriber2 = sub;
             return { unsubscribe: jest.fn() };
-          })
+          }),
         } as any)
         .mockReturnValueOnce({
           subscribe: jest.fn((sub) => {
             subscriber3 = sub;
             return { unsubscribe: jest.fn() };
-          })
+          }),
         } as any);
 
       // Different subscription types
       manager.subscribe(mockSubscription, { onCascade: onCascade1 });
-      manager.subscribeToEntity('User', mockSubscription, { onCascade: onCascade2 });
-      manager.subscribeToEntityById('User', '1', mockSubscription, { onCascade: onCascade3 });
+      manager.subscribeToEntity("User", mockSubscription, {
+        onCascade: onCascade2,
+      });
+      manager.subscribeToEntityById("User", "1", mockSubscription, {
+        onCascade: onCascade3,
+      });
 
       // Send event that should trigger all three
       const event = {
         data: {
           userUpdated: {
             cascade: {
-              updated: [{ __typename: 'User', id: '1', operation: 'UPDATED', entity: { id: '1' } }],
+              updated: [
+                {
+                  __typename: "User",
+                  id: "1",
+                  operation: "UPDATED",
+                  entity: { id: "1" },
+                },
+              ],
               deleted: [],
               invalidations: [],
-              metadata: { timestamp: new Date().toISOString(), depth: 1, affectedCount: 1 }
-            }
-          }
-        }
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
       };
 
       subscriber1.next(event);
@@ -359,16 +427,16 @@ describe('CascadeSubscriptionManager', () => {
     });
   });
 
-  describe('Error Recovery', () => {
-    it('should mark subscription as inactive on network error', () => {
+  describe("Error Recovery", () => {
+    it("should mark subscription as inactive on network error", () => {
       const onError = jest.fn();
       let subscriber: any;
 
-      jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
         subscribe: jest.fn((sub) => {
           subscriber = sub;
           return { unsubscribe: jest.fn() };
-        })
+        }),
       } as any);
 
       const handle = manager.subscribe(mockSubscription, { onError });
@@ -376,22 +444,22 @@ describe('CascadeSubscriptionManager', () => {
       expect(handle.isActive).toBe(true);
 
       // Simulate network error
-      subscriber.error(new Error('WebSocket connection failed'));
+      subscriber.error(new Error("WebSocket connection failed"));
 
       expect(handle.isActive).toBe(false);
       expect(onError).toHaveBeenCalledWith(expect.any(Error));
     });
 
-    it('should handle malformed cascade data gracefully', () => {
+    it("should handle malformed cascade data gracefully", () => {
       const onCascade = jest.fn();
       const onError = jest.fn();
       let subscriber: any;
 
-      jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
         subscribe: jest.fn((sub) => {
           subscriber = sub;
           return { unsubscribe: jest.fn() };
-        })
+        }),
       } as any);
 
       manager.subscribe(mockSubscription, { onCascade, onError });
@@ -399,8 +467,8 @@ describe('CascadeSubscriptionManager', () => {
       // Send malformed data (null cascade)
       subscriber.next({
         data: {
-          userUpdated: null
-        }
+          userUpdated: null,
+        },
       });
 
       // Should not crash, just not call onCascade
@@ -409,8 +477,8 @@ describe('CascadeSubscriptionManager', () => {
       // Send data with no cascade field
       subscriber.next({
         data: {
-          userUpdated: { id: '1', name: 'Test' }
-        }
+          userUpdated: { id: "1", name: "Test" },
+        },
       });
 
       // May or may not extract cascade depending on implementation
@@ -418,34 +486,48 @@ describe('CascadeSubscriptionManager', () => {
       expect(onError).not.toHaveBeenCalled();
     });
 
-    it('should continue processing after callback error', () => {
+    it("should continue processing after callback error", () => {
       const onCascade = jest.fn().mockImplementationOnce(() => {
-        throw new Error('Callback error');
+        throw new Error("Callback error");
       });
       const onError = jest.fn();
       let subscriber: any;
 
-      jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
         subscribe: jest.fn((sub) => {
           subscriber = sub;
           return { unsubscribe: jest.fn() };
-        })
+        }),
       } as any);
 
-      const handle = manager.subscribe(mockSubscription, { onCascade, onError });
+      const handle = manager.subscribe(mockSubscription, {
+        onCascade,
+        onError,
+      });
 
       // First event - callback throws
       subscriber.next({
         data: {
           userUpdated: {
             cascade: {
-              updated: [{ __typename: 'User', id: '1', operation: 'UPDATED', entity: { id: '1' } }],
+              updated: [
+                {
+                  __typename: "User",
+                  id: "1",
+                  operation: "UPDATED",
+                  entity: { id: "1" },
+                },
+              ],
               deleted: [],
               invalidations: [],
-              metadata: { timestamp: new Date().toISOString(), depth: 1, affectedCount: 1 }
-            }
-          }
-        }
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
       });
 
       expect(onError).toHaveBeenCalled();
@@ -460,65 +542,90 @@ describe('CascadeSubscriptionManager', () => {
         data: {
           userUpdated: {
             cascade: {
-              updated: [{ __typename: 'User', id: '2', operation: 'UPDATED', entity: { id: '2' } }],
+              updated: [
+                {
+                  __typename: "User",
+                  id: "2",
+                  operation: "UPDATED",
+                  entity: { id: "2" },
+                },
+              ],
               deleted: [],
               invalidations: [],
-              metadata: { timestamp: new Date().toISOString(), depth: 1, affectedCount: 1 }
-            }
-          }
-        }
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
       });
 
       expect(onCascade).toHaveBeenCalled();
     });
   });
 
-  it('should apply queued cascade updates after reconnection', () => {
+  it("should apply queued cascade updates after reconnection", () => {
     const onCascade = jest.fn();
     let subscriber: any;
 
-    jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
+    jest.spyOn(apolloClient, "subscribe").mockReturnValue({
       subscribe: jest.fn((sub) => {
         subscriber = sub;
         return { unsubscribe: jest.fn() };
-      })
-      } as any);
+      }),
+    } as any);
 
-      const _handle = manager.subscribe(mockSubscription, { onCascade });
+    const _handle = manager.subscribe(mockSubscription, { onCascade });
 
-      // Simulate reconnection scenario - send multiple updates
+    // Simulate reconnection scenario - send multiple updates
     subscriber.next({
       data: {
         userUpdated: {
           cascade: {
             updated: [
-              { __typename: 'User', id: '1', operation: 'UPDATED', entity: { id: '1' } },
-              { __typename: 'User', id: '2', operation: 'CREATED', entity: { id: '2' } }
+              {
+                __typename: "User",
+                id: "1",
+                operation: "UPDATED",
+                entity: { id: "1" },
+              },
+              {
+                __typename: "User",
+                id: "2",
+                operation: "CREATED",
+                entity: { id: "2" },
+              },
             ],
             deleted: [],
             invalidations: [],
-            metadata: { timestamp: new Date().toISOString(), depth: 1, affectedCount: 2 }
-          }
-        }
-      }
+            metadata: {
+              timestamp: new Date().toISOString(),
+              depth: 1,
+              affectedCount: 2,
+            },
+          },
+        },
+      },
     });
 
     expect(onCascade).toHaveBeenCalledTimes(1);
     expect(onCascade).toHaveBeenCalledWith(
       expect.objectContaining({
         updated: expect.arrayContaining([
-          expect.objectContaining({ __typename: 'User', id: '1' }),
-          expect.objectContaining({ __typename: 'User', id: '2' })
-        ])
-      })
+          expect.objectContaining({ __typename: "User", id: "1" }),
+          expect.objectContaining({ __typename: "User", id: "2" }),
+        ]),
+      }),
     );
   });
 
-  it('should not leak memory on repeated subscribe/unsubscribe cycles', () => {
+  it("should not leak memory on repeated subscribe/unsubscribe cycles", () => {
     const unsubscribeFn = jest.fn();
 
-    jest.spyOn(apolloClient, 'subscribe').mockReturnValue({
-      subscribe: jest.fn(() => ({ unsubscribe: unsubscribeFn }))
+    jest.spyOn(apolloClient, "subscribe").mockReturnValue({
+      subscribe: jest.fn(() => ({ unsubscribe: unsubscribeFn })),
     } as any);
 
     // Perform multiple subscribe/unsubscribe cycles
@@ -538,28 +645,33 @@ describe('CascadeSubscriptionManager', () => {
     expect(manager.getActiveSubscriptions()).toHaveLength(0);
   });
 
-  it('should handle rapid subscription updates without race conditions', () => {
+  it("should handle rapid subscription updates without race conditions", () => {
     const onCascade1 = jest.fn();
     const onCascade2 = jest.fn();
     let subscriber1: any;
     let subscriber2: any;
 
-    jest.spyOn(apolloClient, 'subscribe')
+    jest
+      .spyOn(apolloClient, "subscribe")
       .mockReturnValueOnce({
         subscribe: jest.fn((sub) => {
           subscriber1 = sub;
           return { unsubscribe: jest.fn() };
-        })
+        }),
       } as any)
       .mockReturnValueOnce({
         subscribe: jest.fn((sub) => {
           subscriber2 = sub;
           return { unsubscribe: jest.fn() };
-        })
+        }),
       } as any);
 
-      const _handle1 = manager.subscribe(mockSubscription, { onCascade: onCascade1 });
-      const _handle2 = manager.subscribe(mockSubscription, { onCascade: onCascade2 });
+    const _handle1 = manager.subscribe(mockSubscription, {
+      onCascade: onCascade1,
+    });
+    const _handle2 = manager.subscribe(mockSubscription, {
+      onCascade: onCascade2,
+    });
 
     // Send rapid updates to both subscriptions
     for (let i = 0; i < 10; i++) {
@@ -567,26 +679,48 @@ describe('CascadeSubscriptionManager', () => {
         data: {
           userUpdated: {
             cascade: {
-              updated: [{ __typename: 'User', id: `user${i}`, operation: 'UPDATED', entity: { id: `user${i}` } }],
+              updated: [
+                {
+                  __typename: "User",
+                  id: `user${i}`,
+                  operation: "UPDATED",
+                  entity: { id: `user${i}` },
+                },
+              ],
               deleted: [],
               invalidations: [],
-              metadata: { timestamp: new Date().toISOString(), depth: 1, affectedCount: 1 }
-            }
-          }
-        }
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
       });
 
       subscriber2.next({
         data: {
           userUpdated: {
             cascade: {
-              updated: [{ __typename: 'User', id: `user${i + 10}`, operation: 'CREATED', entity: { id: `user${i + 10}` } }],
+              updated: [
+                {
+                  __typename: "User",
+                  id: `user${i + 10}`,
+                  operation: "CREATED",
+                  entity: { id: `user${i + 10}` },
+                },
+              ],
               deleted: [],
               invalidations: [],
-              metadata: { timestamp: new Date().toISOString(), depth: 1, affectedCount: 1 }
-            }
-          }
-        }
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
       });
     }
 

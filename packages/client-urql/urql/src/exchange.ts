@@ -5,18 +5,22 @@
  * from the extensions field, applying updates to the cache.
  */
 
-import { pipe, tap } from 'wonka';
-import type { Exchange, Operation } from '@urql/core';
-import { createScopedLogger, RetryOptions, CascadeError } from '@graphql-cascade/client';
+import { pipe, tap } from "wonka";
+import type { Exchange, Operation } from "@urql/core";
+import {
+  createScopedLogger,
+  RetryOptions,
+  CascadeError,
+} from "@graphql-cascade/client";
 import {
   CascadeExchangeOptions,
   CascadeUpdates,
   CascadeOperation,
   InvalidationStrategy,
   CascadeApplyResult,
-} from './types';
+} from "./types";
 
-const logger = createScopedLogger('[Cascade:URQL]');
+const logger = createScopedLogger("[Cascade:URQL]");
 
 /**
  * Creates a URQL exchange for processing GraphQL Cascade responses.
@@ -42,42 +46,48 @@ const logger = createScopedLogger('[Cascade:URQL]');
  * });
  * ```
  */
-export const cascadeExchange = (options: CascadeExchangeOptions = {}): Exchange => {
-  const { onCascade, onCacheUpdate, onCacheDelete, debug, cacheAdapter } = options;
+export const cascadeExchange = (
+  options: CascadeExchangeOptions = {},
+): Exchange => {
+  const { onCascade, onCacheUpdate, onCacheDelete, debug, cacheAdapter } =
+    options;
 
-  return ({ forward }) => (ops$) => {
-    return pipe(
-      forward(ops$),
-      tap((result) => {
-        // Check for cascade data in extensions
-        const cascade = result.extensions?.cascade as CascadeUpdates | undefined;
+  return ({ forward }) =>
+    (ops$) => {
+      return pipe(
+        forward(ops$),
+        tap((result) => {
+          // Check for cascade data in extensions
+          const cascade = result.extensions?.cascade as
+            | CascadeUpdates
+            | undefined;
 
-        if (!cascade) {
-          return;
-        }
-
-        if (debug) {
-          logger.debug('Received cascade data:', cascade);
-        }
-
-        // Invoke callback if provided
-        onCascade?.(cascade);
-
-        // Apply updates if cache adapter is provided
-        if (cacheAdapter) {
-          const applyResult = applyCascadeUpdates(cascade, cacheAdapter, {
-            onCacheUpdate,
-            onCacheDelete,
-            debug,
-          });
+          if (!cascade) {
+            return;
+          }
 
           if (debug) {
-            logger.debug('Applied updates:', applyResult);
+            logger.debug("Received cascade data:", cascade);
           }
-        }
-      })
-    );
-  };
+
+          // Invoke callback if provided
+          onCascade?.(cascade);
+
+          // Apply updates if cache adapter is provided
+          if (cacheAdapter) {
+            const applyResult = applyCascadeUpdates(cascade, cacheAdapter, {
+              onCacheUpdate,
+              onCacheDelete,
+              debug,
+            });
+
+            if (debug) {
+              logger.debug("Applied updates:", applyResult);
+            }
+          }
+        }),
+      );
+    };
 };
 
 /**
@@ -85,12 +95,12 @@ export const cascadeExchange = (options: CascadeExchangeOptions = {}): Exchange 
  */
 function applyCascadeUpdates(
   cascade: CascadeUpdates,
-  cacheAdapter: NonNullable<CascadeExchangeOptions['cacheAdapter']>,
+  cacheAdapter: NonNullable<CascadeExchangeOptions["cacheAdapter"]>,
   options: {
-    onCacheUpdate?: CascadeExchangeOptions['onCacheUpdate'];
-    onCacheDelete?: CascadeExchangeOptions['onCacheDelete'];
+    onCacheUpdate?: CascadeExchangeOptions["onCacheUpdate"];
+    onCacheDelete?: CascadeExchangeOptions["onCacheDelete"];
     debug?: boolean;
-  }
+  },
 ): CascadeApplyResult {
   const result: CascadeApplyResult = {
     updatedCount: 0,
@@ -112,9 +122,11 @@ function applyCascadeUpdates(
         result.updatedCount++;
       }
     } catch (error) {
-      result.errors.push(error instanceof Error ? error : new Error(String(error)));
+      result.errors.push(
+        error instanceof Error ? error : new Error(String(error)),
+      );
       if (options.debug) {
-        logger.error('Error applying update:', error);
+        logger.error("Error applying update:", error);
       }
     }
   }
@@ -126,9 +138,11 @@ function applyCascadeUpdates(
       options.onCacheDelete?.(deleted.__typename, deleted.id);
       result.deletedCount++;
     } catch (error) {
-      result.errors.push(error instanceof Error ? error : new Error(String(error)));
+      result.errors.push(
+        error instanceof Error ? error : new Error(String(error)),
+      );
       if (options.debug) {
-        logger.error('Error applying deletion:', error);
+        logger.error("Error applying deletion:", error);
       }
     }
   }
@@ -144,7 +158,7 @@ function applyCascadeUpdates(
           // Refetch is async, we don't await here
           cacheAdapter.refetch(invalidation).catch((error) => {
             if (options.debug) {
-              logger.error('Error refetching:', error);
+              logger.error("Error refetching:", error);
             }
           });
           break;
@@ -154,9 +168,11 @@ function applyCascadeUpdates(
       }
       result.invalidatedCount++;
     } catch (error) {
-      result.errors.push(error instanceof Error ? error : new Error(String(error)));
+      result.errors.push(
+        error instanceof Error ? error : new Error(String(error)),
+      );
       if (options.debug) {
-        logger.error('Error applying invalidation:', error);
+        logger.error("Error applying invalidation:", error);
       }
     }
   }
@@ -173,7 +189,9 @@ function applyCascadeUpdates(
  * 3. Implements exponential backoff retry logic
  * 4. Provides callbacks for retry lifecycle events
  */
-export const cascadeErrorExchange = (options: CascadeErrorExchangeOptions = {}): Exchange => {
+export const cascadeErrorExchange = (
+  options: CascadeErrorExchangeOptions = {},
+): Exchange => {
   const {
     onRetryAttempt: _onRetryAttempt,
     onRetrySuccess: _onRetrySuccess,
@@ -182,22 +200,23 @@ export const cascadeErrorExchange = (options: CascadeErrorExchangeOptions = {}):
     ..._retryOptions
   } = options;
 
-  return ({ forward }) => ops$ => {
-    return pipe(
-      forward(ops$),
-      tap((result) => {
-        if (result.error) {
-          const cascadeErrors = extractErrors(result.error);
+  return ({ forward }) =>
+    (ops$) => {
+      return pipe(
+        forward(ops$),
+        tap((result) => {
+          if (result.error) {
+            const cascadeErrors = extractErrors(result.error);
 
-          if (cascadeErrors.length > 0) {
-            // For now, just call the failure callback
-            // Retry logic in URQL would require a more complex exchange
-            onRetryFailure?.(result.operation, cascadeErrors, 1);
+            if (cascadeErrors.length > 0) {
+              // For now, just call the failure callback
+              // Retry logic in URQL would require a more complex exchange
+              onRetryFailure?.(result.operation, cascadeErrors, 1);
+            }
           }
-        }
-      })
-    );
-  };
+        }),
+      );
+    };
 };
 
 /**
@@ -207,7 +226,11 @@ export interface CascadeErrorExchangeOptions extends RetryOptions {
   /**
    * Callback when a retry attempt is made.
    */
-  onRetryAttempt?: (operation: Operation, attempt: number, error: CascadeError) => void;
+  onRetryAttempt?: (
+    operation: Operation,
+    attempt: number,
+    error: CascadeError,
+  ) => void;
 
   /**
    * Callback when retry succeeds.
@@ -217,7 +240,11 @@ export interface CascadeErrorExchangeOptions extends RetryOptions {
   /**
    * Callback when retry fails completely.
    */
-  onRetryFailure?: (operation: Operation, errors: CascadeError[], attempts: number) => void;
+  onRetryFailure?: (
+    operation: Operation,
+    errors: CascadeError[],
+    attempts: number,
+  ) => void;
 
   /**
    * Custom function to extract cascade errors from URQL errors.
@@ -247,7 +274,7 @@ export function extractCascadeErrors(error: any): CascadeError[] {
           message: gqlError.message,
           code: extensions.code as any,
           path: gqlError.path,
-          extensions
+          extensions,
         });
       }
     }
@@ -263,9 +290,9 @@ export function extractCascadeErrors(error: any): CascadeError[] {
     for (const gqlError of error.graphQLErrors) {
       cascadeErrors.push({
         message: gqlError.message,
-        code: 'INTERNAL_ERROR' as any,
+        code: "INTERNAL_ERROR" as any,
         path: gqlError.path,
-        extensions: gqlError.extensions
+        extensions: gqlError.extensions,
       });
     }
   }
@@ -279,9 +306,11 @@ export function extractCascadeErrors(error: any): CascadeError[] {
  * @param response - GraphQL response object
  * @returns Cascade updates or null if not present
  */
-export function extractCascadeData(response: { extensions?: Record<string, unknown> }): CascadeUpdates | null {
+export function extractCascadeData(response: {
+  extensions?: Record<string, unknown>;
+}): CascadeUpdates | null {
   const cascade = response.extensions?.cascade;
-  if (!cascade || typeof cascade !== 'object') {
+  if (!cascade || typeof cascade !== "object") {
     return null;
   }
   return cascade as CascadeUpdates;
@@ -293,6 +322,8 @@ export function extractCascadeData(response: { extensions?: Record<string, unkno
  * @param response - GraphQL response object
  * @returns True if cascade data is present
  */
-export function hasCascadeData(response: { extensions?: Record<string, unknown> }): boolean {
+export function hasCascadeData(response: {
+  extensions?: Record<string, unknown>;
+}): boolean {
   return !!response.extensions?.cascade;
 }

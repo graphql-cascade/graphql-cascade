@@ -1,14 +1,25 @@
-import React from 'react';
-import { useMutation, useApolloClient, MutationHookOptions, OperationVariables } from '@apollo/client';
-import { DocumentNode } from 'graphql';
-import { CascadeResponse, CascadeUpdates, CascadeConflictResolver } from '@graphql-cascade/client';
-import { ApolloCascadeClient } from './client';
+import React from "react";
+import {
+  useMutation,
+  useApolloClient,
+  MutationHookOptions,
+  OperationVariables,
+} from "@apollo/client";
+import { DocumentNode } from "graphql";
+import {
+  CascadeResponse,
+  CascadeUpdates,
+  CascadeConflictResolver,
+} from "@graphql-cascade/client";
+import { ApolloCascadeClient } from "./client";
 
 /**
  * Options for useCascadeMutation hook
  */
-export interface UseCascadeMutationOptions<TData, TVariables>
-  extends Omit<MutationHookOptions<TData, TVariables>, 'onCompleted' | 'onError' | 'update'> {
+export interface UseCascadeMutationOptions<TData, TVariables> extends Omit<
+  MutationHookOptions<TData, TVariables>,
+  "onCompleted" | "onError" | "update"
+> {
   /**
    * Whether to enable optimistic updates
    */
@@ -38,25 +49,33 @@ export interface UseCascadeMutationOptions<TData, TVariables>
 /**
  * Conflict resolution strategies for optimistic updates
  */
-export type ConflictResolutionStrategy = 'SERVER_WINS' | 'CLIENT_WINS' | 'MERGE' | 'MANUAL';
+export type ConflictResolutionStrategy =
+  | "SERVER_WINS"
+  | "CLIENT_WINS"
+  | "MERGE"
+  | "MANUAL";
 
 /**
  * Optimistic response generator function type
  */
-export type OptimisticResponseGenerator<TData, TVariables> = (variables: TVariables) => CascadeResponse<TData>;
+export type OptimisticResponseGenerator<TData, TVariables> = (
+  variables: TVariables,
+) => CascadeResponse<TData>;
 
 /**
  * Return type for useCascadeMutation hook
  */
 export type UseCascadeMutationResult<TData, TVariables> = [
-  (options?: MutationHookOptions<TData, TVariables>) => Promise<CascadeMutationResult<TData>>,
+  (
+    options?: MutationHookOptions<TData, TVariables>,
+  ) => Promise<CascadeMutationResult<TData>>,
   {
     data?: TData;
     loading: boolean;
     error?: Error;
     called: boolean;
     cascade?: CascadeUpdates;
-  }
+  },
 ];
 
 /**
@@ -79,9 +98,12 @@ export type RollbackFunction = () => void;
  * @param options - Hook options including optimistic update configuration
  * @returns Tuple of [mutate function, result object]
  */
-export function useCascadeMutation<TData = any, TVariables extends OperationVariables = OperationVariables>(
+export function useCascadeMutation<
+  TData = any,
+  TVariables extends OperationVariables = OperationVariables,
+>(
   mutation: DocumentNode,
-  options: UseCascadeMutationOptions<TData, TVariables> = {}
+  options: UseCascadeMutationOptions<TData, TVariables> = {},
 ): UseCascadeMutationResult<TData, TVariables> {
   const apolloClient = useApolloClient();
   const cascadeClient = new ApolloCascadeClient(apolloClient);
@@ -91,12 +113,14 @@ export function useCascadeMutation<TData = any, TVariables extends OperationVari
     optimisticCascadeResponse,
     onCompleted,
     onError,
-    conflictResolution = 'SERVER_WINS',
+    conflictResolution = "SERVER_WINS",
     ...apolloOptions
   } = options;
 
   // State for tracking cascade updates
-  const [cascadeResult, setCascadeResult] = React.useState<CascadeUpdates | undefined>();
+  const [cascadeResult, setCascadeResult] = React.useState<
+    CascadeUpdates | undefined
+  >();
 
   // Apollo mutation hook
   const [mutate, { data, loading, error, called }] = useMutation(mutation, {
@@ -105,7 +129,9 @@ export function useCascadeMutation<TData = any, TVariables extends OperationVari
       try {
         // Extract cascade response from mutation result
         const mutationName = Object.keys(apolloData)[0];
-        const cascadeResponse = apolloData[mutationName] as CascadeResponse<TData>;
+        const cascadeResponse = apolloData[
+          mutationName
+        ] as CascadeResponse<TData>;
 
         if (cascadeResponse.cascade) {
           setCascadeResult(cascadeResponse.cascade);
@@ -119,7 +145,7 @@ export function useCascadeMutation<TData = any, TVariables extends OperationVari
           }
         }
       } catch (err) {
-        console.error('Error processing cascade response:', err);
+        console.error("Error processing cascade response:", err);
         if (onError) {
           onError(err as Error, {} as TVariables);
         }
@@ -151,14 +177,19 @@ export function useCascadeMutation<TData = any, TVariables extends OperationVari
 
         // Extract cascade data
         const mutationName = Object.keys(result.data!)[0];
-        const cascadeResponse = result.data![mutationName] as CascadeResponse<TData>;
+        const cascadeResponse = result.data![
+          mutationName
+        ] as CascadeResponse<TData>;
 
         // Handle conflicts if optimistic update was applied
         if (optimistic && rollbackFn && cascadeResponse.cascade) {
           const hasConflicts = detectConflicts(cascadeResponse);
           if (hasConflicts) {
             // Resolve conflicts based on strategy
-            const resolvedResponse = resolveConflicts(cascadeResponse, conflictResolution);
+            const resolvedResponse = resolveConflicts(
+              cascadeResponse,
+              conflictResolution,
+            );
             // Rollback optimistic and apply resolved response
             rollbackFn();
             cascadeClient.applyCascade(resolvedResponse);
@@ -167,9 +198,8 @@ export function useCascadeMutation<TData = any, TVariables extends OperationVari
 
         return {
           data: cascadeResponse.data,
-          cascade: cascadeResponse.cascade
+          cascade: cascadeResponse.cascade,
         };
-
       } catch (error) {
         // Rollback on error (if not already done in onError)
         if (rollbackFn) {
@@ -178,13 +208,15 @@ export function useCascadeMutation<TData = any, TVariables extends OperationVari
         throw error;
       }
     },
-    [mutate, optimistic, optimisticCascadeResponse, cascadeClient]
+    [mutate, optimistic, optimisticCascadeResponse, cascadeClient],
   );
 
   // Helper function to apply optimistic updates
   const applyOptimisticUpdate = (variables: TVariables): RollbackFunction => {
     if (!optimisticCascadeResponse) {
-      throw new Error('optimisticCascadeResponse function is required for optimistic updates');
+      throw new Error(
+        "optimisticCascadeResponse function is required for optimistic updates",
+      );
     }
 
     const optimisticResponse = optimisticCascadeResponse(variables);
@@ -210,8 +242,14 @@ export function useCascadeMutation<TData = any, TVariables extends OperationVari
   };
 
   // Helper function to capture rollback state
-  const captureRollbackState = (cascade: CascadeUpdates): Array<{ __typename: string; id: string; previousData: any }> => {
-    const rollbackInfo: Array<{ __typename: string; id: string; previousData: any }> = [];
+  const captureRollbackState = (
+    cascade: CascadeUpdates,
+  ): Array<{ __typename: string; id: string; previousData: any }> => {
+    const rollbackInfo: Array<{
+      __typename: string;
+      id: string;
+      previousData: any;
+    }> = [];
 
     cascade.updated.forEach(({ __typename, id }) => {
       const currentData = cascadeClient.getCache().read(__typename, id);
@@ -232,9 +270,14 @@ export function useCascadeMutation<TData = any, TVariables extends OperationVari
 
     // Check for conflicts in updated entities
     for (const updated of serverResponse.cascade.updated) {
-      const optimisticData = cascadeClient.getCache().read(updated.__typename, updated.id);
+      const optimisticData = cascadeClient
+        .getCache()
+        .read(updated.__typename, updated.id);
       if (optimisticData) {
-        const conflict = conflictResolver.detectConflicts(optimisticData, updated.entity);
+        const conflict = conflictResolver.detectConflicts(
+          optimisticData,
+          updated.entity,
+        );
         if (conflict.hasConflict) {
           return true;
         }
@@ -247,7 +290,7 @@ export function useCascadeMutation<TData = any, TVariables extends OperationVari
   // Helper function to resolve conflicts
   const resolveConflicts = (
     serverResponse: CascadeResponse<TData>,
-    strategy: ConflictResolutionStrategy
+    strategy: ConflictResolutionStrategy,
   ): CascadeResponse<TData> => {
     const conflictResolver = new CascadeConflictResolver();
     const resolvedResponse = { ...serverResponse };
@@ -255,26 +298,32 @@ export function useCascadeMutation<TData = any, TVariables extends OperationVari
     // Resolve conflicts in updated entities
     resolvedResponse.cascade = {
       ...serverResponse.cascade,
-      updated: serverResponse.cascade.updated.map(updated => {
-        const optimisticData = cascadeClient.getCache().read(updated.__typename, updated.id);
+      updated: serverResponse.cascade.updated.map((updated) => {
+        const optimisticData = cascadeClient
+          .getCache()
+          .read(updated.__typename, updated.id);
         if (optimisticData) {
-          const conflict = conflictResolver.detectConflicts(optimisticData, updated.entity);
+          const conflict = conflictResolver.detectConflicts(
+            optimisticData,
+            updated.entity,
+          );
           if (conflict.hasConflict) {
-            const resolvedEntity = conflictResolver.resolveConflicts(conflict, strategy);
+            const resolvedEntity = conflictResolver.resolveConflicts(
+              conflict,
+              strategy,
+            );
             return {
               ...updated,
-              entity: resolvedEntity
+              entity: resolvedEntity,
             };
           }
         }
         return updated;
-      })
+      }),
     };
 
     return resolvedResponse;
   };
-
-
 
   return [
     cascadeMutate,

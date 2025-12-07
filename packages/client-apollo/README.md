@@ -22,32 +22,57 @@ This package requires the following peer dependencies:
 ### Basic Setup
 
 ```typescript
-import { ApolloClient, InMemoryCache } from '@apollo/client';
-import { ApolloCascadeClient } from '@graphql-cascade/client-apollo';
+import { ApolloClient, InMemoryCache } from "@apollo/client";
+import { ApolloCascadeClient } from "@graphql-cascade/client-apollo";
 
 const client = new ApolloClient({
-  uri: 'http://localhost:4000/graphql',
-  cache: new InMemoryCache()
+  uri: "http://localhost:4000/graphql",
+  cache: new InMemoryCache(),
 });
 
 const cascade = new ApolloCascadeClient(client);
 
 // Mutations automatically update the cache
-const result = await cascade.mutate(gql`
-  mutation CreateTodo($input: CreateTodoInput!) {
-    createTodo(input: $input) {
-      success
-      errors { message code }
-      data { id title completed }
-      cascade {
-        updated { __typename id operation entity }
-        deleted { __typename id }
-        invalidations { queryName strategy scope }
-        metadata { timestamp affectedCount }
+const result = await cascade.mutate(
+  gql`
+    mutation CreateTodo($input: CreateTodoInput!) {
+      createTodo(input: $input) {
+        success
+        errors {
+          message
+          code
+        }
+        data {
+          id
+          title
+          completed
+        }
+        cascade {
+          updated {
+            __typename
+            id
+            operation
+            entity
+          }
+          deleted {
+            __typename
+            id
+          }
+          invalidations {
+            queryName
+            strategy
+            scope
+          }
+          metadata {
+            timestamp
+            affectedCount
+          }
+        }
       }
     }
-  }
-`, { input: { title: 'Learn GraphQL Cascade' } });
+  `,
+  { input: { title: "Learn GraphQL Cascade" } },
+);
 
 console.log(result); // { id: '1', title: 'Learn GraphQL Cascade', completed: false }
 ```
@@ -55,9 +80,9 @@ console.log(result); // { id: '1', title: 'Learn GraphQL Cascade', completed: fa
 ### React Integration with Optimistic Updates
 
 ```tsx
-import React from 'react';
-import { ApolloProvider } from '@apollo/client';
-import { useCascadeMutation } from '@graphql-cascade/client-apollo';
+import React from "react";
+import { ApolloProvider } from "@apollo/client";
+import { useCascadeMutation } from "@graphql-cascade/client-apollo";
 
 const TodoItem: React.FC<{ todo: Todo }> = ({ todo }) => {
   const [toggleTodo, { loading }] = useCascadeMutation(
@@ -65,10 +90,21 @@ const TodoItem: React.FC<{ todo: Todo }> = ({ todo }) => {
       mutation ToggleTodo($id: ID!) {
         toggleTodo(id: $id) {
           success
-          data { id completed }
+          data {
+            id
+            completed
+          }
           cascade {
-            updated { __typename id operation entity }
-            metadata { timestamp affectedCount }
+            updated {
+              __typename
+              id
+              operation
+              entity
+            }
+            metadata {
+              timestamp
+              affectedCount
+            }
           }
         }
       }
@@ -79,31 +115,35 @@ const TodoItem: React.FC<{ todo: Todo }> = ({ todo }) => {
         success: true,
         data: { id, completed: !todo.completed },
         cascade: {
-          updated: [{
-            __typename: 'Todo',
-            id,
-            operation: 'UPDATED',
-            entity: { id, completed: !todo.completed }
-          }],
+          updated: [
+            {
+              __typename: "Todo",
+              id,
+              operation: "UPDATED",
+              entity: { id, completed: !todo.completed },
+            },
+          ],
           deleted: [],
           invalidations: [],
-          metadata: { timestamp: new Date().toISOString(), affectedCount: 1 }
-        }
+          metadata: { timestamp: new Date().toISOString(), affectedCount: 1 },
+        },
       }),
-      conflictResolution: 'SERVER_WINS'
-    }
+      conflictResolution: "SERVER_WINS",
+    },
   );
 
   return (
     <div>
-      <span style={{ textDecoration: todo.completed ? 'line-through' : 'none' }}>
+      <span
+        style={{ textDecoration: todo.completed ? "line-through" : "none" }}
+      >
         {todo.title}
       </span>
       <button
         onClick={() => toggleTodo({ variables: { id: todo.id } })}
         disabled={loading}
       >
-        {loading ? 'Updating...' : 'Toggle'}
+        {loading ? "Updating..." : "Toggle"}
       </button>
     </div>
   );
@@ -141,7 +181,10 @@ class ApolloCascadeClient {
 A React hook that wraps Apollo's `useMutation` with cascade support and optimistic updates.
 
 ```typescript
-interface UseCascadeMutationOptions<TData, TVariables> extends Omit<MutationHookOptions<TData, TVariables>, 'onCompleted' | 'onError' | 'update'> {
+interface UseCascadeMutationOptions<TData, TVariables> extends Omit<
+  MutationHookOptions<TData, TVariables>,
+  "onCompleted" | "onError" | "update"
+> {
   optimistic?: boolean;
   optimisticCascadeResponse?: OptimisticResponseGenerator<TData, TVariables>;
   onCompleted?: (data: TData, cascade: CascadeUpdates) => void;
@@ -150,14 +193,16 @@ interface UseCascadeMutationOptions<TData, TVariables> extends Omit<MutationHook
 }
 
 type UseCascadeMutationResult<TData, TVariables> = [
-  (options?: MutationHookOptions<TData, TVariables>) => Promise<CascadeMutationResult<TData>>,
+  (
+    options?: MutationHookOptions<TData, TVariables>,
+  ) => Promise<CascadeMutationResult<TData>>,
   {
     data?: TData;
     loading: boolean;
     error?: Error;
     called: boolean;
     cascade?: CascadeUpdates;
-  }
+  },
 ];
 ```
 
@@ -172,26 +217,28 @@ const [updateUser, { loading, error }] = useCascadeMutation(
       success: true,
       data: { id: variables.id, name: variables.name },
       cascade: {
-        updated: [{
-          __typename: 'User',
-          id: variables.id,
-          operation: 'UPDATED',
-          entity: { name: variables.name }
-        }],
+        updated: [
+          {
+            __typename: "User",
+            id: variables.id,
+            operation: "UPDATED",
+            entity: { name: variables.name },
+          },
+        ],
         deleted: [],
         invalidations: [],
-        metadata: { timestamp: new Date().toISOString(), affectedCount: 1 }
-      }
+        metadata: { timestamp: new Date().toISOString(), affectedCount: 1 },
+      },
     }),
-    conflictResolution: 'MERGE', // Merge server and client changes
+    conflictResolution: "MERGE", // Merge server and client changes
     onCompleted: (data, cascade) => {
-      console.log('User updated:', data);
-      console.log('Cascade applied:', cascade);
+      console.log("User updated:", data);
+      console.log("Cascade applied:", cascade);
     },
     onError: (error, variables) => {
-      console.error('Update failed:', error);
-    }
-  }
+      console.error("Update failed:", error);
+    },
+  },
 );
 ```
 
@@ -221,24 +268,27 @@ Manages real-time cascade updates via GraphQL subscriptions.
 
 ```typescript
 class CascadeSubscriptionManager {
-  constructor(cascadeClient: ApolloCascadeClient, apolloClient: ApolloClient<unknown>);
+  constructor(
+    cascadeClient: ApolloCascadeClient,
+    apolloClient: ApolloClient<unknown>,
+  );
 
   subscribe<TData = unknown>(
     subscription: DocumentNode,
-    options: CascadeSubscriptionOptions<TData> = {}
+    options: CascadeSubscriptionOptions<TData> = {},
   ): CascadeSubscriptionHandle;
 
   subscribeToEntity(
     typename: string,
     subscription: DocumentNode,
-    options: CascadeSubscriptionOptions = {}
+    options: CascadeSubscriptionOptions = {},
   ): CascadeSubscriptionHandle;
 
   subscribeToEntityById(
     typename: string,
     id: string,
     subscription: DocumentNode,
-    options: CascadeSubscriptionOptions = {}
+    options: CascadeSubscriptionOptions = {},
   ): CascadeSubscriptionHandle;
 }
 ```
@@ -246,28 +296,42 @@ class CascadeSubscriptionManager {
 **Example:**
 
 ```typescript
-const subscriptionManager = new CascadeSubscriptionManager(cascadeClient, apolloClient);
+const subscriptionManager = new CascadeSubscriptionManager(
+  cascadeClient,
+  apolloClient,
+);
 
 const handle = subscriptionManager.subscribeToEntity(
-  'Todo',
+  "Todo",
   gql`
     subscription OnTodoUpdate {
       todoUpdated {
         cascade {
-          updated { __typename id operation entity }
-          deleted { __typename id }
-          metadata { timestamp affectedCount }
+          updated {
+            __typename
+            id
+            operation
+            entity
+          }
+          deleted {
+            __typename
+            id
+          }
+          metadata {
+            timestamp
+            affectedCount
+          }
         }
       }
     }
   `,
   {
     onCascade: (cascade) => {
-      console.log('Todos updated:', cascade);
+      console.log("Todos updated:", cascade);
     },
     autoApply: true, // Automatically apply to cache
-    filter: (event) => event.cascade.updated.length > 0
-  }
+    filter: (event) => event.cascade.updated.length > 0,
+  },
 );
 
 // Later: handle.unsubscribe();
@@ -286,10 +350,12 @@ class CascadeFragmentGenerator {
   generateFragment(
     typename: string,
     entity: Record<string, unknown>,
-    depth = 0
+    depth = 0,
   ): FragmentInfo;
 
-  generateFragmentsForCascade(cascade: CascadeUpdates): Map<string, FragmentInfo>;
+  generateFragmentsForCascade(
+    cascade: CascadeUpdates,
+  ): Map<string, FragmentInfo>;
   generateCombinedFragment(cascade: CascadeUpdates): DocumentNode;
 }
 ```
@@ -299,13 +365,13 @@ class CascadeFragmentGenerator {
 ```typescript
 const generator = new CascadeFragmentGenerator({
   maxDepth: 2,
-  includeTypename: true
+  includeTypename: true,
 });
 
-const fragment = generator.generateFragment('User', {
-  id: '1',
-  name: 'John',
-  profile: { avatar: 'url.jpg' }
+const fragment = generator.generateFragment("User", {
+  id: "1",
+  name: "John",
+  profile: { avatar: "url.jpg" },
 });
 
 console.log(fragment.document); // Generated fragment
@@ -324,7 +390,10 @@ class CascadeError extends Error {
   readonly recoverable: boolean;
   readonly context: CascadeErrorContext;
 
-  static fromApolloError(error: ApolloError, context?: Partial<CascadeErrorContext>): CascadeError;
+  static fromApolloError(
+    error: ApolloError,
+    context?: Partial<CascadeErrorContext>,
+  ): CascadeError;
   getRecoveryActions(): RecoveryAction[];
 }
 
@@ -333,7 +402,7 @@ class CascadeErrorRecovery {
 
   async withRecovery<T>(
     operation: () => Promise<T>,
-    errorHandler?: (error: CascadeError) => void
+    errorHandler?: (error: CascadeError) => void,
   ): Promise<T>;
 }
 ```
@@ -344,16 +413,16 @@ class CascadeErrorRecovery {
 const recovery = new CascadeErrorRecovery({
   maxRetries: 3,
   retryDelay: 1000,
-  exponentialBackoff: true
+  exponentialBackoff: true,
 });
 
 try {
   const result = await recovery.withRecovery(() =>
-    cascade.mutate(CREATE_POST_MUTATION, variables)
+    cascade.mutate(CREATE_POST_MUTATION, variables),
   );
 } catch (error) {
   if (error instanceof CascadeError) {
-    console.log('Recovery actions:', error.getRecoveryActions());
+    console.log("Recovery actions:", error.getRecoveryActions());
   }
 }
 ```
@@ -366,7 +435,10 @@ Persistent cache storage with cascade history tracking.
 
 ```typescript
 class CascadeCachePersistence {
-  constructor(apolloClient: ApolloClient<NormalizedCacheObject>, options: CachePersistenceOptions);
+  constructor(
+    apolloClient: ApolloClient<NormalizedCacheObject>,
+    options: CachePersistenceOptions,
+  );
 
   async persist(): Promise<void>;
   async restore(): Promise<boolean>;
@@ -381,10 +453,10 @@ class CascadeCachePersistence {
 ```typescript
 const persistence = new CascadeCachePersistence(apolloClient, {
   storage: createLocalStoragePersistence(),
-  key: 'myapp_cache',
+  key: "myapp_cache",
   persistOnChange: true,
   debounceMs: 1000,
-  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  maxAge: 24 * 60 * 60 * 1000, // 24 hours
 });
 
 // Restore on app start
@@ -401,7 +473,7 @@ onCascadeApplied(persistence, cascadeResponse);
 ```typescript
 const [updateItem, result] = useCascadeMutation(UPDATE_MUTATION, {
   optimistic: true,
-  conflictResolution: 'MANUAL',
+  conflictResolution: "MANUAL",
   optimisticCascadeResponse: (variables) => ({
     // ... optimistic response
   }),
@@ -410,7 +482,7 @@ const [updateItem, result] = useCascadeMutation(UPDATE_MUTATION, {
     const conflictResolver = new CascadeConflictResolver();
     const conflicts = conflictResolver.detectConflicts(
       optimisticData,
-      serverData
+      serverData,
     );
 
     if (conflicts.hasConflict) {
@@ -418,12 +490,12 @@ const [updateItem, result] = useCascadeMutation(UPDATE_MUTATION, {
       const resolved = customResolveFunction(conflicts);
       cascadeClient.applyCascade({
         ...cascade,
-        updated: cascade.updated.map(u =>
-          u.id === resolved.id ? { ...u, entity: resolved } : u
-        )
+        updated: cascade.updated.map((u) =>
+          u.id === resolved.id ? { ...u, entity: resolved } : u,
+        ),
       });
     }
-  }
+  },
 });
 ```
 
@@ -434,7 +506,7 @@ const [updateItem, result] = useCascadeMutation(UPDATE_MUTATION, {
 const results = await Promise.all([
   cascade.mutate(CREATE_USER, userData),
   cascade.mutate(CREATE_POST, postData),
-  cascade.mutate(CREATE_COMMENT, commentData)
+  cascade.mutate(CREATE_COMMENT, commentData),
 ]);
 
 // All cache updates are applied automatically
@@ -451,18 +523,18 @@ const cache = new InMemoryCache({
           // Custom merge function for pagination
           merge(existing, incoming) {
             return incoming;
-          }
-        }
-      }
-    }
-  }
+          },
+        },
+      },
+    },
+  },
 });
 
 const cascade = new ApolloCascadeClient(
   new ApolloClient({
     cache,
-    uri: '/graphql'
-  })
+    uri: "/graphql",
+  }),
 );
 ```
 
@@ -488,13 +560,13 @@ const [createTodo] = useMutation(CREATE_TODO, {
                 title
                 completed
               }
-            `
+            `,
           });
           return [...existingTodos, newTodoRef];
-        }
-      }
+        },
+      },
     });
-  }
+  },
 });
 ```
 
@@ -517,12 +589,12 @@ const [updateTodo] = useMutation(UPDATE_TODO, {
     updateTodo: {
       id: todoId,
       completed: !completed,
-      __typename: 'Todo'
-    }
+      __typename: "Todo",
+    },
   },
   update: (cache, { data }) => {
     // Manual optimistic update reversal if needed
-  }
+  },
 });
 ```
 
@@ -535,17 +607,19 @@ const [updateTodo] = useCascadeMutation(UPDATE_TODO, {
     success: true,
     data: { id: variables.id, completed: !variables.completed },
     cascade: {
-      updated: [{
-        __typename: 'Todo',
-        id: variables.id,
-        operation: 'UPDATED',
-        entity: { completed: !variables.completed }
-      }],
+      updated: [
+        {
+          __typename: "Todo",
+          id: variables.id,
+          operation: "UPDATED",
+          entity: { completed: !variables.completed },
+        },
+      ],
       deleted: [],
       invalidations: [],
-      metadata: { timestamp: new Date().toISOString(), affectedCount: 1 }
-    }
-  })
+      metadata: { timestamp: new Date().toISOString(), affectedCount: 1 },
+    },
+  }),
 });
 ```
 
@@ -560,20 +634,23 @@ const { data } = useSubscription(TODO_UPDATED, {
     cache.modify({
       // Complex manual update logic
     });
-  }
+  },
 });
 ```
 
 **After:**
 
 ```typescript
-const subscriptionManager = new CascadeSubscriptionManager(cascadeClient, apolloClient);
+const subscriptionManager = new CascadeSubscriptionManager(
+  cascadeClient,
+  apolloClient,
+);
 
-subscriptionManager.subscribeToEntity('Todo', TODO_UPDATED_SUBSCRIPTION, {
+subscriptionManager.subscribeToEntity("Todo", TODO_UPDATED_SUBSCRIPTION, {
   onCascade: (cascade) => {
     // Automatic cache updates!
-    console.log('Todos updated automatically');
-  }
+    console.log("Todos updated automatically");
+  },
 });
 ```
 
@@ -590,8 +667,8 @@ import type {
   InvalidationScope,
   CascadeOperation,
   UpdatedEntity,
-  DeletedEntity
-} from '@graphql-cascade/client';
+  DeletedEntity,
+} from "@graphql-cascade/client";
 
 import type {
   UseCascadeMutationOptions,
@@ -610,8 +687,8 @@ import type {
   CascadeErrorCode,
   CascadeErrorSeverity,
   RecoveryAction,
-  ErrorRecoveryOptions
-} from '@graphql-cascade/client-apollo';
+  ErrorRecoveryOptions,
+} from "@graphql-cascade/client-apollo";
 ```
 
 ### Example Type Usage
@@ -643,7 +720,7 @@ const [createTodo] = useCascadeMutation<
 >(CREATE_TODO_MUTATION, {
   onCompleted: (data, cascade) => {
     // Fully typed parameters
-  }
+  },
 });
 ```
 

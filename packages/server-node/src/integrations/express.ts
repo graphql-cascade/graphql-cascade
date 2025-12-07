@@ -4,10 +4,10 @@
  * Provides Express middleware that attaches a CascadeTracker to each request.
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { CascadeTracker } from '../tracker';
-import { CascadeBuilder } from '../builder';
-import { CascadeTrackerConfig, CascadeBuilderConfig } from '../types';
+import { Request, Response, NextFunction } from "express";
+import { CascadeTracker } from "../tracker";
+import { CascadeBuilder } from "../builder";
+import { CascadeTrackerConfig, CascadeBuilderConfig } from "../types";
 
 /**
  * Extend Express Request type to include cascade tracker and builder.
@@ -24,7 +24,8 @@ declare global {
 /**
  * Configuration options for cascade middleware.
  */
-export interface CascadeMiddlewareOptions extends CascadeTrackerConfig, CascadeBuilderConfig {}
+export interface CascadeMiddlewareOptions
+  extends CascadeTrackerConfig, CascadeBuilderConfig {}
 
 /**
  * Creates Express middleware that attaches a CascadeTracker and CascadeBuilder
@@ -84,7 +85,11 @@ export function cascadeMiddleware(options?: CascadeMiddlewareOptions) {
   return (req: Request, res: Response, next: NextFunction): void => {
     // Create a new tracker and builder for this request
     req.cascadeTracker = new CascadeTracker(trackerConfig);
-    req.cascadeBuilder = new CascadeBuilder(req.cascadeTracker, undefined, builderConfig);
+    req.cascadeBuilder = new CascadeBuilder(
+      req.cascadeTracker,
+      undefined,
+      builderConfig,
+    );
 
     next();
   };
@@ -122,10 +127,12 @@ export function buildCascadeResponse(
   req: Request,
   data?: any,
   success: boolean = true,
-  errors: any[] = []
+  errors: any[] = [],
 ): any {
   if (!req.cascadeBuilder) {
-    throw new Error('CascadeBuilder not found on request. Did you add cascadeMiddleware?');
+    throw new Error(
+      "CascadeBuilder not found on request. Did you add cascadeMiddleware?",
+    );
   }
 
   return req.cascadeBuilder.buildResponse(data, success, errors);

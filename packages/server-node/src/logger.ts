@@ -8,7 +8,7 @@
 /**
  * Log levels for cascade operations.
  */
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent';
+export type LogLevel = "debug" | "info" | "warn" | "error" | "silent";
 
 /**
  * Logger interface for cascade operations.
@@ -50,7 +50,8 @@ const defaultLogger: CascadeLogger = {
   debug: (message: string, ...args: unknown[]) => console.log(message, ...args),
   info: (message: string, ...args: unknown[]) => console.log(message, ...args),
   warn: (message: string, ...args: unknown[]) => console.warn(message, ...args),
-  error: (message: string, ...args: unknown[]) => console.error(message, ...args),
+  error: (message: string, ...args: unknown[]) =>
+    console.error(message, ...args),
 };
 
 /**
@@ -68,9 +69,9 @@ export const silentLogger: CascadeLogger = {
  * Default level is 'silent' to avoid noise in production.
  */
 let globalConfig: LoggerConfig = {
-  level: 'silent',
+  level: "silent",
   logger: defaultLogger,
-  prefix: '[Cascade:Server]',
+  prefix: "[Cascade:Server]",
 };
 
 /**
@@ -116,7 +117,7 @@ function shouldLog(level: LogLevel): boolean {
  * Get the active logger based on configuration.
  */
 function getLogger(): CascadeLogger {
-  if (globalConfig.level === 'silent') {
+  if (globalConfig.level === "silent") {
     return silentLogger;
   }
   return globalConfig.logger ?? defaultLogger;
@@ -146,25 +147,25 @@ function formatMessage(message: string): string {
  */
 export const logger: CascadeLogger = {
   debug(message: string, ...args: unknown[]): void {
-    if (shouldLog('debug')) {
+    if (shouldLog("debug")) {
       getLogger().debug(formatMessage(message), ...args);
     }
   },
 
   info(message: string, ...args: unknown[]): void {
-    if (shouldLog('info')) {
+    if (shouldLog("info")) {
       getLogger().info(formatMessage(message), ...args);
     }
   },
 
   warn(message: string, ...args: unknown[]): void {
-    if (shouldLog('warn')) {
+    if (shouldLog("warn")) {
       getLogger().warn(formatMessage(message), ...args);
     }
   },
 
   error(message: string, ...args: unknown[]): void {
-    if (shouldLog('error')) {
+    if (shouldLog("error")) {
       getLogger().error(formatMessage(message), ...args);
     }
   },
@@ -182,25 +183,25 @@ export const logger: CascadeLogger = {
 export function createScopedLogger(prefix: string): CascadeLogger {
   return {
     debug(message: string, ...args: unknown[]): void {
-      if (shouldLog('debug')) {
+      if (shouldLog("debug")) {
         getLogger().debug(`${prefix} ${message}`, ...args);
       }
     },
 
     info(message: string, ...args: unknown[]): void {
-      if (shouldLog('info')) {
+      if (shouldLog("info")) {
         getLogger().info(`${prefix} ${message}`, ...args);
       }
     },
 
     warn(message: string, ...args: unknown[]): void {
-      if (shouldLog('warn')) {
+      if (shouldLog("warn")) {
         getLogger().warn(`${prefix} ${message}`, ...args);
       }
     },
 
     error(message: string, ...args: unknown[]): void {
-      if (shouldLog('error')) {
+      if (shouldLog("error")) {
         getLogger().error(`${prefix} ${message}`, ...args);
       }
     },

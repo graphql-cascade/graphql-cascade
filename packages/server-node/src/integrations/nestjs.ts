@@ -5,21 +5,22 @@
  * cascade tracking in NestJS applications.
  */
 
-import { Module, Injectable, Scope, DynamicModule } from '@nestjs/common';
-import { CascadeTracker } from '../tracker';
-import { CascadeBuilder } from '../builder';
+import { Module, Injectable, Scope, DynamicModule } from "@nestjs/common";
+import { CascadeTracker } from "../tracker";
+import { CascadeBuilder } from "../builder";
 import {
   CascadeTrackerConfig,
   CascadeBuilderConfig,
   CascadeResponse,
   CascadeErrorInfo,
   GraphQLEntity,
-} from '../types';
+} from "../types";
 
 /**
  * Configuration options for CascadeModule.
  */
-export interface CascadeModuleOptions extends CascadeTrackerConfig, CascadeBuilderConfig {}
+export interface CascadeModuleOptions
+  extends CascadeTrackerConfig, CascadeBuilderConfig {}
 
 /**
  * Request-scoped service for cascade tracking in NestJS.
@@ -44,7 +45,10 @@ export class CascadeService {
    * Initialize with custom configuration.
    * @internal
    */
-  initWithConfig(trackerConfig: CascadeTrackerConfig, builderConfig: CascadeBuilderConfig): void {
+  initWithConfig(
+    trackerConfig: CascadeTrackerConfig,
+    builderConfig: CascadeBuilderConfig,
+  ): void {
     this.tracker = new CascadeTracker(trackerConfig);
     this.builder = new CascadeBuilder(this.tracker, undefined, builderConfig);
   }
@@ -108,7 +112,11 @@ export class CascadeService {
   /**
    * Build a complete cascade response.
    */
-  buildResponse<T>(data?: T, success: boolean = true, errors: CascadeErrorInfo[] = []): CascadeResponse {
+  buildResponse<T>(
+    data?: T,
+    success: boolean = true,
+    errors: CascadeErrorInfo[] = [],
+  ): CascadeResponse {
     return this.builder.buildResponse(data, success, errors);
   }
 
@@ -175,11 +183,11 @@ export class CascadeModule {
       module: CascadeModule,
       providers: [
         {
-          provide: 'CASCADE_TRACKER_CONFIG',
+          provide: "CASCADE_TRACKER_CONFIG",
           useValue: trackerConfig,
         },
         {
-          provide: 'CASCADE_BUILDER_CONFIG',
+          provide: "CASCADE_BUILDER_CONFIG",
           useValue: builderConfig,
         },
         {

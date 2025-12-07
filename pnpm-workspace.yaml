@@ -7,3 +7,4 @@ packages:
   - 'packages/cli'
   - 'packages/conformance'
   - 'packages/server-node'
+  - 'docs'

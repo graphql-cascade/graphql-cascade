@@ -43,7 +43,7 @@ npm install express
 ## Quick Start
 
 ```typescript
-import { CascadeTracker, CascadeBuilder } from '@graphql-cascade/server';
+import { CascadeTracker, CascadeBuilder } from "@graphql-cascade/server";
 
 // Create tracker and builder
 const tracker = new CascadeTracker();
@@ -53,8 +53,18 @@ const builder = new CascadeBuilder(tracker);
 const transactionId = tracker.startTransaction();
 
 // Track entity changes during your mutation
-tracker.trackCreate({ id: 1, __typename: 'User', name: 'John', email: 'john@example.com' });
-tracker.trackUpdate({ id: 2, __typename: 'Post', title: 'Updated Title', authorId: 1 });
+tracker.trackCreate({
+  id: 1,
+  __typename: "User",
+  name: "John",
+  email: "john@example.com",
+});
+tracker.trackUpdate({
+  id: 2,
+  __typename: "Post",
+  title: "Updated Title",
+  authorId: 1,
+});
 
 // Build cascade response
 const response = builder.buildResponse(mutationResult);
@@ -72,18 +82,18 @@ console.log(response.cascade.metadata); // Performance metadata
 The `CascadeTracker` is the heart of GraphQL Cascade. It tracks entity changes during GraphQL mutations and automatically discovers related entities that may be affected.
 
 ```typescript
-import { CascadeTracker } from '@graphql-cascade/server';
+import { CascadeTracker } from "@graphql-cascade/server";
 
 const tracker = new CascadeTracker({
-  maxDepth: 3,                    // Maximum relationship traversal depth
-  excludeTypes: ['AuditLog'],     // Types to exclude from tracking
+  maxDepth: 3, // Maximum relationship traversal depth
+  excludeTypes: ["AuditLog"], // Types to exclude from tracking
   enableRelationshipTracking: true, // Auto-discover related entities
-  maxEntities: 1000,              // Maximum entities to track
-  maxRelatedPerEntity: 100        // Maximum related entities per entity
+  maxEntities: 1000, // Maximum entities to track
+  maxRelatedPerEntity: 100, // Maximum related entities per entity
 });
 
 // Use with context manager (recommended)
-import { trackCascade } from '@graphql-cascade/server';
+import { trackCascade } from "@graphql-cascade/server";
 
 const transaction = trackCascade();
 const transactionId = transaction.enter();
@@ -98,13 +108,13 @@ transaction.exit(); // Automatically handles cleanup
 The `CascadeBuilder` constructs GraphQL Cascade responses from tracked changes, including optional query invalidations.
 
 ```typescript
-import { CascadeBuilder } from '@graphql-cascade/server';
+import { CascadeBuilder } from "@graphql-cascade/server";
 
 const builder = new CascadeBuilder(tracker, invalidator, {
-  maxResponseSizeMb: 5.0,        // Maximum response size
-  maxUpdatedEntities: 500,       // Maximum updated entities in response
-  maxDeletedEntities: 100,       // Maximum deleted entities in response
-  maxInvalidations: 50           // Maximum invalidations in response
+  maxResponseSizeMb: 5.0, // Maximum response size
+  maxUpdatedEntities: 500, // Maximum updated entities in response
+  maxDeletedEntities: 100, // Maximum deleted entities in response
+  maxInvalidations: 50, // Maximum invalidations in response
 });
 
 // Build successful response
@@ -119,7 +129,7 @@ const errorResponse = builder.buildErrorResponse(errors, partialResult);
 The `CascadeInvalidator` (optional) computes which queries should be invalidated based on entity changes.
 
 ```typescript
-import { CascadeInvalidator } from '@graphql-cascade/server';
+import { CascadeInvalidator } from "@graphql-cascade/server";
 
 const invalidator = new CascadeInvalidator(schema, {
   // Configuration options
@@ -128,7 +138,7 @@ const invalidator = new CascadeInvalidator(schema, {
 const invalidations = invalidator.computeInvalidations(
   updatedEntities,
   deletedEntities,
-  primaryResult
+  primaryResult,
 );
 ```
 
@@ -137,8 +147,8 @@ const invalidations = invalidator.computeInvalidations(
 ### Apollo Server Integration
 
 ```typescript
-import { createCascadePlugin } from '@graphql-cascade/server';
-import { ApolloServer } from '@apollo/server';
+import { createCascadePlugin } from "@graphql-cascade/server";
+import { ApolloServer } from "@apollo/server";
 
 const server = new ApolloServer({
   typeDefs,
@@ -148,24 +158,26 @@ const server = new ApolloServer({
       tracker: new CascadeTracker(),
       invalidator: new CascadeInvalidator(schema),
       // Plugin options
-    })
-  ]
+    }),
+  ],
 });
 ```
 
 ### NestJS Integration
 
 ```typescript
-import { CascadeModule } from '@graphql-cascade/server';
-import { Module } from '@nestjs/common';
+import { CascadeModule } from "@graphql-cascade/server";
+import { Module } from "@nestjs/common";
 
 @Module({
   imports: [
     CascadeModule.forRoot({
       trackerConfig: { maxDepth: 3 },
-      invalidatorConfig: { /* ... */ }
-    })
-  ]
+      invalidatorConfig: {
+        /* ... */
+      },
+    }),
+  ],
 })
 export class AppModule {}
 
@@ -191,19 +203,21 @@ export class UserService {
 ### Express Integration
 
 ```typescript
-import { cascadeMiddleware, getCascadeData } from '@graphql-cascade/server';
-import express from 'express';
+import { cascadeMiddleware, getCascadeData } from "@graphql-cascade/server";
+import express from "express";
 
 const app = express();
 
 // Add cascade middleware
-app.use(cascadeMiddleware({
-  tracker: new CascadeTracker(),
-  invalidator: new CascadeInvalidator(schema)
-}));
+app.use(
+  cascadeMiddleware({
+    tracker: new CascadeTracker(),
+    invalidator: new CascadeInvalidator(schema),
+  }),
+);
 
 // In your GraphQL resolver
-app.post('/graphql', async (req, res) => {
+app.post("/graphql", async (req, res) => {
   // ... execute GraphQL operation ...
 
   const cascadeData = getCascadeData();
@@ -219,11 +233,11 @@ app.post('/graphql', async (req, res) => {
 
 ```typescript
 interface CascadeTrackerConfig {
-  maxDepth?: number;                    // Default: 3
-  excludeTypes?: string[];              // Default: []
+  maxDepth?: number; // Default: 3
+  excludeTypes?: string[]; // Default: []
   enableRelationshipTracking?: boolean; // Default: true
-  maxEntities?: number;                 // Default: 1000
-  maxRelatedPerEntity?: number;         // Default: 100
+  maxEntities?: number; // Default: 1000
+  maxRelatedPerEntity?: number; // Default: 100
 }
 ```
 
@@ -231,10 +245,10 @@ interface CascadeTrackerConfig {
 
 ```typescript
 interface CascadeBuilderConfig {
-  maxResponseSizeMb?: number;     // Default: 5.0
-  maxUpdatedEntities?: number;    // Default: 500
-  maxDeletedEntities?: number;    // Default: 100
-  maxInvalidations?: number;      // Default: 50
+  maxResponseSizeMb?: number; // Default: 5.0
+  maxUpdatedEntities?: number; // Default: 500
+  maxDeletedEntities?: number; // Default: 100
+  maxInvalidations?: number; // Default: 50
 }
 ```
 
@@ -267,10 +281,21 @@ class CascadeTracker {
 
 ```typescript
 class CascadeBuilder {
-  constructor(tracker: CascadeTracker, invalidator?: any, config?: CascadeBuilderConfig);
+  constructor(
+    tracker: CascadeTracker,
+    invalidator?: any,
+    config?: CascadeBuilderConfig,
+  );
 
-  buildResponse(primaryResult?: any, success?: boolean, errors?: CascadeError[]): CascadeResponse;
-  buildErrorResponse(errors: CascadeError[], primaryResult?: any): CascadeResponse;
+  buildResponse(
+    primaryResult?: any,
+    success?: boolean,
+    errors?: CascadeError[],
+  ): CascadeResponse;
+  buildErrorResponse(
+    errors: CascadeError[],
+    primaryResult?: any,
+  ): CascadeResponse;
 }
 ```
 
@@ -278,7 +303,10 @@ class CascadeBuilder {
 
 ```typescript
 // Build responses without creating instances
-import { buildSuccessResponse, buildErrorResponse } from '@graphql-cascade/server';
+import {
+  buildSuccessResponse,
+  buildErrorResponse,
+} from "@graphql-cascade/server";
 
 const response = buildSuccessResponse(tracker, invalidator, result);
 const errorResponse = buildErrorResponse(tracker, errors, result);
@@ -293,11 +321,11 @@ By default, CascadeTracker looks for `__typename` and `id` properties. You can c
 ```typescript
 class CustomTracker extends CascadeTracker {
   protected getEntityType(entity: any): string {
-    return entity.type || entity.__typename || 'Unknown';
+    return entity.type || entity.__typename || "Unknown";
   }
 
   protected getEntityId(entity: any): string {
-    return entity.uuid || entity.id || 'unknown';
+    return entity.uuid || entity.id || "unknown";
   }
 }
 ```
@@ -310,13 +338,13 @@ CascadeTracker automatically discovers relationships by inspecting object proper
 // Entity with relationships
 const user = {
   id: 1,
-  __typename: 'User',
-  name: 'John',
+  __typename: "User",
+  name: "John",
   posts: [
-    { id: 1, __typename: 'Post', title: 'Hello' },
-    { id: 2, __typename: 'Post', title: 'World' }
+    { id: 1, __typename: "Post", title: "Hello" },
+    { id: 2, __typename: "Post", title: "World" },
   ],
-  company: { id: 1, __typename: 'Company', name: 'ACME' }
+  company: { id: 1, __typename: "Company", name: "ACME" },
 };
 
 // When you track the user, related posts and company are automatically tracked
@@ -328,7 +356,7 @@ tracker.trackUpdate(user);
 For operations affecting many entities, use `StreamingCascadeBuilder`:
 
 ```typescript
-import { StreamingCascadeBuilder } from '@graphql-cascade/server';
+import { StreamingCascadeBuilder } from "@graphql-cascade/server";
 
 const builder = new StreamingCascadeBuilder(tracker);
 const response = builder.buildStreamingResponse(result);
@@ -341,7 +369,9 @@ Access performance metadata in cascade responses:
 ```typescript
 const response = builder.buildResponse(result);
 console.log(`Tracking time: ${response.cascade.metadata.trackingTime}ms`);
-console.log(`Construction time: ${response.cascade.metadata.constructionTime}ms`);
+console.log(
+  `Construction time: ${response.cascade.metadata.constructionTime}ms`,
+);
 console.log(`Entities affected: ${response.cascade.metadata.affectedCount}`);
 ```
 
@@ -365,7 +395,7 @@ interface CascadeUpdates {
 interface UpdatedEntity {
   __typename: string;
   id: string;
-  operation: 'CREATED' | 'UPDATED' | 'DELETED';
+  operation: "CREATED" | "UPDATED" | "DELETED";
   entity: any;
 }
 
@@ -393,20 +423,24 @@ interface CascadeMetadata {
 ### Common Issues
 
 **"No cascade transaction in progress"**
+
 - Ensure you call `tracker.startTransaction()` before tracking changes
 - Use the `trackCascade()` context manager for automatic cleanup
 
 **Memory issues with large datasets**
+
 - Use `StreamingCascadeBuilder` for operations affecting many entities
 - Configure appropriate limits in `CascadeTrackerConfig`
 - Consider pagination for bulk operations
 
 **Missing related entities in cascade**
+
 - Ensure entities have proper `__typename` and `id` properties
 - Check `maxDepth` configuration for relationship traversal
 - Verify `enableRelationshipTracking` is enabled
 
 **Performance problems**
+
 - Monitor `trackingTime` and `constructionTime` in metadata
 - Adjust `maxEntities` and `maxRelatedPerEntity` limits
 - Use streaming for large responses
@@ -417,7 +451,7 @@ Enable debug logging:
 
 ```typescript
 // Set environment variable
-process.env.DEBUG = 'cascade:*';
+process.env.DEBUG = "cascade:*";
 
 // Or enable in tracker config
 const tracker = new CascadeTracker({

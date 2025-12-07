@@ -1,6 +1,6 @@
-import { RecordSourceSelectorProxy, MutationConfig } from 'relay-runtime';
-import { CascadeResponse, CascadeUpdates } from '@graphql-cascade/client';
-import { RelayRetryOptions } from './error-handling';
+import { RecordSourceSelectorProxy, MutationConfig } from "relay-runtime";
+import { CascadeResponse, CascadeUpdates } from "@graphql-cascade/client";
+import { RelayRetryOptions } from "./error-handling";
 
 /**
  * Relay-specific types for GraphQL Cascade integration.
@@ -41,7 +41,7 @@ export interface OptimisticResponseGenerator {
   generate<TVariables = any>(
     mutationName: string,
     variables: TVariables,
-    optimisticData?: any
+    optimisticData?: any,
   ): any;
 }
 
@@ -49,10 +49,10 @@ export interface OptimisticResponseGenerator {
  * Connection update operations for Relay connections.
  */
 export enum ConnectionOperation {
-  PREPEND = 'PREPEND',
-  APPEND = 'APPEND',
-  REMOVE = 'REMOVE',
-  REPLACE = 'REPLACE'
+  PREPEND = "PREPEND",
+  APPEND = "APPEND",
+  REMOVE = "REMOVE",
+  REPLACE = "REPLACE",
 }
 
 /**
@@ -107,7 +107,7 @@ export interface RelayCascadeClient {
   generateOptimisticResponse<TVariables = any>(
     mutationName: string,
     variables: TVariables,
-    optimisticData?: any
+    optimisticData?: any,
   ): any;
 
   /**
@@ -118,5 +118,8 @@ export interface RelayCascadeClient {
   /**
    * Apply cascade updates directly to a store.
    */
-  applyCascadeToStore(store: RecordSourceSelectorProxy, cascade: CascadeUpdates): void;
+  applyCascadeToStore(
+    store: RecordSourceSelectorProxy,
+    cascade: CascadeUpdates,
+  ): void;
 }

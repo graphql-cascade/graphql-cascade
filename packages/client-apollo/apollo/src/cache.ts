@@ -1,5 +1,9 @@
-import { ApolloCache, gql } from '@apollo/client';
-import { CascadeCache, QueryInvalidation, InvalidationScope } from '@graphql-cascade/client';
+import { ApolloCache, gql } from "@apollo/client";
+import {
+  CascadeCache,
+  QueryInvalidation,
+  InvalidationScope,
+} from "@graphql-cascade/client";
 
 // Counter for generating unique fragment names
 let fragmentCounter = 0;
@@ -22,11 +26,11 @@ export class ApolloCascadeCache implements CascadeCache {
     const cacheId = this.cache.identify({ __typename: typename, id });
     if (!cacheId) return;
 
-    const fields = Object.keys(data).filter(k => k !== '__typename');
+    const fields = Object.keys(data).filter((k) => k !== "__typename");
     if (fields.length === 0) return;
 
     const fragmentName = getUniqueFragmentName(typename);
-    const fragmentFields = fields.join('\n          ');
+    const fragmentFields = fields.join("\n          ");
 
     this.cache.writeFragment({
       id: cacheId,
@@ -52,7 +56,7 @@ export class ApolloCascadeCache implements CascadeCache {
             id
             __typename
           }
-        `
+        `,
       });
     } catch {
       return null;
@@ -77,7 +81,9 @@ export class ApolloCascadeCache implements CascadeCache {
         break;
       case InvalidationScope.PREFIX:
       case InvalidationScope.PATTERN:
-        console.warn(`Apollo cache does not support ${invalidation.scope} scope invalidation. Only EXACT scope is supported.`);
+        console.warn(
+          `Apollo cache does not support ${invalidation.scope} scope invalidation. Only EXACT scope is supported.`,
+        );
         break;
       case InvalidationScope.ALL:
         this.cache.gc();
@@ -88,7 +94,9 @@ export class ApolloCascadeCache implements CascadeCache {
   async refetch(_invalidation: QueryInvalidation): Promise<void> {
     // Apollo's refetchQueries requires access to ApolloClient, not just cache
     // This would need to be implemented in the client class
-    throw new Error('Refetch requires ApolloClient instance, use ApolloCascadeClient.refetch instead');
+    throw new Error(
+      "Refetch requires ApolloClient instance, use ApolloCascadeClient.refetch instead",
+    );
   }
 
   remove(invalidation: QueryInvalidation): void {
@@ -101,7 +109,9 @@ export class ApolloCascadeCache implements CascadeCache {
         break;
       case InvalidationScope.PREFIX:
       case InvalidationScope.PATTERN:
-        console.warn(`Apollo cache does not support ${invalidation.scope} scope removal. Only EXACT scope is supported.`);
+        console.warn(
+          `Apollo cache does not support ${invalidation.scope} scope removal. Only EXACT scope is supported.`,
+        );
         break;
       case InvalidationScope.ALL:
         this.cache.gc();

@@ -5,17 +5,10 @@
  */
 
 // NestJS Integration
-export {
-  CascadeModule,
-  CascadeService,
-  CascadeModuleOptions,
-} from './nestjs';
+export { CascadeModule, CascadeService, CascadeModuleOptions } from "./nestjs";
 
 // Apollo Server Integration
-export {
-  createCascadePlugin,
-  CascadePluginOptions,
-} from './apollo';
+export { createCascadePlugin, CascadePluginOptions } from "./apollo";
 
 // Express Integration
 export {
@@ -23,7 +16,7 @@ export {
   getCascadeData,
   buildCascadeResponse,
   CascadeMiddlewareOptions,
-} from './express';
+} from "./express";
 
 // OpenTelemetry Integration
 export {
@@ -33,4 +26,4 @@ export {
   type OTelCounter,
   type OTelHistogram,
   type OTelUpDownCounter,
-} from './opentelemetry';
+} from "./opentelemetry";

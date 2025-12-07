@@ -1,48 +1,48 @@
-import { ApolloError } from '@apollo/client';
-import { CascadeUpdates } from '@graphql-cascade/client';
+import { ApolloError } from "@apollo/client";
+import { CascadeUpdates } from "@graphql-cascade/client";
 
 /**
  * Cascade error codes - aligned with core v1.1 error codes
  */
 export enum CascadeErrorCode {
   // Network errors
-  NETWORK_ERROR = 'CASCADE_NETWORK_ERROR',
-  TIMEOUT_ERROR = 'CASCADE_TIMEOUT_ERROR',
+  NETWORK_ERROR = "CASCADE_NETWORK_ERROR",
+  TIMEOUT_ERROR = "CASCADE_TIMEOUT_ERROR",
 
   // Cache errors
-  CACHE_WRITE_ERROR = 'CASCADE_CACHE_WRITE_ERROR',
-  CACHE_READ_ERROR = 'CASCADE_CACHE_READ_ERROR',
-  CACHE_EVICTION_ERROR = 'CASCADE_CACHE_EVICTION_ERROR',
-  CACHE_CORRUPTION = 'CASCADE_CACHE_CORRUPTION',
+  CACHE_WRITE_ERROR = "CASCADE_CACHE_WRITE_ERROR",
+  CACHE_READ_ERROR = "CASCADE_CACHE_READ_ERROR",
+  CACHE_EVICTION_ERROR = "CASCADE_CACHE_EVICTION_ERROR",
+  CACHE_CORRUPTION = "CASCADE_CACHE_CORRUPTION",
 
   // Cascade-specific errors
-  INVALID_CASCADE_DATA = 'CASCADE_INVALID_DATA',
-  MISSING_CASCADE_DATA = 'CASCADE_MISSING_DATA',
-  PARTIAL_CASCADE_FAILURE = 'CASCADE_PARTIAL_FAILURE',
-  CASCADE_CONFLICT = 'CASCADE_CONFLICT',
+  INVALID_CASCADE_DATA = "CASCADE_INVALID_DATA",
+  MISSING_CASCADE_DATA = "CASCADE_MISSING_DATA",
+  PARTIAL_CASCADE_FAILURE = "CASCADE_PARTIAL_FAILURE",
+  CASCADE_CONFLICT = "CASCADE_CONFLICT",
 
   // Optimistic update errors
-  OPTIMISTIC_ROLLBACK_FAILED = 'CASCADE_OPTIMISTIC_ROLLBACK_FAILED',
-  OPTIMISTIC_CONFLICT = 'CASCADE_OPTIMISTIC_CONFLICT',
+  OPTIMISTIC_ROLLBACK_FAILED = "CASCADE_OPTIMISTIC_ROLLBACK_FAILED",
+  OPTIMISTIC_CONFLICT = "CASCADE_OPTIMISTIC_CONFLICT",
 
   // Subscription errors
-  SUBSCRIPTION_ERROR = 'CASCADE_SUBSCRIPTION_ERROR',
-  SUBSCRIPTION_RECONNECT_FAILED = 'CASCADE_SUBSCRIPTION_RECONNECT_FAILED',
+  SUBSCRIPTION_ERROR = "CASCADE_SUBSCRIPTION_ERROR",
+  SUBSCRIPTION_RECONNECT_FAILED = "CASCADE_SUBSCRIPTION_RECONNECT_FAILED",
 
   // New v1.1 error codes (mapped to existing Apollo codes for compatibility)
-  VALIDATION_ERROR = 'CASCADE_INVALID_DATA',
-  NOT_FOUND = 'CASCADE_MISSING_DATA',
-  UNAUTHORIZED = 'CASCADE_CONFLICT', // Using existing code for auth errors
-  FORBIDDEN = 'CASCADE_CONFLICT', // Using existing code for auth errors
-  CONFLICT = 'CASCADE_CONFLICT',
-  INTERNAL_ERROR = 'CASCADE_UNKNOWN_ERROR',
-  TRANSACTION_FAILED = 'CASCADE_PARTIAL_FAILURE',
-  TIMEOUT = 'CASCADE_TIMEOUT_ERROR',
-  RATE_LIMITED = 'CASCADE_NETWORK_ERROR',
-  SERVICE_UNAVAILABLE = 'CASCADE_NETWORK_ERROR',
+  VALIDATION_ERROR = "CASCADE_INVALID_DATA",
+  NOT_FOUND = "CASCADE_MISSING_DATA",
+  UNAUTHORIZED = "CASCADE_CONFLICT", // Using existing code for auth errors
+  FORBIDDEN = "CASCADE_CONFLICT", // Using existing code for auth errors
+  CONFLICT = "CASCADE_CONFLICT",
+  INTERNAL_ERROR = "CASCADE_UNKNOWN_ERROR",
+  TRANSACTION_FAILED = "CASCADE_PARTIAL_FAILURE",
+  TIMEOUT = "CASCADE_TIMEOUT_ERROR",
+  RATE_LIMITED = "CASCADE_NETWORK_ERROR",
+  SERVICE_UNAVAILABLE = "CASCADE_NETWORK_ERROR",
 
   // Unknown
-  UNKNOWN_ERROR = 'CASCADE_UNKNOWN_ERROR'
+  UNKNOWN_ERROR = "CASCADE_UNKNOWN_ERROR",
 }
 
 /**
@@ -50,13 +50,13 @@ export enum CascadeErrorCode {
  */
 export enum CascadeErrorSeverity {
   /** Informational - logged but no action needed */
-  INFO = 'info',
+  INFO = "info",
   /** Warning - operation succeeded but with issues */
-  WARNING = 'warning',
+  WARNING = "warning",
   /** Error - operation failed but recoverable */
-  ERROR = 'error',
+  ERROR = "error",
   /** Critical - requires immediate attention, may need manual intervention */
-  CRITICAL = 'critical'
+  CRITICAL = "critical",
 }
 
 /**
@@ -64,21 +64,21 @@ export enum CascadeErrorSeverity {
  */
 export enum RecoveryAction {
   /** No action needed */
-  NONE = 'NONE',
+  NONE = "NONE",
   /** Retry the operation */
-  RETRY = 'RETRY',
+  RETRY = "RETRY",
   /** Refetch affected queries */
-  REFETCH = 'REFETCH',
+  REFETCH = "REFETCH",
   /** Reset the cache */
-  RESET_CACHE = 'RESET_CACHE',
+  RESET_CACHE = "RESET_CACHE",
   /** Roll back optimistic updates */
-  ROLLBACK = 'ROLLBACK',
+  ROLLBACK = "ROLLBACK",
   /** Reconnect subscription */
-  RECONNECT = 'RECONNECT',
+  RECONNECT = "RECONNECT",
   /** Notify user */
-  NOTIFY_USER = 'NOTIFY_USER',
+  NOTIFY_USER = "NOTIFY_USER",
   /** Custom recovery handler */
-  CUSTOM = 'CUSTOM'
+  CUSTOM = "CUSTOM",
 }
 
 /**
@@ -94,7 +94,7 @@ export class CascadeError extends Error {
 
   constructor(options: CascadeErrorOptions) {
     super(options.message);
-    this.name = 'CascadeError';
+    this.name = "CascadeError";
     this.code = options.code;
     this.severity = options.severity ?? CascadeErrorSeverity.ERROR;
     this.recoverable = options.recoverable ?? true;
@@ -111,7 +111,10 @@ export class CascadeError extends Error {
   /**
    * Create a CascadeError from an Apollo error
    */
-  static fromApolloError(error: ApolloError, context?: Partial<CascadeErrorContext>): CascadeError {
+  static fromApolloError(
+    error: ApolloError,
+    context?: Partial<CascadeErrorContext>,
+  ): CascadeError {
     const code = error.networkError
       ? CascadeErrorCode.NETWORK_ERROR
       : CascadeErrorCode.UNKNOWN_ERROR;
@@ -123,20 +126,23 @@ export class CascadeError extends Error {
       recoverable: true,
       context: {
         ...context,
-        graphQLErrors: error.graphQLErrors?.map(e => ({
+        graphQLErrors: error.graphQLErrors?.map((e) => ({
           message: e.message,
           path: e.path,
-          extensions: e.extensions
-        }))
+          extensions: e.extensions,
+        })),
       },
-      originalError: error
+      originalError: error,
     });
   }
 
   /**
    * Create a CascadeError from any error
    */
-  static fromError(error: unknown, code: CascadeErrorCode = CascadeErrorCode.UNKNOWN_ERROR): CascadeError {
+  static fromError(
+    error: unknown,
+    code: CascadeErrorCode = CascadeErrorCode.UNKNOWN_ERROR,
+  ): CascadeError {
     if (error instanceof CascadeError) {
       return error;
     }
@@ -153,7 +159,7 @@ export class CascadeError extends Error {
       code,
       severity: CascadeErrorSeverity.ERROR,
       recoverable: true,
-      originalError
+      originalError,
     });
   }
 
@@ -208,7 +214,7 @@ export class CascadeError extends Error {
       recoverable: this.recoverable,
       context: this.context,
       timestamp: this.timestamp,
-      stack: this.stack
+      stack: this.stack,
     };
   }
 }
@@ -298,22 +304,39 @@ export interface ErrorRecoveryOptions {
   /**
    * Custom recovery handler
    */
-  customRecovery?: (error: CascadeError, action: RecoveryAction) => Promise<boolean>;
+  customRecovery?: (
+    error: CascadeError,
+    action: RecoveryAction,
+  ) => Promise<boolean>;
 }
 
 /**
  * Error recovery manager for cascade operations.
  */
 export class CascadeErrorRecovery {
-  private options: Required<Omit<ErrorRecoveryOptions, 'onRecoveryAttempt' | 'onRecoverySuccess' | 'onRecoveryFailure' | 'customRecovery'>> &
-    Pick<ErrorRecoveryOptions, 'onRecoveryAttempt' | 'onRecoverySuccess' | 'onRecoveryFailure' | 'customRecovery'>;
+  private options: Required<
+    Omit<
+      ErrorRecoveryOptions,
+      | "onRecoveryAttempt"
+      | "onRecoverySuccess"
+      | "onRecoveryFailure"
+      | "customRecovery"
+    >
+  > &
+    Pick<
+      ErrorRecoveryOptions,
+      | "onRecoveryAttempt"
+      | "onRecoverySuccess"
+      | "onRecoveryFailure"
+      | "customRecovery"
+    >;
 
   constructor(options: ErrorRecoveryOptions = {}) {
     this.options = {
       maxRetries: options.maxRetries ?? 3,
       retryDelay: options.retryDelay ?? 1000,
       exponentialBackoff: options.exponentialBackoff ?? true,
-      ...options
+      ...options,
     };
   }
 
@@ -326,7 +349,7 @@ export class CascadeErrorRecovery {
    */
   async withRecovery<T>(
     operation: () => Promise<T>,
-    errorHandler?: (error: CascadeError) => void
+    errorHandler?: (error: CascadeError) => void,
   ): Promise<T> {
     let lastError: CascadeError | null = null;
     let attempt = 0;
@@ -340,7 +363,6 @@ export class CascadeErrorRecovery {
           this.options.onRecoverySuccess?.(attempt);
         }
         return result;
-
       } catch (err) {
         lastError = CascadeError.fromError(err);
         lastError.context.attemptNumber = attempt;
@@ -358,7 +380,10 @@ export class CascadeErrorRecovery {
         const actions = lastError.getRecoveryActions();
 
         // Try recovery actions
-        if (actions.includes(RecoveryAction.RETRY) && attempt < this.options.maxRetries) {
+        if (
+          actions.includes(RecoveryAction.RETRY) &&
+          attempt < this.options.maxRetries
+        ) {
           const delay = this.calculateDelay(attempt);
           await this.sleep(delay);
           continue;
@@ -367,7 +392,10 @@ export class CascadeErrorRecovery {
         // If custom recovery is available, try it
         if (this.options.customRecovery) {
           for (const action of actions) {
-            const recovered = await this.options.customRecovery(lastError, action);
+            const recovered = await this.options.customRecovery(
+              lastError,
+              action,
+            );
             if (recovered) {
               return operation();
             }
@@ -388,7 +416,10 @@ export class CascadeErrorRecovery {
    * @param error - The error to handle
    * @returns Recommended recovery actions
    */
-  handleError(error: unknown): { cascadeError: CascadeError; actions: RecoveryAction[] } {
+  handleError(error: unknown): {
+    cascadeError: CascadeError;
+    actions: RecoveryAction[];
+  } {
     const cascadeError = CascadeError.fromError(error);
     const actions = cascadeError.getRecoveryActions();
 
@@ -409,7 +440,7 @@ export class CascadeErrorRecovery {
    * Sleep for a specified duration.
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
@@ -472,7 +503,7 @@ export class CascadeErrorBoundary {
       warnings: this.warningsCount,
       errors: this.errorsCount,
       critical: this.criticalCount,
-      recoverable: this.errors.filter(e => e.recoverable).length
+      recoverable: this.errors.filter((e) => e.recoverable).length,
     };
   }
 
@@ -505,8 +536,8 @@ export class CascadeErrorBoundary {
         : CascadeErrorSeverity.ERROR,
       context: {
         errorCount: this.errors.length,
-        errors: this.errors.map(e => e.toJSON())
-      }
+        errors: this.errors.map((e) => e.toJSON()),
+      },
     });
 
     throw aggregateError;
@@ -528,7 +559,7 @@ export interface ErrorBoundarySummary {
  * Create a pre-configured error recovery handler with common defaults.
  */
 export function createDefaultErrorRecovery(
-  options?: Partial<ErrorRecoveryOptions>
+  options?: Partial<ErrorRecoveryOptions>,
 ): CascadeErrorRecovery {
   return new CascadeErrorRecovery({
     maxRetries: 3,
@@ -541,8 +572,11 @@ export function createDefaultErrorRecovery(
       console.info(`[Cascade] Operation succeeded after ${attempts} attempts`);
     },
     onRecoveryFailure: (error, attempts) => {
-      console.error(`[Cascade] Operation failed after ${attempts} attempts:`, error.message);
+      console.error(
+        `[Cascade] Operation failed after ${attempts} attempts:`,
+        error.message,
+      );
     },
-    ...options
+    ...options,
   });
 }

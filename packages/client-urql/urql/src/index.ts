@@ -8,17 +8,23 @@
  */
 
 // Types
-export * from './types';
+export * from "./types";
 
 // Exchange
-export { cascadeExchange, cascadeErrorExchange, extractCascadeData, hasCascadeData, extractCascadeErrors } from './exchange';
+export {
+  cascadeExchange,
+  cascadeErrorExchange,
+  extractCascadeData,
+  hasCascadeData,
+  extractCascadeErrors,
+} from "./exchange";
 
 // Cache
-export { InMemoryCascadeCache } from './cache';
+export { InMemoryCascadeCache } from "./cache";
 
 // Client
-export { URQLCascadeClient } from './client';
-export type { CascadeMutationResult, OptimisticConfig } from './client';
+export { URQLCascadeClient } from "./client";
+export type { CascadeMutationResult, OptimisticConfig } from "./client";
 
 // Version
-export const VERSION = '0.2.0';
+export const VERSION = "0.2.0";

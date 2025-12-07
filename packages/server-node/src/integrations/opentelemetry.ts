@@ -11,16 +11,25 @@ import type {
   CounterMetric,
   GaugeMetric,
   HistogramMetric,
-} from '../metrics';
+} from "../metrics";
 
 /**
  * OpenTelemetry Meter interface (subset of @opentelemetry/api Meter).
  * This allows users to pass their own meter without requiring the full dependency.
  */
 export interface OTelMeter {
-  createCounter(name: string, options?: { description?: string; unit?: string }): OTelCounter;
-  createHistogram(name: string, options?: { description?: string; unit?: string }): OTelHistogram;
-  createUpDownCounter(name: string, options?: { description?: string; unit?: string }): OTelUpDownCounter;
+  createCounter(
+    name: string,
+    options?: { description?: string; unit?: string },
+  ): OTelCounter;
+  createHistogram(
+    name: string,
+    options?: { description?: string; unit?: string },
+  ): OTelHistogram;
+  createUpDownCounter(
+    name: string,
+    options?: { description?: string; unit?: string },
+  ): OTelUpDownCounter;
 }
 
 export interface OTelCounter {
@@ -74,40 +83,40 @@ export class OpenTelemetryMetricsCollector implements MetricsCollector {
   private maxHistogramSize: number;
 
   constructor(config: OpenTelemetryConfig) {
-    const prefix = config.prefix ?? 'cascade';
+    const prefix = config.prefix ?? "cascade";
     const meter = config.meter;
     this.maxHistogramSize = config.maxHistogramSize ?? 100;
 
     // Create counters
     this.counters = new Map<CounterMetric, OTelCounter>([
       [
-        'transactionsStarted',
+        "transactionsStarted",
         meter.createCounter(`${prefix}_transactions_started_total`, {
-          description: 'Total cascade transactions started',
+          description: "Total cascade transactions started",
         }),
       ],
       [
-        'transactionsCompleted',
+        "transactionsCompleted",
         meter.createCounter(`${prefix}_transactions_completed_total`, {
-          description: 'Total cascade transactions completed successfully',
+          description: "Total cascade transactions completed successfully",
         }),
       ],
       [
-        'transactionsFailed',
+        "transactionsFailed",
         meter.createCounter(`${prefix}_transactions_failed_total`, {
-          description: 'Total cascade transactions failed',
+          description: "Total cascade transactions failed",
         }),
       ],
       [
-        'entitiesTracked',
+        "entitiesTracked",
         meter.createCounter(`${prefix}_entities_tracked_total`, {
-          description: 'Total entities tracked across all transactions',
+          description: "Total entities tracked across all transactions",
         }),
       ],
       [
-        'entitiesTruncated',
+        "entitiesTruncated",
         meter.createCounter(`${prefix}_entities_truncated_total`, {
-          description: 'Total entities truncated due to limits',
+          description: "Total entities truncated due to limits",
         }),
       ],
     ]);
@@ -115,24 +124,24 @@ export class OpenTelemetryMetricsCollector implements MetricsCollector {
     // Create histograms
     this.histograms = new Map<HistogramMetric, OTelHistogram>([
       [
-        'trackingTimeMs',
+        "trackingTimeMs",
         meter.createHistogram(`${prefix}_tracking_duration_milliseconds`, {
-          description: 'Time spent tracking entities in milliseconds',
-          unit: 'ms',
+          description: "Time spent tracking entities in milliseconds",
+          unit: "ms",
         }),
       ],
       [
-        'constructionTimeMs',
+        "constructionTimeMs",
         meter.createHistogram(`${prefix}_construction_duration_milliseconds`, {
-          description: 'Time spent building cascade response in milliseconds',
-          unit: 'ms',
+          description: "Time spent building cascade response in milliseconds",
+          unit: "ms",
         }),
       ],
       [
-        'cascadeSize',
+        "cascadeSize",
         meter.createHistogram(`${prefix}_response_size_entities`, {
-          description: 'Number of entities in cascade response',
-          unit: 'entities',
+          description: "Number of entities in cascade response",
+          unit: "entities",
         }),
       ],
     ]);
@@ -141,8 +150,8 @@ export class OpenTelemetryMetricsCollector implements MetricsCollector {
     this.activeTransactionsGauge = meter.createUpDownCounter(
       `${prefix}_active_transactions`,
       {
-        description: 'Current number of active cascade transactions',
-      }
+        description: "Current number of active cascade transactions",
+      },
     );
 
     // Initialize local snapshot

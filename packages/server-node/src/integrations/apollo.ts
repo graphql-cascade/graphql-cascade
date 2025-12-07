@@ -5,9 +5,9 @@
  * into GraphQL response extensions.
  */
 
-import { ApolloServerPlugin, GraphQLRequestListener } from '@apollo/server';
-import { CascadeTracker } from '../tracker';
-import { CascadeTrackerConfig } from '../types';
+import { ApolloServerPlugin, GraphQLRequestListener } from "@apollo/server";
+import { CascadeTracker } from "../tracker";
+import { CascadeTrackerConfig } from "../types";
 
 /**
  * Configuration options for the Cascade Apollo Server plugin.
@@ -81,8 +81,10 @@ export interface CascadePluginOptions extends CascadeTrackerConfig {
  * };
  * ```
  */
-export function createCascadePlugin(options?: CascadePluginOptions): ApolloServerPlugin {
-  const contextKey = options?.contextKey ?? 'cascadeTracker';
+export function createCascadePlugin(
+  options?: CascadePluginOptions,
+): ApolloServerPlugin {
+  const contextKey = options?.contextKey ?? "cascadeTracker";
   const autoInject = options?.autoInject ?? true;
   const onInjectionError = options?.onInjectionError;
 
@@ -100,7 +102,7 @@ export function createCascadePlugin(options?: CascadePluginOptions): ApolloServe
             const context = contextValue as any;
             const tracker = context[contextKey] as CascadeTracker;
 
-            if (!tracker || typeof tracker.getCascadeData !== 'function') {
+            if (!tracker || typeof tracker.getCascadeData !== "function") {
               // No tracker or invalid tracker - skip cascade injection
               return;
             }
@@ -115,7 +117,7 @@ export function createCascadePlugin(options?: CascadePluginOptions): ApolloServe
             const cascadeData = tracker.getCascadeData();
 
             // Inject into response extensions
-            if (response.body.kind === 'single') {
+            if (response.body.kind === "single") {
               if (!response.body.singleResult.extensions) {
                 response.body.singleResult.extensions = {};
               }

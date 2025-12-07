@@ -1,5 +1,5 @@
-import { runStandardTests } from './standard';
-import { ServerConformanceOptions } from '../types';
+import { runStandardTests } from "./standard";
+import { ServerConformanceOptions } from "../types";
 
 // Create a mock server that matches the implementation expectations
 function createMockServer() {
@@ -11,41 +11,51 @@ function createMockServer() {
       const transactionId = `txn-${++transactionCounter}`;
 
       // Mock responses based on mutation type
-      if (mutation === 'createUser') {
+      if (mutation === "createUser") {
         return {
           success: true,
-          data: { id: '1', name: variables.name, email: variables.email },
+          data: { id: "1", name: variables.name, email: variables.email },
           cascade: {
-            updated: [{ __typename: 'User', id: '1', operation: 'CREATED' }],
+            updated: [{ __typename: "User", id: "1", operation: "CREATED" }],
             deleted: [],
             invalidations: [],
             metadata: {
               timestamp: new Date().toISOString(),
               depth: 1,
               affectedCount: 1,
-              transactionId
-            }
-          }
+              transactionId,
+            },
+          },
         };
       }
 
-      if (mutation === 'createUserWithPosts') {
+      if (mutation === "createUserWithPosts") {
         const effectiveDepth = Math.min(depth, maxDepth);
-        const updated = [{ __typename: 'User', id: '1', operation: 'CREATED' }];
+        const updated = [{ __typename: "User", id: "1", operation: "CREATED" }];
 
         if (effectiveDepth >= 2) {
           variables.posts.forEach((_: any, index: number) => {
-            updated.push({ __typename: 'Post', id: `${index + 1}`, operation: 'CREATED' });
+            updated.push({
+              __typename: "Post",
+              id: `${index + 1}`,
+              operation: "CREATED",
+            });
           });
         }
 
         return {
           success: true,
           data: {
-            id: '1',
+            id: "1",
             name: variables.name,
             email: variables.email,
-            posts: effectiveDepth >= 2 ? variables.posts.map((p: any, i: number) => ({ id: `${i + 1}`, title: p.title })) : []
+            posts:
+              effectiveDepth >= 2
+                ? variables.posts.map((p: any, i: number) => ({
+                    id: `${i + 1}`,
+                    title: p.title,
+                  }))
+                : [],
           },
           cascade: {
             updated,
@@ -55,27 +65,34 @@ function createMockServer() {
               timestamp: new Date().toISOString(),
               depth: effectiveDepth,
               affectedCount: updated.length,
-              transactionId
-            }
-          }
+              transactionId,
+            },
+          },
         };
       }
 
-      if (mutation === 'createUserWithProfile') {
+      if (mutation === "createUserWithProfile") {
         const effectiveDepth = Math.min(depth, maxDepth);
-        const updated = [{ __typename: 'User', id: '1', operation: 'CREATED' }];
+        const updated = [{ __typename: "User", id: "1", operation: "CREATED" }];
 
         if (effectiveDepth >= 2) {
-          updated.push({ __typename: 'Profile', id: '1', operation: 'CREATED' });
+          updated.push({
+            __typename: "Profile",
+            id: "1",
+            operation: "CREATED",
+          });
         }
 
         return {
           success: true,
           data: {
-            id: '1',
+            id: "1",
             name: variables.name,
             email: variables.email,
-            profile: effectiveDepth >= 2 ? { id: '1', bio: variables.profile.bio } : undefined
+            profile:
+              effectiveDepth >= 2
+                ? { id: "1", bio: variables.profile.bio }
+                : undefined,
           },
           cascade: {
             updated,
@@ -85,35 +102,49 @@ function createMockServer() {
               timestamp: new Date().toISOString(),
               depth: effectiveDepth,
               affectedCount: updated.length,
-              transactionId
-            }
-          }
+              transactionId,
+            },
+          },
         };
       }
 
-      if (mutation === 'createUserWithGroups') {
+      if (mutation === "createUserWithGroups") {
         const effectiveDepth = Math.min(depth, maxDepth);
-        const updated = [{ __typename: 'User', id: '1', operation: 'CREATED' }];
+        const updated = [{ __typename: "User", id: "1", operation: "CREATED" }];
 
         if (effectiveDepth >= 2) {
           variables.groups.forEach((_: any, index: number) => {
-            updated.push({ __typename: 'Group', id: `${index + 1}`, operation: 'CREATED' });
+            updated.push({
+              __typename: "Group",
+              id: `${index + 1}`,
+              operation: "CREATED",
+            });
           });
         }
 
         if (effectiveDepth >= 3) {
           variables.groups.forEach((_: any, index: number) => {
-            updated.push({ __typename: 'UserGroup', id: `${index + 1}`, operation: 'CREATED' });
+            updated.push({
+              __typename: "UserGroup",
+              id: `${index + 1}`,
+              operation: "CREATED",
+            });
           });
         }
 
         return {
           success: true,
           data: {
-            id: '1',
+            id: "1",
             name: variables.name,
             email: variables.email,
-            groups: effectiveDepth >= 2 ? variables.groups.map((g: any, i: number) => ({ id: `${i + 1}`, name: g.name })) : []
+            groups:
+              effectiveDepth >= 2
+                ? variables.groups.map((g: any, i: number) => ({
+                    id: `${i + 1}`,
+                    name: g.name,
+                  }))
+                : [],
           },
           cascade: {
             updated,
@@ -123,16 +154,16 @@ function createMockServer() {
               timestamp: new Date().toISOString(),
               depth: effectiveDepth,
               affectedCount: updated.length,
-              transactionId
-            }
-          }
+              transactionId,
+            },
+          },
         };
       }
 
-      if (mutation === 'createUsersWithFriends') {
+      if (mutation === "createUsersWithFriends") {
         const updated = [
-          { __typename: 'User', id: '1', operation: 'CREATED' },
-          { __typename: 'User', id: '2', operation: 'CREATED' }
+          { __typename: "User", id: "1", operation: "CREATED" },
+          { __typename: "User", id: "2", operation: "CREATED" },
         ];
 
         return {
@@ -146,16 +177,16 @@ function createMockServer() {
               timestamp: new Date().toISOString(),
               depth: 2,
               affectedCount: 2,
-              transactionId
-            }
-          }
+              transactionId,
+            },
+          },
         };
       }
 
-      if (mutation === 'createCategoryTree') {
+      if (mutation === "createCategoryTree") {
         const updated = [
-          { __typename: 'Category', id: '1', operation: 'CREATED' },
-          { __typename: 'Category', id: '2', operation: 'CREATED' }
+          { __typename: "Category", id: "1", operation: "CREATED" },
+          { __typename: "Category", id: "2", operation: "CREATED" },
         ];
 
         return {
@@ -169,49 +200,73 @@ function createMockServer() {
               timestamp: new Date().toISOString(),
               depth: 2,
               affectedCount: 2,
-              transactionId
-            }
-          }
+              transactionId,
+            },
+          },
         };
       }
 
-      if (mutation === 'createPostWithComments') {
+      if (mutation === "createPostWithComments") {
         const effectiveDepth = Math.min(depth, maxDepth);
         const updated = [];
 
         if (effectiveDepth >= 1) {
-          updated.push({ __typename: 'Post', id: '1', operation: 'CREATED' });
+          updated.push({ __typename: "Post", id: "1", operation: "CREATED" });
         }
 
         if (effectiveDepth >= 2) {
-          updated.push({ __typename: 'User', id: '1', operation: 'CREATED' }); // Author
+          updated.push({ __typename: "User", id: "1", operation: "CREATED" }); // Author
         }
 
         if (effectiveDepth >= 3) {
-          updated.push({ __typename: 'Comment', id: '1', operation: 'CREATED' });
-          updated.push({ __typename: 'Comment', id: '2', operation: 'CREATED' });
-          updated.push({ __typename: 'User', id: '2', operation: 'CREATED' }); // Commenter 1
-          updated.push({ __typename: 'User', id: '3', operation: 'CREATED' }); // Commenter 2
+          updated.push({
+            __typename: "Comment",
+            id: "1",
+            operation: "CREATED",
+          });
+          updated.push({
+            __typename: "Comment",
+            id: "2",
+            operation: "CREATED",
+          });
+          updated.push({ __typename: "User", id: "2", operation: "CREATED" }); // Commenter 1
+          updated.push({ __typename: "User", id: "3", operation: "CREATED" }); // Commenter 2
         }
 
         // Check for partial success (invalid comment)
-        const hasInvalidComment = variables.comments.some((c: any) => !c.text || !c.author.name);
+        const hasInvalidComment = variables.comments.some(
+          (c: any) => !c.text || !c.author.name,
+        );
         const success = !hasInvalidComment;
 
         if (hasInvalidComment) {
           // Remove invalid comment from updates
-          updated.splice(updated.findIndex((u: any) => u.__typename === 'Comment' && u.id === '2'), 1);
-          updated.splice(updated.findIndex((u: any) => u.__typename === 'User' && u.id === '3'), 1);
+          updated.splice(
+            updated.findIndex(
+              (u: any) => u.__typename === "Comment" && u.id === "2",
+            ),
+            1,
+          );
+          updated.splice(
+            updated.findIndex(
+              (u: any) => u.__typename === "User" && u.id === "3",
+            ),
+            1,
+          );
         }
 
         return {
           success,
-          data: success ? {
-            id: '1',
-            title: variables.title,
-            author: { id: '1', name: variables.author.name },
-            comments: hasInvalidComment ? [variables.comments[0]] : variables.comments
-          } : null,
+          data: success
+            ? {
+                id: "1",
+                title: variables.title,
+                author: { id: "1", name: variables.author.name },
+                comments: hasInvalidComment
+                  ? [variables.comments[0]]
+                  : variables.comments,
+              }
+            : null,
           cascade: {
             updated,
             deleted: [],
@@ -222,17 +277,19 @@ function createMockServer() {
               affectedCount: updated.length,
               transactionId,
               partialSuccess: hasInvalidComment,
-              warnings: hasInvalidComment ? ['Some comments could not be created'] : undefined
-            }
-          }
+              warnings: hasInvalidComment
+                ? ["Some comments could not be created"]
+                : undefined,
+            },
+          },
         };
       }
 
-      if (mutation === 'updatePostWithComments') {
+      if (mutation === "updatePostWithComments") {
         const updated = [
-          { __typename: 'Post', id: variables.id, operation: 'UPDATED' },
-          { __typename: 'Comment', id: 'comment-1', operation: 'UPDATED' },
-          { __typename: 'Comment', id: 'comment-2', operation: 'UPDATED' }
+          { __typename: "Post", id: variables.id, operation: "UPDATED" },
+          { __typename: "Comment", id: "comment-1", operation: "UPDATED" },
+          { __typename: "Comment", id: "comment-2", operation: "UPDATED" },
         ];
 
         return {
@@ -246,22 +303,26 @@ function createMockServer() {
               timestamp: new Date().toISOString(),
               depth: 2,
               affectedCount: 3,
-              transactionId
-            }
-          }
+              transactionId,
+            },
+          },
         };
       }
 
-      if (mutation === 'createDeepNested') {
+      if (mutation === "createDeepNested") {
         const effectiveDepth = Math.min(depth, maxDepth);
-        const updated = [{ __typename: 'User', id: '1', operation: 'CREATED' }];
+        const updated = [{ __typename: "User", id: "1", operation: "CREATED" }];
 
         if (effectiveDepth >= 2) {
-          updated.push({ __typename: 'Post', id: '1', operation: 'CREATED' });
+          updated.push({ __typename: "Post", id: "1", operation: "CREATED" });
         }
 
         if (effectiveDepth >= 3) {
-          updated.push({ __typename: 'Comment', id: '1', operation: 'CREATED' });
+          updated.push({
+            __typename: "Comment",
+            id: "1",
+            operation: "CREATED",
+          });
         }
 
         return {
@@ -275,22 +336,26 @@ function createMockServer() {
               timestamp: new Date().toISOString(),
               depth: effectiveDepth,
               affectedCount: updated.length,
-              transactionId
-            }
-          }
+              transactionId,
+            },
+          },
         };
       }
 
-      if (mutation === 'createDeepCascade') {
+      if (mutation === "createDeepCascade") {
         const effectiveDepth = Math.min(depth, maxDepth);
-        const updated = [{ __typename: 'User', id: '1', operation: 'CREATED' }];
+        const updated = [{ __typename: "User", id: "1", operation: "CREATED" }];
 
         if (effectiveDepth >= 2) {
-          updated.push({ __typename: 'Post', id: '1', operation: 'CREATED' });
+          updated.push({ __typename: "Post", id: "1", operation: "CREATED" });
         }
 
         if (effectiveDepth >= 3) {
-          updated.push({ __typename: 'Comment', id: '1', operation: 'CREATED' });
+          updated.push({
+            __typename: "Comment",
+            id: "1",
+            operation: "CREATED",
+          });
         }
 
         return {
@@ -304,128 +369,151 @@ function createMockServer() {
               timestamp: new Date().toISOString(),
               depth: effectiveDepth,
               affectedCount: updated.length,
-              transactionId
-            }
-          }
+              transactionId,
+            },
+          },
         };
       }
 
-      if (mutation === 'createPost') {
+      if (mutation === "createPost") {
         return {
           success: true,
-          data: { id: '1', title: variables.title, content: variables.content, authorId: variables.authorId },
+          data: {
+            id: "1",
+            title: variables.title,
+            content: variables.content,
+            authorId: variables.authorId,
+          },
           cascade: {
-            updated: [{ __typename: 'Post', id: '1', operation: 'CREATED' }],
+            updated: [{ __typename: "Post", id: "1", operation: "CREATED" }],
             deleted: [],
             invalidations: [],
             metadata: {
               timestamp: new Date().toISOString(),
               depth: 1,
               affectedCount: 1,
-              transactionId
-            }
-          }
+              transactionId,
+            },
+          },
         };
       }
 
-      if (mutation === 'createUserWithValidation') {
+      if (mutation === "createUserWithValidation") {
         const isValid = variables.name && variables.name.trim().length > 0;
         return {
           success: isValid,
-          errors: isValid ? undefined : [{ code: 'VALIDATION_ERROR', message: 'Name is required' }],
-          data: isValid ? { id: '1', name: variables.name, email: variables.email } : null,
+          errors: isValid
+            ? undefined
+            : [{ code: "VALIDATION_ERROR", message: "Name is required" }],
+          data: isValid
+            ? { id: "1", name: variables.name, email: variables.email }
+            : null,
           cascade: {
-            updated: isValid ? [{ __typename: 'User', id: '1', operation: 'CREATED' }] : [],
+            updated: isValid
+              ? [{ __typename: "User", id: "1", operation: "CREATED" }]
+              : [],
             deleted: [],
             invalidations: [],
             metadata: {
               timestamp: new Date().toISOString(),
               depth: isValid ? 1 : 0,
               affectedCount: isValid ? 1 : 0,
-              transactionId
-            }
-          }
+              transactionId,
+            },
+          },
         };
       }
 
       // Default response
       return {
         success: true,
-        data: { id: '1' },
+        data: { id: "1" },
         cascade: {
-          updated: [{ __typename: 'Entity', id: '1', operation: 'CREATED' }],
+          updated: [{ __typename: "Entity", id: "1", operation: "CREATED" }],
           deleted: [],
           invalidations: [],
           metadata: {
             timestamp: new Date().toISOString(),
             depth: 1,
             affectedCount: 1,
-            transactionId
-          }
-        }
+            transactionId,
+          },
+        },
       };
-    }
+    },
   };
 }
 
-describe('runStandardTests', () => {
+describe("runStandardTests", () => {
   const options: ServerConformanceOptions = {
-    level: 'standard',
-    createServer: createMockServer
+    level: "standard",
+    createServer: createMockServer,
   };
 
-  it('returns 3 test categories', async () => {
+  it("returns 3 test categories", async () => {
     const categories = await runStandardTests(options);
     expect(categories).toHaveLength(3);
-    expect(categories[0].name).toBe('Cascade Depth Control');
-    expect(categories[1].name).toBe('Relationship Traversal');
-    expect(categories[2].name).toBe('Transaction Metadata');
+    expect(categories[0].name).toBe("Cascade Depth Control");
+    expect(categories[1].name).toBe("Relationship Traversal");
+    expect(categories[2].name).toBe("Transaction Metadata");
   });
 
-  it('Cascade Depth Control has 6 tests', async () => {
+  it("Cascade Depth Control has 6 tests", async () => {
     const categories = await runStandardTests(options);
-    const depthCategory = categories.find(c => c.name === 'Cascade Depth Control');
+    const depthCategory = categories.find(
+      (c) => c.name === "Cascade Depth Control",
+    );
     expect(depthCategory?.tests).toHaveLength(6);
   });
 
-  it('Relationship Traversal has 8 tests', async () => {
+  it("Relationship Traversal has 8 tests", async () => {
     const categories = await runStandardTests(options);
-    const relationshipCategory = categories.find(c => c.name === 'Relationship Traversal');
+    const relationshipCategory = categories.find(
+      (c) => c.name === "Relationship Traversal",
+    );
     expect(relationshipCategory?.tests).toHaveLength(8);
   });
 
-  it('Transaction Metadata has 4 tests', async () => {
+  it("Transaction Metadata has 4 tests", async () => {
     const categories = await runStandardTests(options);
-    const transactionCategory = categories.find(c => c.name === 'Transaction Metadata');
+    const transactionCategory = categories.find(
+      (c) => c.name === "Transaction Metadata",
+    );
     expect(transactionCategory?.tests).toHaveLength(4);
   });
 
-  it('total of 18 tests across all categories', async () => {
+  it("total of 18 tests across all categories", async () => {
     const categories = await runStandardTests(options);
-    const totalTests = categories.reduce((sum, category) => sum + category.tests.length, 0);
+    const totalTests = categories.reduce(
+      (sum, category) => sum + category.tests.length,
+      0,
+    );
     expect(totalTests).toBe(18);
   });
 
-  it('runs all tests and returns results', async () => {
+  it("runs all tests and returns results", async () => {
     const categories = await runStandardTests(options);
-    const totalTests = categories.reduce((sum, category) => sum + category.tests.length, 0);
+    const totalTests = categories.reduce(
+      (sum, category) => sum + category.tests.length,
+      0,
+    );
     expect(totalTests).toBe(18);
 
     // Check that each test has a result (passed or failed with message)
-    categories.forEach(category => {
-      category.tests.forEach(test => {
-        expect(test).toHaveProperty('name');
-        expect(test).toHaveProperty('passed');
-        expect(typeof test.passed).toBe('boolean');
-        expect(test).toHaveProperty('message');
+    categories.forEach((category) => {
+      category.tests.forEach((test) => {
+        expect(test).toHaveProperty("name");
+        expect(test).toHaveProperty("passed");
+        expect(typeof test.passed).toBe("boolean");
+        expect(test).toHaveProperty("message");
       });
     });
   });
 
-  it('all categories are at standard level', async () => {
+  it("all categories are at standard level", async () => {
     const categories = await runStandardTests(options);
-    categories.forEach(category => {
-      expect(category.level).toBe('standard');
+    categories.forEach((category) => {
+      expect(category.level).toBe("standard");
     });
   });
 });

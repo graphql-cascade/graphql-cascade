@@ -5,16 +5,16 @@
  * with automatic cascade processing.
  */
 
-import type { Client, OperationResult, TypedDocumentNode } from '@urql/core';
-import type { DocumentNode } from 'graphql';
+import type { Client, OperationResult, TypedDocumentNode } from "@urql/core";
+import type { DocumentNode } from "graphql";
 import {
   CascadeCache,
   CascadeUpdates,
   URQLCascadeConfig,
   CascadeOperation,
   InvalidationStrategy,
-} from './types';
-import { extractCascadeData } from './exchange';
+} from "./types";
+import { extractCascadeData } from "./exchange";
 
 /**
  * Mutation result with cascade data.
@@ -69,7 +69,7 @@ export class URQLCascadeClient {
   constructor(
     client: Client,
     cache: CascadeCache,
-    config: URQLCascadeConfig = {}
+    config: URQLCascadeConfig = {},
   ) {
     this.client = client;
     this.cache = cache;
@@ -88,11 +88,16 @@ export class URQLCascadeClient {
    * @param variables - Mutation variables
    * @returns Mutation result with cascade data
    */
-  async mutate<T = unknown, V extends Record<string, unknown> = Record<string, unknown>>(
+  async mutate<
+    T = unknown,
+    V extends Record<string, unknown> = Record<string, unknown>,
+  >(
     mutation: DocumentNode | TypedDocumentNode<T, V>,
-    variables?: V
+    variables?: V,
   ): Promise<CascadeMutationResult<T>> {
-    const result = await this.client.mutation(mutation, variables ?? {} as V).toPromise();
+    const result = await this.client
+      .mutation(mutation, variables ?? ({} as V))
+      .toPromise();
 
     return this.processMutationResult<T>(result);
   }
@@ -105,14 +110,20 @@ export class URQLCascadeClient {
    * @param optimistic - Optimistic update configuration
    * @returns Mutation result with cascade data
    */
-  async mutateOptimistic<T = unknown, V extends Record<string, unknown> = Record<string, unknown>>(
+  async mutateOptimistic<
+    T = unknown,
+    V extends Record<string, unknown> = Record<string, unknown>,
+  >(
     mutation: DocumentNode | TypedDocumentNode<T, V>,
     variables: V,
-    optimistic: OptimisticConfig<T, V>
+    optimistic: OptimisticConfig<T, V>,
   ): Promise<CascadeMutationResult<T>> {
     // Apply optimistic updates
     const optimisticResponse = optimistic.optimisticResponse(variables);
-    const optimisticCascade = optimistic.optimisticCascade?.(variables, optimisticResponse);
+    const optimisticCascade = optimistic.optimisticCascade?.(
+      variables,
+      optimisticResponse,
+    );
 
     // Capture rollback data BEFORE applying optimistic updates
     const rollbackData = this.captureRollbackData(optimisticCascade);
@@ -139,7 +150,9 @@ export class URQLCascadeClient {
   /**
    * Process a mutation result and extract cascade data.
    */
-  private processMutationResult<T>(result: OperationResult): CascadeMutationResult<T> {
+  private processMutationResult<T>(
+    result: OperationResult,
+  ): CascadeMutationResult<T> {
     const cascade = extractCascadeData(result);
 
     // Apply cascade updates to cache
@@ -200,7 +213,7 @@ export class URQLCascadeClient {
    * Capture data needed for rollback.
    */
   private captureRollbackData(
-    cascade: CascadeUpdates | undefined
+    cascade: CascadeUpdates | undefined,
   ): Map<string, Record<string, unknown> | null> | null {
     if (!cascade) return null;
 
@@ -218,9 +231,11 @@ export class URQLCascadeClient {
   /**
    * Rollback optimistic updates.
    */
-  private rollback(rollbackData: Map<string, Record<string, unknown> | null>): void {
+  private rollback(
+    rollbackData: Map<string, Record<string, unknown> | null>,
+  ): void {
     for (const [key, data] of rollbackData) {
-      const [typename, id] = key.split(':');
+      const [typename, id] = key.split(":");
       if (data) {
         this.cache.write(typename, id, data);
       } else {

@@ -6,11 +6,7 @@
  * consider using the GraphcacheCascadeAdapter instead.
  */
 
-import {
-  CascadeCache,
-  QueryInvalidation,
-  InvalidationScope,
-} from './types';
+import { CascadeCache, QueryInvalidation, InvalidationScope } from "./types";
 
 /**
  * Entity stored in the cache.
@@ -42,7 +38,10 @@ interface CachedQuery {
 export class InMemoryCascadeCache implements CascadeCache {
   private entities: Map<string, CacheEntity> = new Map();
   private queries: Map<string, CachedQuery> = new Map();
-  private refetchFn?: (queryName: string, args?: Record<string, unknown>) => Promise<void>;
+  private refetchFn?: (
+    queryName: string,
+    args?: Record<string, unknown>,
+  ) => Promise<void>;
 
   /**
    * Create a new in-memory cache.
@@ -50,7 +49,10 @@ export class InMemoryCascadeCache implements CascadeCache {
    * @param options - Cache options
    */
   constructor(options?: {
-    refetchFn?: (queryName: string, args?: Record<string, unknown>) => Promise<void>;
+    refetchFn?: (
+      queryName: string,
+      args?: Record<string, unknown>,
+    ) => Promise<void>;
   }) {
     this.refetchFn = options?.refetchFn;
   }
@@ -155,7 +157,7 @@ export class InMemoryCascadeCache implements CascadeCache {
     const typename = entity.__typename as string;
     const id = entity.id as string;
     if (!typename || !id) {
-      throw new Error('Entity must have __typename and id fields');
+      throw new Error("Entity must have __typename and id fields");
     }
     return this.entityKey(typename, id);
   }
@@ -168,7 +170,10 @@ export class InMemoryCascadeCache implements CascadeCache {
 
     switch (invalidation.scope) {
       case InvalidationScope.EXACT:
-        const exactKey = this.queryKey(invalidation.queryName ?? '', invalidation.arguments);
+        const exactKey = this.queryKey(
+          invalidation.queryName ?? "",
+          invalidation.arguments,
+        );
         if (this.queries.has(exactKey)) {
           matches.push(exactKey);
         }
@@ -176,7 +181,10 @@ export class InMemoryCascadeCache implements CascadeCache {
 
       case InvalidationScope.PREFIX:
         for (const key of this.queries.keys()) {
-          if (invalidation.queryName && key.startsWith(invalidation.queryName)) {
+          if (
+            invalidation.queryName &&
+            key.startsWith(invalidation.queryName)
+          ) {
             matches.push(key);
           }
         }
@@ -213,20 +221,26 @@ export class InMemoryCascadeCache implements CascadeCache {
   private patternToRegex(pattern: string): RegExp {
     // Validate pattern length to prevent ReDoS attacks
     if (pattern.length > InMemoryCascadeCache.MAX_PATTERN_LENGTH) {
-      throw new Error(`Pattern exceeds maximum length of ${InMemoryCascadeCache.MAX_PATTERN_LENGTH} characters`);
+      throw new Error(
+        `Pattern exceeds maximum length of ${InMemoryCascadeCache.MAX_PATTERN_LENGTH} characters`,
+      );
     }
 
     const escaped = pattern
-      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-      .replace(/\*/g, '.*')
-      .replace(/\?/g, '.');
+      .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+      .replace(/\*/g, ".*")
+      .replace(/\?/g, ".");
     return new RegExp(`^${escaped}$`);
   }
 
   /**
    * Store a query result.
    */
-  storeQuery(name: string, args: Record<string, unknown> | undefined, data: unknown): void {
+  storeQuery(
+    name: string,
+    args: Record<string, unknown> | undefined,
+    data: unknown,
+  ): void {
     const key = this.queryKey(name, args);
     this.queries.set(key, {
       name,
@@ -240,7 +254,10 @@ export class InMemoryCascadeCache implements CascadeCache {
   /**
    * Get a query result.
    */
-  getQuery(name: string, args?: Record<string, unknown>): { data: unknown; isStale: boolean } | null {
+  getQuery(
+    name: string,
+    args?: Record<string, unknown>,
+  ): { data: unknown; isStale: boolean } | null {
     const key = this.queryKey(name, args);
     const query = this.queries.get(key);
     if (!query) {
@@ -273,7 +290,11 @@ export class InMemoryCascadeCache implements CascadeCache {
   /**
    * Get cache statistics.
    */
-  getStats(): { entityCount: number; queryCount: number; staleQueryCount: number } {
+  getStats(): {
+    entityCount: number;
+    queryCount: number;
+    staleQueryCount: number;
+  } {
     let staleCount = 0;
     for (const query of this.queries.values()) {
       if (query.isStale) {

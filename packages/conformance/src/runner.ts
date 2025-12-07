@@ -11,14 +11,14 @@ import type {
   ServerConformanceOptions,
   ClientConformanceOptions,
   TestCategory,
-} from './types';
+} from "./types";
 
-import { runBasicTests, runStandardTests, runCompleteTests } from './server';
+import { runBasicTests, runStandardTests, runCompleteTests } from "./server";
 import {
   runClientBasicTests,
   runClientStandardTests,
   runClientCompleteTests,
-} from './client';
+} from "./client";
 
 /**
  * Aggregate test results for a specific level
@@ -48,43 +48,43 @@ function determineAchievedLevel(
   basicResults: LevelResults,
   standardResults: LevelResults,
   completeResults: LevelResults,
-  testedLevel: ConformanceLevel
+  testedLevel: ConformanceLevel,
 ): ConformanceLevel {
   // If any basic tests failed, no conformance level achieved
   if (basicResults.failed > 0) {
-    return 'none';
+    return "none";
   }
 
   // If only tested basic, return basic
-  if (testedLevel === 'basic') {
-    return 'basic';
+  if (testedLevel === "basic") {
+    return "basic";
   }
 
   // If standard tests failed, only basic achieved
   if (standardResults.failed > 0) {
-    return 'basic';
+    return "basic";
   }
 
   // If only tested standard, return standard
-  if (testedLevel === 'standard') {
-    return 'standard';
+  if (testedLevel === "standard") {
+    return "standard";
   }
 
   // If complete tests failed, only standard achieved
   if (completeResults.failed > 0) {
-    return 'standard';
+    return "standard";
   }
 
-  return 'complete';
+  return "complete";
 }
 
 /**
  * Extract failures from test categories
  */
 function extractFailures(
-  categories: TestCategory[]
-): ConformanceReport['failures'] {
-  const failures: ConformanceReport['failures'] = [];
+  categories: TestCategory[],
+): ConformanceReport["failures"] {
+  const failures: ConformanceReport["failures"] = [];
 
   for (const category of categories) {
     for (const test of category.tests) {
@@ -92,7 +92,7 @@ function extractFailures(
         failures.push({
           test: `${category.name}: ${test.name}`,
           level: category.level,
-          message: test.message || 'Test failed',
+          message: test.message || "Test failed",
           expected: test.expected,
           actual: test.actual,
         });
@@ -107,7 +107,7 @@ function extractFailures(
  * Run server conformance tests
  */
 export async function runServerConformance(
-  options: ServerConformanceOptions
+  options: ServerConformanceOptions,
 ): Promise<ConformanceReport> {
   const timestamp = new Date().toISOString();
   const testedLevel = options.level;
@@ -119,7 +119,7 @@ export async function runServerConformance(
   // Run standard tests if requested
   let standardCategories: TestCategory[] = [];
   let standardResults: LevelResults = { passed: 0, failed: 0, skipped: 0 };
-  if (testedLevel === 'standard' || testedLevel === 'complete') {
+  if (testedLevel === "standard" || testedLevel === "complete") {
     standardCategories = await runStandardTests(options);
     standardResults = aggregateResults(standardCategories);
   }
@@ -127,7 +127,7 @@ export async function runServerConformance(
   // Run complete tests if requested
   let completeCategories: TestCategory[] = [];
   let completeResults: LevelResults = { passed: 0, failed: 0, skipped: 0 };
-  if (testedLevel === 'complete') {
+  if (testedLevel === "complete") {
     completeCategories = await runCompleteTests(options);
     completeResults = aggregateResults(completeCategories);
   }
@@ -137,7 +137,7 @@ export async function runServerConformance(
     basicResults,
     standardResults,
     completeResults,
-    testedLevel
+    testedLevel,
   );
 
   // Collect all failures
@@ -149,7 +149,7 @@ export async function runServerConformance(
 
   return {
     timestamp,
-    target: 'server',
+    target: "server",
     level: {
       achieved: achievedLevel,
       tested: testedLevel,
@@ -167,7 +167,7 @@ export async function runServerConformance(
  * Run client conformance tests
  */
 export async function runClientConformance(
-  options: ClientConformanceOptions
+  options: ClientConformanceOptions,
 ): Promise<ConformanceReport> {
   const timestamp = new Date().toISOString();
   const testedLevel = options.level;
@@ -179,7 +179,7 @@ export async function runClientConformance(
   // Run standard tests if requested
   let standardCategories: TestCategory[] = [];
   let standardResults: LevelResults = { passed: 0, failed: 0, skipped: 0 };
-  if (testedLevel === 'standard' || testedLevel === 'complete') {
+  if (testedLevel === "standard" || testedLevel === "complete") {
     standardCategories = await runClientStandardTests(options);
     standardResults = aggregateResults(standardCategories);
   }
@@ -187,7 +187,7 @@ export async function runClientConformance(
   // Run complete tests if requested
   let completeCategories: TestCategory[] = [];
   let completeResults: LevelResults = { passed: 0, failed: 0, skipped: 0 };
-  if (testedLevel === 'complete') {
+  if (testedLevel === "complete") {
     completeCategories = await runClientCompleteTests(options);
     completeResults = aggregateResults(completeCategories);
   }
@@ -197,7 +197,7 @@ export async function runClientConformance(
     basicResults,
     standardResults,
     completeResults,
-    testedLevel
+    testedLevel,
   );
 
   // Collect all failures
@@ -209,7 +209,7 @@ export async function runClientConformance(
 
   return {
     timestamp,
-    target: 'client',
+    target: "client",
     level: {
       achieved: achievedLevel,
       tested: testedLevel,

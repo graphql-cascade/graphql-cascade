@@ -9,14 +9,14 @@ This directory contains optional integrations for popular Node.js frameworks and
 **Module and Service for NestJS applications with request-scoped cascade tracking.**
 
 ```typescript
-import { Module } from '@nestjs/common';
-import { CascadeModule } from '@graphql-cascade/server';
+import { Module } from "@nestjs/common";
+import { CascadeModule } from "@graphql-cascade/server";
 
 @Module({
   imports: [
     CascadeModule.forRoot({
       maxDepth: 5,
-      excludeTypes: ['InternalType'],
+      excludeTypes: ["InternalType"],
       maxResponseSizeMb: 10,
     }),
   ],
@@ -27,15 +27,18 @@ export class AppModule {}
 **Usage in Resolvers:**
 
 ```typescript
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CascadeService } from '@graphql-cascade/server';
+import { Resolver, Mutation, Args } from "@nestjs/graphql";
+import { CascadeService } from "@graphql-cascade/server";
 
 @Resolver()
 export class UserResolver {
   constructor(private cascadeService: CascadeService) {}
 
   @Mutation(() => User)
-  async updateUser(@Args('id') id: string, @Args('input') input: UpdateUserInput) {
+  async updateUser(
+    @Args("id") id: string,
+    @Args("input") input: UpdateUserInput,
+  ) {
     this.cascadeService.startTransaction();
 
     const user = await this.userService.update(id, input);
@@ -51,8 +54,8 @@ export class UserResolver {
 **Plugin for Apollo Server v4+ that automatically injects cascade data into response extensions.**
 
 ```typescript
-import { ApolloServer } from '@apollo/server';
-import { createCascadePlugin } from '@graphql-cascade/server';
+import { ApolloServer } from "@apollo/server";
+import { createCascadePlugin } from "@graphql-cascade/server";
 
 const server = new ApolloServer({
   typeDefs,
@@ -60,8 +63,8 @@ const server = new ApolloServer({
   plugins: [
     createCascadePlugin({
       maxDepth: 5,
-      excludeTypes: ['InternalType'],
-      contextKey: 'cascadeTracker', // default
+      excludeTypes: ["InternalType"],
+      contextKey: "cascadeTracker", // default
       autoInject: true, // default
     }),
   ],
@@ -71,7 +74,7 @@ const server = new ApolloServer({
 **Context Setup:**
 
 ```typescript
-import { CascadeTracker } from '@graphql-cascade/server';
+import { CascadeTracker } from "@graphql-cascade/server";
 
 const server = new ApolloServer({
   // ...
@@ -104,8 +107,8 @@ const resolvers = {
 **Middleware for Express applications that attaches cascade tracker to each request.**
 
 ```typescript
-import express from 'express';
-import { cascadeMiddleware } from '@graphql-cascade/server';
+import express from "express";
+import { cascadeMiddleware } from "@graphql-cascade/server";
 
 const app = express();
 
@@ -113,13 +116,13 @@ const app = express();
 app.use(
   cascadeMiddleware({
     maxDepth: 5,
-    excludeTypes: ['InternalType'],
+    excludeTypes: ["InternalType"],
     maxResponseSizeMb: 10,
-  })
+  }),
 );
 
 // Now req.cascadeTracker and req.cascadeBuilder are available
-app.post('/graphql', (req, res) => {
+app.post("/graphql", (req, res) => {
   req.cascadeTracker.startTransaction();
   // ... handle GraphQL
 });
@@ -128,9 +131,9 @@ app.post('/graphql', (req, res) => {
 **Helper Functions:**
 
 ```typescript
-import { getCascadeData, buildCascadeResponse } from '@graphql-cascade/server';
+import { getCascadeData, buildCascadeResponse } from "@graphql-cascade/server";
 
-app.post('/api/users', async (req, res) => {
+app.post("/api/users", async (req, res) => {
   req.cascadeTracker.startTransaction();
 
   const user = await createUser(req.body);

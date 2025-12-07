@@ -13,12 +13,9 @@ export {
   InvalidationStrategy,
   InvalidationScope,
   CascadeCache,
-} from '@graphql-cascade/client';
+} from "@graphql-cascade/client";
 
-import type {
-  CascadeUpdates,
-  CascadeCache,
-} from '@graphql-cascade/client';
+import type { CascadeUpdates, CascadeCache } from "@graphql-cascade/client";
 
 /**
  * Options for the cascade exchange.

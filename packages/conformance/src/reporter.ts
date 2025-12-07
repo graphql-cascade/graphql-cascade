@@ -4,10 +4,10 @@
  * Formats and outputs conformance test results.
  */
 
-import type { ConformanceReport, ConformanceLevel } from './types';
+import type { ConformanceReport, ConformanceLevel } from "./types";
 
 export interface ReporterOptions {
-  format: 'console' | 'json' | 'markdown';
+  format: "console" | "json" | "markdown";
   verbose?: boolean;
   colors?: boolean;
 }
@@ -16,13 +16,13 @@ export interface ReporterOptions {
  * ANSI color codes for terminal output
  */
 const colors = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  red: '\x1b[31m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  gray: '\x1b[90m',
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  gray: "\x1b[90m",
 };
 
 /**
@@ -54,47 +54,50 @@ function getColorFns(useColors: boolean) {
  */
 function getLevelDisplay(
   level: ConformanceLevel,
-  c: ReturnType<typeof getColorFns>
+  c: ReturnType<typeof getColorFns>,
 ): string {
   switch (level) {
-    case 'complete':
-      return c.green('COMPLETE');
-    case 'standard':
-      return c.blue('STANDARD');
-    case 'basic':
-      return c.yellow('BASIC');
-    case 'none':
-      return c.red('NONE');
+    case "complete":
+      return c.green("COMPLETE");
+    case "standard":
+      return c.blue("STANDARD");
+    case "basic":
+      return c.yellow("BASIC");
+    case "none":
+      return c.red("NONE");
   }
 }
 
 /**
  * Format report as console output
  */
-function formatConsole(report: ConformanceReport, options: ReporterOptions): string {
+function formatConsole(
+  report: ConformanceReport,
+  options: ReporterOptions,
+): string {
   const c = getColorFns(options.colors !== false);
   const lines: string[] = [];
 
   // Header
-  lines.push('');
-  lines.push(c.bold('GraphQL Cascade Conformance Report'));
-  lines.push(c.gray('─'.repeat(50)));
-  lines.push('');
+  lines.push("");
+  lines.push(c.bold("GraphQL Cascade Conformance Report"));
+  lines.push(c.gray("─".repeat(50)));
+  lines.push("");
 
   // Target and timestamp
   lines.push(`Target: ${c.bold(report.target.toUpperCase())}`);
   lines.push(`Timestamp: ${c.gray(report.timestamp)}`);
-  lines.push('');
+  lines.push("");
 
   // Level summary
-  lines.push(c.bold('Conformance Level'));
+  lines.push(c.bold("Conformance Level"));
   lines.push(`  Tested:   ${getLevelDisplay(report.level.tested, c)}`);
   lines.push(`  Achieved: ${getLevelDisplay(report.level.achieved, c)}`);
-  lines.push('');
+  lines.push("");
 
   // Results by level
-  lines.push(c.bold('Test Results'));
-  const levels: ConformanceLevel[] = ['basic', 'standard', 'complete'];
+  lines.push(c.bold("Test Results"));
+  const levels: ConformanceLevel[] = ["basic", "standard", "complete"];
   for (const level of levels) {
     const results = report.results[level as keyof typeof report.results];
     const total = results.passed + results.failed + results.skipped;
@@ -103,26 +106,26 @@ function formatConsole(report: ConformanceReport, options: ReporterOptions): str
     const passRate = total > 0 ? Math.round((results.passed / total) * 100) : 0;
     const statusColor = results.failed === 0 ? c.green : c.red;
     lines.push(
-      `  ${level.padEnd(10)} ${statusColor(`${results.passed}/${total}`)} (${passRate}%)`
+      `  ${level.padEnd(10)} ${statusColor(`${results.passed}/${total}`)} (${passRate}%)`,
     );
   }
-  lines.push('');
+  lines.push("");
 
   // Failures
   if (report.failures.length > 0) {
-    lines.push(c.bold(c.red('Failures')));
+    lines.push(c.bold(c.red("Failures")));
     for (const failure of report.failures) {
-      lines.push(`  ${c.red('✗')} [${failure.level}] ${failure.test}`);
+      lines.push(`  ${c.red("✗")} [${failure.level}] ${failure.test}`);
       lines.push(`    ${c.gray(failure.message)}`);
       if (options.verbose && failure.expected !== undefined) {
         lines.push(`    Expected: ${JSON.stringify(failure.expected)}`);
         lines.push(`    Actual:   ${JSON.stringify(failure.actual)}`);
       }
     }
-    lines.push('');
+    lines.push("");
   } else {
-    lines.push(c.green('All tests passed!'));
-    lines.push('');
+    lines.push(c.green("All tests passed!"));
+    lines.push("");
   }
 
   // Summary
@@ -136,13 +139,13 @@ function formatConsole(report: ConformanceReport, options: ReporterOptions): str
     report.results.complete.failed;
   const total = totalPassed + totalFailed;
 
-  lines.push(c.gray('─'.repeat(50)));
+  lines.push(c.gray("─".repeat(50)));
   lines.push(
-    `Total: ${c.green(`${totalPassed} passed`)}, ${c.red(`${totalFailed} failed`)} (${total} tests)`
+    `Total: ${c.green(`${totalPassed} passed`)}, ${c.red(`${totalFailed} failed`)} (${total} tests)`,
   );
-  lines.push('');
+  lines.push("");
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 /**
@@ -155,32 +158,35 @@ function formatJson(report: ConformanceReport): string {
 /**
  * Format report as Markdown
  */
-function formatMarkdown(report: ConformanceReport, options: ReporterOptions): string {
+function formatMarkdown(
+  report: ConformanceReport,
+  options: ReporterOptions,
+): string {
   const lines: string[] = [];
 
   // Header
-  lines.push('# GraphQL Cascade Conformance Report');
-  lines.push('');
+  lines.push("# GraphQL Cascade Conformance Report");
+  lines.push("");
   lines.push(`**Target:** ${report.target}`);
   lines.push(`**Timestamp:** ${report.timestamp}`);
-  lines.push('');
+  lines.push("");
 
   // Level summary
-  lines.push('## Conformance Level');
-  lines.push('');
+  lines.push("## Conformance Level");
+  lines.push("");
   lines.push(`| Metric | Value |`);
   lines.push(`|--------|-------|`);
   lines.push(`| Tested | ${report.level.tested} |`);
   lines.push(`| Achieved | ${report.level.achieved} |`);
-  lines.push('');
+  lines.push("");
 
   // Results table
-  lines.push('## Test Results');
-  lines.push('');
-  lines.push('| Level | Passed | Failed | Skipped | Pass Rate |');
-  lines.push('|-------|--------|--------|---------|-----------|');
+  lines.push("## Test Results");
+  lines.push("");
+  lines.push("| Level | Passed | Failed | Skipped | Pass Rate |");
+  lines.push("|-------|--------|--------|---------|-----------|");
 
-  const levels: ConformanceLevel[] = ['basic', 'standard', 'complete'];
+  const levels: ConformanceLevel[] = ["basic", "standard", "complete"];
   for (const level of levels) {
     const results = report.results[level as keyof typeof report.results];
     const total = results.passed + results.failed + results.skipped;
@@ -188,37 +194,37 @@ function formatMarkdown(report: ConformanceReport, options: ReporterOptions): st
 
     const passRate = total > 0 ? Math.round((results.passed / total) * 100) : 0;
     lines.push(
-      `| ${level} | ${results.passed} | ${results.failed} | ${results.skipped} | ${passRate}% |`
+      `| ${level} | ${results.passed} | ${results.failed} | ${results.skipped} | ${passRate}% |`,
     );
   }
-  lines.push('');
+  lines.push("");
 
   // Failures
   if (report.failures.length > 0) {
-    lines.push('## Failures');
-    lines.push('');
+    lines.push("## Failures");
+    lines.push("");
     for (const failure of report.failures) {
       lines.push(`### ${failure.test}`);
-      lines.push('');
+      lines.push("");
       lines.push(`**Level:** ${failure.level}`);
       lines.push(`**Message:** ${failure.message}`);
       if (options.verbose && failure.expected !== undefined) {
-        lines.push('');
-        lines.push('```json');
+        lines.push("");
+        lines.push("```json");
         lines.push(`Expected: ${JSON.stringify(failure.expected, null, 2)}`);
         lines.push(`Actual: ${JSON.stringify(failure.actual, null, 2)}`);
-        lines.push('```');
+        lines.push("```");
       }
-      lines.push('');
+      lines.push("");
     }
   } else {
-    lines.push('## Summary');
-    lines.push('');
-    lines.push('All tests passed.');
-    lines.push('');
+    lines.push("## Summary");
+    lines.push("");
+    lines.push("All tests passed.");
+    lines.push("");
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 /**
@@ -226,14 +232,14 @@ function formatMarkdown(report: ConformanceReport, options: ReporterOptions): st
  */
 export function formatReport(
   report: ConformanceReport,
-  options: ReporterOptions = { format: 'console' }
+  options: ReporterOptions = { format: "console" },
 ): string {
   switch (options.format) {
-    case 'json':
+    case "json":
       return formatJson(report);
-    case 'markdown':
+    case "markdown":
       return formatMarkdown(report, options);
-    case 'console':
+    case "console":
     default:
       return formatConsole(report, options);
   }
@@ -244,7 +250,7 @@ export function formatReport(
  */
 export function printReport(
   report: ConformanceReport,
-  options: ReporterOptions = { format: 'console' }
+  options: ReporterOptions = { format: "console" },
 ): void {
   console.log(formatReport(report, options));
 }

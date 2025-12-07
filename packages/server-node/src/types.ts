@@ -12,34 +12,34 @@
  */
 export enum CascadeErrorCode {
   // Input and validation errors
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  NOT_FOUND = 'NOT_FOUND',
+  VALIDATION_ERROR = "VALIDATION_ERROR",
+  NOT_FOUND = "NOT_FOUND",
 
   // Authentication and authorization
-  UNAUTHORIZED = 'UNAUTHORIZED',
-  FORBIDDEN = 'FORBIDDEN',
+  UNAUTHORIZED = "UNAUTHORIZED",
+  FORBIDDEN = "FORBIDDEN",
 
   // Conflict and consistency
-  CONFLICT = 'CONFLICT',
-  TRANSACTION_FAILED = 'TRANSACTION_FAILED',
+  CONFLICT = "CONFLICT",
+  TRANSACTION_FAILED = "TRANSACTION_FAILED",
 
   // Operational errors (v1.1)
-  TIMEOUT = 'TIMEOUT',
-  RATE_LIMITED = 'RATE_LIMITED',
-  SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
+  TIMEOUT = "TIMEOUT",
+  RATE_LIMITED = "RATE_LIMITED",
+  SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE",
 
   // Fallback
-  INTERNAL_ERROR = 'INTERNAL_ERROR',
+  INTERNAL_ERROR = "INTERNAL_ERROR",
 
   // Legacy internal codes (for backward compatibility)
   /** @deprecated Use INTERNAL_ERROR instead */
-  NO_TRANSACTION = 'NO_TRANSACTION',
+  NO_TRANSACTION = "NO_TRANSACTION",
   /** @deprecated Use INTERNAL_ERROR instead */
-  TRANSACTION_IN_PROGRESS = 'TRANSACTION_IN_PROGRESS',
+  TRANSACTION_IN_PROGRESS = "TRANSACTION_IN_PROGRESS",
   /** @deprecated Use VALIDATION_ERROR instead */
-  MISSING_ID = 'MISSING_ID',
+  MISSING_ID = "MISSING_ID",
   /** @deprecated Use INTERNAL_ERROR instead */
-  SERIALIZATION_ERROR = 'SERIALIZATION_ERROR',
+  SERIALIZATION_ERROR = "SERIALIZATION_ERROR",
 }
 
 /**
@@ -49,7 +49,7 @@ export interface EntityChange {
   /** The entity that changed */
   entity: any;
   /** The operation performed: 'CREATED', 'UPDATED', 'DELETED' */
-  operation: 'CREATED' | 'UPDATED' | 'DELETED';
+  operation: "CREATED" | "UPDATED" | "DELETED";
   /** Timestamp when the change occurred */
   timestamp: number;
 }
@@ -93,7 +93,7 @@ export interface CascadeUpdatedEntity {
   /** Entity ID */
   id: string;
   /** Operation performed */
-  operation: 'CREATED' | 'UPDATED' | 'DELETED';
+  operation: "CREATED" | "UPDATED" | "DELETED";
   /** The entity data */
   entity: Record<string, any>;
 }
@@ -178,7 +178,7 @@ export interface TrackerCascadeData {
   updated: Array<{
     __typename: string;
     id: string;
-    operation: 'CREATED' | 'UPDATED' | 'DELETED';
+    operation: "CREATED" | "UPDATED" | "DELETED";
     entity: Record<string, unknown>;
   }>;
   /** List of deleted entities */
@@ -190,8 +190,6 @@ export interface TrackerCascadeData {
   /** Metadata about the cascade operation */
   metadata: CascadeMetadata;
 }
-
-
 
 /**
  * Logger interface for cascade operations (matches CascadeLogger from logger.ts).
@@ -206,7 +204,7 @@ export interface CascadeLoggerInterface {
 /**
  * Metrics collector interface (re-exported from metrics.ts).
  */
-export type { MetricsCollector } from './metrics';
+export type { MetricsCollector } from "./metrics";
 
 /**
  * Configuration options for CascadeTracker.
@@ -229,7 +227,7 @@ export interface CascadeTrackerConfig {
   /** Enable debug logging (shorthand for setting logger to console logger) */
   debug?: boolean;
   /** Optional metrics collector for observability */
-  metrics?: import('./metrics').MetricsCollector;
+  metrics?: import("./metrics").MetricsCollector;
   /**
    * Filter which fields are included in entity data.
    * Return true to include the field, false to exclude.
@@ -237,7 +235,11 @@ export interface CascadeTrackerConfig {
    * @param fieldName - The field name being serialized
    * @param value - The field value
    */
-  fieldFilter?: (typename: string, fieldName: string, value: unknown) => boolean;
+  fieldFilter?: (
+    typename: string,
+    fieldName: string,
+    value: unknown,
+  ) => boolean;
   /**
    * Filter which entities are included in the cascade response.
    * Can be async for authorization checks.
@@ -245,7 +247,10 @@ export interface CascadeTrackerConfig {
    * @param entity - The tracked entity
    * @param context - Optional context (e.g., user, request info)
    */
-  entityFilter?: (entity: TrackedEntity, context?: unknown) => boolean | Promise<boolean>;
+  entityFilter?: (
+    entity: TrackedEntity,
+    context?: unknown,
+  ) => boolean | Promise<boolean>;
   /**
    * Validate entity before tracking.
    * Throw an error to reject the entity.
@@ -276,7 +281,7 @@ export interface CascadeBuilderConfig {
   /** Optional handler called when invalidation computation fails */
   onInvalidationError?: (error: Error) => void;
   /** Optional metrics collector for observability */
-  metrics?: import('./metrics').MetricsCollector;
+  metrics?: import("./metrics").MetricsCollector;
   /**
    * Include timing metadata (trackingTime, constructionTime) in responses.
    * Consider disabling in production to avoid information disclosure.
@@ -341,6 +346,6 @@ export interface Invalidator {
   computeInvalidations(
     updated: CascadeUpdatedEntity[],
     deleted: CascadeDeletedEntity[],
-    primaryResult: unknown
+    primaryResult: unknown,
   ): CascadeInvalidation[] | null | undefined;
 }

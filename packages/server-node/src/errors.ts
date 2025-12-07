@@ -4,8 +4,8 @@
  * Structured error handling with hints and documentation links.
  */
 
-import type { CascadeErrorInfo } from './types';
-import { CascadeErrorCode } from './types';
+import type { CascadeErrorInfo } from "./types";
+import { CascadeErrorCode } from "./types";
 
 /**
  * Structured error class for GraphQL Cascade operations.
@@ -22,14 +22,9 @@ export class CascadeError extends Error {
   /** Path to documentation for this error */
   public readonly docsPath?: string;
 
-  constructor(
-    message: string,
-    code: string,
-    hint?: string,
-    docsPath?: string
-  ) {
+  constructor(message: string, code: string, hint?: string, docsPath?: string) {
     super(message);
-    this.name = 'CascadeError';
+    this.name = "CascadeError";
     this.code = code;
     this.hint = hint;
     this.docsPath = docsPath;
@@ -71,7 +66,7 @@ export class CascadeError extends Error {
 export function formatErrorMessage(
   message: string,
   hint?: string,
-  docsPath?: string
+  docsPath?: string,
 ): string {
   let formatted = message;
 
@@ -93,7 +88,7 @@ export function validationError(
   message: string,
   field?: string,
   path?: string[],
-  extensions?: Record<string, any>
+  extensions?: Record<string, any>,
 ): CascadeErrorInfo {
   return {
     message,
@@ -111,7 +106,7 @@ export function notFoundError(
   message: string,
   field?: string,
   path?: string[],
-  extensions?: Record<string, any>
+  extensions?: Record<string, any>,
 ): CascadeErrorInfo {
   return {
     message,
@@ -129,7 +124,7 @@ export function timeoutError(
   message: string,
   timeoutMs: number,
   service?: string,
-  extensions?: Record<string, any>
+  extensions?: Record<string, any>,
 ): CascadeErrorInfo {
   return {
     message,
@@ -151,7 +146,7 @@ export function rateLimitedError(
   retryAfter: number,
   limit: number,
   window: string,
-  extensions?: Record<string, any>
+  extensions?: Record<string, any>,
 ): CascadeErrorInfo {
   return {
     message,
@@ -173,7 +168,7 @@ export function serviceUnavailableError(
   message: string,
   service: string,
   retryAfter?: number,
-  extensions?: Record<string, any>
+  extensions?: Record<string, any>,
 ): CascadeErrorInfo {
   return {
     message,
@@ -192,7 +187,7 @@ export function serviceUnavailableError(
  */
 export function unauthorizedError(
   message: string,
-  extensions?: Record<string, any>
+  extensions?: Record<string, any>,
 ): CascadeErrorInfo {
   return {
     message,
@@ -206,7 +201,7 @@ export function unauthorizedError(
  */
 export function forbiddenError(
   message: string,
-  extensions?: Record<string, any>
+  extensions?: Record<string, any>,
 ): CascadeErrorInfo {
   return {
     message,
@@ -222,7 +217,7 @@ export function conflictError(
   message: string,
   field?: string,
   path?: string[],
-  extensions?: Record<string, any>
+  extensions?: Record<string, any>,
 ): CascadeErrorInfo {
   return {
     message,
