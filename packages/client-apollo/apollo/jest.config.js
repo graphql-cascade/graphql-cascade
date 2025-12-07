@@ -19,6 +19,7 @@ module.exports = {
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
+      isolatedModules: true,
       tsconfig: {
         jsx: 'react-jsx'
       }
