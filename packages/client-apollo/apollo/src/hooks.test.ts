@@ -2,6 +2,7 @@ import { ApolloClient, InMemoryCache } from "@apollo/client";
 
 import {
   CascadeResponse,
+  CascadeOperation,
   CascadeConflictResolver,
   InvalidationStrategy,
   InvalidationScope,

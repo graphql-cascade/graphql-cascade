@@ -280,8 +280,9 @@ describe("CascadeSubscriptionManager", () => {
     it("should handle rapid subscription updates without race conditions", () => {
       const onCascade1 = jest.fn();
       const onCascade2 = jest.fn();
-      let _subscriber1: any;
-      let _subscriber2: any;
+      const onCascade3 = jest.fn();
+      let subscriber1: any;
+      let subscriber2: any;
       let subscriber3: any;
 
       jest
@@ -729,7 +730,7 @@ describe("CascadeSubscriptionManager", () => {
     expect(onCascade2).toHaveBeenCalledTimes(10);
 
     // Verify subscriptions are still active
-    expect(handle1.isActive).toBe(true);
-    expect(handle2.isActive).toBe(true);
+    expect(_handle1.isActive).toBe(true);
+    expect(_handle2.isActive).toBe(true);
   });
 });
