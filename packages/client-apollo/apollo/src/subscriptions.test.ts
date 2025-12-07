@@ -281,21 +281,21 @@ describe("CascadeSubscriptionManager", () => {
       const onCascade1 = jest.fn();
       const onCascade2 = jest.fn();
       const onCascade3 = jest.fn();
-      let subscriber1: any;
-      let subscriber2: any;
+      let _subscriber1: any;
+      let _subscriber2: any;
       let subscriber3: any;
 
       jest
         .spyOn(apolloClient, "subscribe")
         .mockReturnValueOnce({
           subscribe: jest.fn((sub) => {
-            subscriber1 = sub;
+            _subscriber1 = sub;
             return { unsubscribe: jest.fn() };
           }),
         } as any)
         .mockReturnValueOnce({
           subscribe: jest.fn((sub) => {
-            subscriber2 = sub;
+            _subscriber2 = sub;
             return { unsubscribe: jest.fn() };
           }),
         } as any)
