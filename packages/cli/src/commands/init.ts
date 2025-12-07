@@ -117,28 +117,43 @@ export const initCommand = new Command("init")
         process.exit(1);
       }
 
-      // Check if config already exists
+      // Generate config file content
       const configPath = path.join(process.cwd(), "cascade.config.ts");
-      if (fs.existsSync(configPath) && !options.yes) {
-        const overwriteAnswer = await inquirer.prompt([
-          {
-            type: "confirm",
-            name: "overwrite",
-            message: "cascade.config.ts already exists. Overwrite?",
-            default: false,
-          },
-        ]);
+      const configContent = generateConfigFile(client, schemaPath);
 
-        if (!overwriteAnswer.overwrite) {
-          console.log("Configuration generation cancelled.");
-          return;
+      // Handle file creation/overwrite with atomic operations
+      if (!options.yes) {
+        try {
+          // Atomic operation: create new file exclusively (fails if exists)
+          fs.writeFileSync(configPath, configContent, { flag: 'wx', encoding: 'utf-8' });
+          console.log("\nConfiguration file created: cascade.config.ts ✓");
+          return; // Success - file created
+        } catch (err: any) {
+          // Handle file already exists
+          if (err.code === 'EEXIST') {
+            const overwriteAnswer = await inquirer.prompt([
+              {
+                type: "confirm",
+                name: "overwrite",
+                message: "cascade.config.ts already exists. Overwrite?",
+                default: false,
+              },
+            ]);
+
+            if (!overwriteAnswer.overwrite) {
+              console.log("Configuration generation cancelled.");
+              return;
+            }
+            // Fall through to overwrite below
+          } else {
+            // Propagate other filesystem errors
+            throw err;
+          }
         }
       }
 
-      // Generate config file
-      const configContent = generateConfigFile(client, schemaPath);
+      // Write file (overwrite mode or --yes flag was used)
       fs.writeFileSync(configPath, configContent, "utf-8");
-
       console.log("\nConfiguration file created: cascade.config.ts ✓");
 
       // Display next steps
