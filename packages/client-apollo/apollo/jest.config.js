@@ -17,11 +17,12 @@ module.exports = {
       statements: 70
     }
   },
-  globals: {
-    'ts-jest': {
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', {
       tsconfig: {
-        jsx: 'react-jsx'
+        jsx: 'react-jsx',
+        outDir: '$$ts-jest$$'
       }
-    }
+    }]
   }
 };
