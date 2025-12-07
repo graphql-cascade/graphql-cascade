@@ -1,5 +1,5 @@
 import { gql, DocumentNode } from '@apollo/client';
-import { CascadeUpdates, UpdatedEntity } from '@graphql-cascade/client';
+import { CascadeUpdates } from '@graphql-cascade/client';
 
 /**
  * Fragment generation options

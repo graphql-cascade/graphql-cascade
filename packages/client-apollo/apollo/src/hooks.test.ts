@@ -1,9 +1,8 @@
 import { ApolloClient, InMemoryCache } from '@apollo/client';
-import { gql } from '@apollo/client';
+
 import {
   CascadeResponse,
   CascadeConflictResolver,
-  CascadeOperation,
   InvalidationStrategy,
   InvalidationScope
 } from '@graphql-cascade/client';

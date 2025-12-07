@@ -203,7 +203,7 @@ export const exampleUsage = () => {
   const cascade = new ApolloCascadeClient(client);
 
   // Example mutation
-  const updatedUser = cascade.mutate(
+  const _updatedUser = cascade.mutate(
     gql`
       mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
         updateUser(id: $id, input: $input) {

@@ -1,4 +1,4 @@
-import { ApolloClient, DocumentNode, FetchResult, Observable } from '@apollo/client';
+import { ApolloClient, DocumentNode, FetchResult } from '@apollo/client';
 import { CascadeUpdates, CascadeResponse } from '@graphql-cascade/client';
 import { ApolloCascadeClient } from './client';
 
@@ -24,7 +24,7 @@ export interface CascadeSubscriptionEvent {
 /**
  * Options for cascade subscription
  */
-export interface CascadeSubscriptionOptions<TData = unknown> {
+export interface CascadeSubscriptionOptions<_TData = unknown> {
   /**
    * Callback when cascade data is received
    */

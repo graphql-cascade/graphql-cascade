@@ -1,4 +1,4 @@
-import { InMemoryCache, gql } from '@apollo/client';
+import { InMemoryCache } from '@apollo/client';
 import { ApolloCascadeCache } from './cache';
 import { QueryInvalidation, InvalidationStrategy, InvalidationScope } from '@graphql-cascade/client';
 

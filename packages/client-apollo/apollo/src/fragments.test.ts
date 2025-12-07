@@ -1,5 +1,5 @@
 import { gql } from '@apollo/client';
-import { CascadeUpdates, CascadeOperation, InvalidationStrategy, InvalidationScope } from '@graphql-cascade/client';
+import { CascadeUpdates, CascadeOperation } from '@graphql-cascade/client';
 import {
   CascadeFragmentGenerator,
   extractFieldsFromEntity,

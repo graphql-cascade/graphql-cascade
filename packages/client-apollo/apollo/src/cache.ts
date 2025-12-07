@@ -85,7 +85,7 @@ export class ApolloCascadeCache implements CascadeCache {
     }
   }
 
-  async refetch(invalidation: QueryInvalidation): Promise<void> {
+  async refetch(_invalidation: QueryInvalidation): Promise<void> {
     // Apollo's refetchQueries requires access to ApolloClient, not just cache
     // This would need to be implemented in the client class
     throw new Error('Refetch requires ApolloClient instance, use ApolloCascadeClient.refetch instead');

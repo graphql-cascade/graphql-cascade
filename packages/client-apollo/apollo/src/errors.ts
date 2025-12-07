@@ -1,5 +1,5 @@
 import { ApolloError } from '@apollo/client';
-import { CascadeUpdates, CascadeResponse } from '@graphql-cascade/client';
+import { CascadeUpdates } from '@graphql-cascade/client';
 
 /**
  * Cascade error codes - aligned with core v1.1 error codes

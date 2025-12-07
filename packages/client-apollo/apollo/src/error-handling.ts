@@ -1,7 +1,7 @@
 import { ApolloLink, Observable, Operation, NextLink, FetchResult } from '@apollo/client';
 import { shouldRetry, calculateRetryDelay, RetryOptions, CascadeError as CoreCascadeError, CascadeErrorCode as CoreCascadeErrorCode } from '@graphql-cascade/client';
 import { CascadeError, CascadeErrorCode } from './errors';
-import { CascadeErrorCode as CoreErrorCode } from '@graphql-cascade/client';
+
 
 /**
  * Options for the cascade error handling link.
@@ -180,38 +180,7 @@ function mapToCoreErrorCode(code: CascadeErrorCode): CoreCascadeErrorCode {
   }
 }
 
-/**
- * Map error codes from various sources to core CascadeErrorCode.
- */
-function mapErrorCodeToCore(code?: string): CoreCascadeErrorCode {
-  if (!code) return CoreCascadeErrorCode.INTERNAL_ERROR;
 
-  // Direct mapping for new v1.1 error codes
-  switch (code.toUpperCase()) {
-    case 'VALIDATION_ERROR':
-      return CoreCascadeErrorCode.VALIDATION_ERROR;
-    case 'NOT_FOUND':
-      return CoreCascadeErrorCode.NOT_FOUND;
-    case 'UNAUTHORIZED':
-      return CoreCascadeErrorCode.UNAUTHORIZED;
-    case 'FORBIDDEN':
-      return CoreCascadeErrorCode.FORBIDDEN;
-    case 'CONFLICT':
-      return CoreCascadeErrorCode.CONFLICT;
-    case 'INTERNAL_ERROR':
-      return CoreCascadeErrorCode.INTERNAL_ERROR;
-    case 'TRANSACTION_FAILED':
-      return CoreCascadeErrorCode.TRANSACTION_FAILED;
-    case 'TIMEOUT':
-      return CoreCascadeErrorCode.TIMEOUT;
-    case 'RATE_LIMITED':
-      return CoreCascadeErrorCode.RATE_LIMITED;
-    case 'SERVICE_UNAVAILABLE':
-      return CoreCascadeErrorCode.SERVICE_UNAVAILABLE;
-    default:
-      return CoreCascadeErrorCode.INTERNAL_ERROR;
-  }
-}
 
 /**
  * Extract cascade error from a GraphQL response.

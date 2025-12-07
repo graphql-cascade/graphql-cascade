@@ -1,5 +1,5 @@
 import { ApolloClient, InMemoryCache, NormalizedCacheObject } from '@apollo/client';
-import { CascadeOperation, InvalidationStrategy, InvalidationScope } from '@graphql-cascade/client';
+import { CascadeOperation } from '@graphql-cascade/client';
 import {
   CascadeCachePersistence,
   createInMemoryPersistence,
@@ -8,7 +8,7 @@ import {
 } from './persistence';
 
 // Mock localStorage
-const mockLocalStorage = () => {
+const _mockLocalStorage = () => {
   const store: Record<string, string> = {};
   return {
     getItem: jest.fn((key: string) => store[key] ?? null),
@@ -99,7 +99,7 @@ describe('CascadeCachePersistence', () => {
       // Should only have User, not Post
       const keys = Object.keys(parsed.cache);
       const hasUser = keys.some(k => k.includes('User'));
-      const hasPost = keys.some(k => k.includes('Post'));
+      const _hasPost = keys.some(k => k.includes('Post'));
 
       expect(hasUser || keys.includes('ROOT_QUERY')).toBe(true);
       // Post should be filtered out (unless it's in ROOT_QUERY)
