@@ -1,4 +1,4 @@
-import { URQLCascadeClient, CascadeMutationResult, OptimisticConfig } from './client';
+import { URQLCascadeClient, OptimisticConfig } from './client';
 import { InMemoryCascadeCache } from './cache';
 import { CascadeUpdates, CascadeOperation, InvalidationStrategy, InvalidationScope } from './types';
 import type { Client, OperationResult, CombinedError } from '@urql/core';

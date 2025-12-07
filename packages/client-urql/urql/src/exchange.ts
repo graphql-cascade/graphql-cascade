@@ -5,9 +5,9 @@
  * from the extensions field, applying updates to the cache.
  */
 
-import { pipe, tap, mergeMap, fromPromise } from 'wonka';
+import { pipe, tap } from 'wonka';
 import type { Exchange, Operation } from '@urql/core';
-import { createScopedLogger, shouldRetry, calculateRetryDelay, RetryOptions, CascadeError } from '@graphql-cascade/client';
+import { createScopedLogger, RetryOptions, CascadeError } from '@graphql-cascade/client';
 import {
   CascadeExchangeOptions,
   CascadeUpdates,
@@ -175,11 +175,11 @@ function applyCascadeUpdates(
  */
 export const cascadeErrorExchange = (options: CascadeErrorExchangeOptions = {}): Exchange => {
   const {
-    onRetryAttempt,
-    onRetrySuccess,
+    onRetryAttempt: _onRetryAttempt,
+    onRetrySuccess: _onRetrySuccess,
     onRetryFailure,
     extractErrors = extractCascadeErrors,
-    ...retryOptions
+    ..._retryOptions
   } = options;
 
   return ({ forward }) => ops$ => {

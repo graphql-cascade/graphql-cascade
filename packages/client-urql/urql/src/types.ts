@@ -17,7 +17,6 @@ export {
 
 import type {
   CascadeUpdates,
-  QueryInvalidation,
   CascadeCache,
 } from '@graphql-cascade/client';
 
