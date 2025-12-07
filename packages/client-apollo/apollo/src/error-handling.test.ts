@@ -1,4 +1,10 @@
-import { ApolloLink, Observable, FetchResult, Operation, ApolloError } from "@apollo/client";
+import {
+  ApolloLink,
+  Observable,
+  FetchResult,
+  Operation,
+  ApolloError,
+} from "@apollo/client";
 import { gql } from "@apollo/client/core";
 import {
   CascadeErrorLink,
@@ -24,9 +30,7 @@ function createMockOperation(operationName = "TestQuery"): Operation {
 }
 
 // Helper to create a mock forward link that returns specific results
-function createMockForward(
-  results: Array<FetchResult | Error>
-) {
+function createMockForward(results: Array<FetchResult | Error>) {
   let callCount = 0;
   return (_operation: Operation) => {
     return new Observable<FetchResult>((observer) => {
@@ -34,10 +38,13 @@ function createMockForward(
 
       if (result instanceof Error) {
         // Convert plain Error to ApolloError for proper handling
-        const apolloError = result instanceof ApolloError ? result : new ApolloError({
-          errorMessage: result.message,
-          networkError: result,
-        });
+        const apolloError =
+          result instanceof ApolloError
+            ? result
+            : new ApolloError({
+                errorMessage: result.message,
+                networkError: result,
+              });
         setTimeout(() => observer.error(apolloError), 10);
       } else {
         setTimeout(() => {
@@ -60,7 +67,9 @@ describe("CascadeErrorLink", () => {
 
       let result: FetchResult | undefined;
       link.request(operation, forward).subscribe({
-        next: (value) => { result = value; },
+        next: (value) => {
+          result = value;
+        },
       });
 
       jest.advanceTimersByTime(20);
@@ -118,7 +127,9 @@ describe("CascadeErrorLink", () => {
 
       let result: FetchResult | undefined;
       link.request(operation, forward).subscribe({
-        next: (value) => { result = value; },
+        next: (value) => {
+          result = value;
+        },
       });
 
       // Initial attempt fails
@@ -273,7 +284,9 @@ describe("cascade error extraction and retry", () => {
 
     let result: FetchResult | undefined;
     link.request(operation, forward).subscribe({
-      next: (value) => { result = value; },
+      next: (value) => {
+        result = value;
+      },
     });
 
     jest.advanceTimersByTime(20);
@@ -313,7 +326,9 @@ describe("cascade error extraction and retry", () => {
 
     let finalError: Error | undefined;
     link.request(operation, forward).subscribe({
-      error: (err) => { finalError = err; },
+      error: (err) => {
+        finalError = err;
+      },
     });
 
     jest.advanceTimersByTime(20);

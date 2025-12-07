@@ -125,12 +125,15 @@ export const initCommand = new Command("init")
       if (!options.yes) {
         try {
           // Atomic operation: create new file exclusively (fails if exists)
-          fs.writeFileSync(configPath, configContent, { flag: 'wx', encoding: 'utf-8' });
+          fs.writeFileSync(configPath, configContent, {
+            flag: "wx",
+            encoding: "utf-8",
+          });
           console.log("\nConfiguration file created: cascade.config.ts ✓");
           return; // Success - file created
         } catch (err: any) {
           // Handle file already exists
-          if (err.code === 'EEXIST') {
+          if (err.code === "EEXIST") {
             const overwriteAnswer = await inquirer.prompt([
               {
                 type: "confirm",

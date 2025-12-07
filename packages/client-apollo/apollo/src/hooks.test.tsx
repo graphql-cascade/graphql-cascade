@@ -49,7 +49,7 @@ function createWrapper(mocks: MockedResponse[] = []) {
 // Helper to create a successful cascade response
 function createSuccessResponse(
   id: string,
-  name: string
+  name: string,
 ): CascadeResponse<{ id: string; name: string }> {
   return {
     data: { id, name },
@@ -91,7 +91,7 @@ describe("useCascadeMutation", () => {
 
       const { result } = renderHook(
         () => useCascadeMutation(UPDATE_USER_MUTATION),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate, state] = result.current;
@@ -150,7 +150,7 @@ describe("useCascadeMutation", () => {
           useCascadeMutation(UPDATE_USER_MUTATION, {
             onCompleted,
           }),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
@@ -165,7 +165,7 @@ describe("useCascadeMutation", () => {
           expect.objectContaining({
             updated: expect.any(Array),
             deleted: expect.any(Array),
-          })
+          }),
         );
       });
     });
@@ -186,7 +186,7 @@ describe("useCascadeMutation", () => {
           useCascadeMutation(UPDATE_USER_MUTATION, {
             onError,
           }),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
@@ -200,10 +200,10 @@ describe("useCascadeMutation", () => {
       });
 
       await waitFor(() => {
-        expect(onError).toHaveBeenCalledWith(
-          expect.any(Error),
-          { id: "1", name: "Error" }
-        );
+        expect(onError).toHaveBeenCalledWith(expect.any(Error), {
+          id: "1",
+          name: "Error",
+        });
       });
     });
   });
@@ -251,7 +251,7 @@ describe("useCascadeMutation", () => {
             optimistic: true,
             optimisticCascadeResponse,
           }),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
@@ -307,7 +307,7 @@ describe("useCascadeMutation", () => {
             optimistic: true,
             optimisticCascadeResponse,
           }),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
@@ -345,16 +345,16 @@ describe("useCascadeMutation", () => {
             optimistic: true,
             // optimisticCascadeResponse not provided
           }),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
 
       await act(async () => {
         await expect(
-          mutate({ variables: { id: "1", name: "Missing" } })
+          mutate({ variables: { id: "1", name: "Missing" } }),
         ).rejects.toThrow(
-          "optimisticCascadeResponse function is required for optimistic updates"
+          "optimisticCascadeResponse function is required for optimistic updates",
         );
       });
     });
@@ -404,7 +404,7 @@ describe("useCascadeMutation", () => {
             optimisticCascadeResponse,
             conflictResolution: "SERVER_WINS",
           }),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
@@ -422,64 +422,61 @@ describe("useCascadeMutation", () => {
       "CLIENT_WINS" as const,
       "MERGE" as const,
       "MANUAL" as const,
-    ])(
-      "should handle %s conflict resolution strategy",
-      async (strategy) => {
-        const optimisticCascadeResponse = (variables: any) => ({
-          data: { id: variables.id, name: variables.name },
-          success: true,
-          cascade: {
-            updated: [
-              {
-                __typename: "User",
-                id: variables.id,
-                operation: CascadeOperation.UPDATED,
-                entity: { id: variables.id, name: variables.name },
-              },
-            ],
-            deleted: [],
-            invalidations: [],
-            metadata: {
-              timestamp: new Date().toISOString(),
-              depth: 1,
-              affectedCount: 1,
+    ])("should handle %s conflict resolution strategy", async (strategy) => {
+      const optimisticCascadeResponse = (variables: any) => ({
+        data: { id: variables.id, name: variables.name },
+        success: true,
+        cascade: {
+          updated: [
+            {
+              __typename: "User",
+              id: variables.id,
+              operation: CascadeOperation.UPDATED,
+              entity: { id: variables.id, name: variables.name },
             },
+          ],
+          deleted: [],
+          invalidations: [],
+          metadata: {
+            timestamp: new Date().toISOString(),
+            depth: 1,
+            affectedCount: 1,
           },
-        });
+        },
+      });
 
-        const mockResponse: MockedResponse = {
-          request: {
-            query: UPDATE_USER_MUTATION,
-            variables: { id: "1", name: "Test" },
+      const mockResponse: MockedResponse = {
+        request: {
+          query: UPDATE_USER_MUTATION,
+          variables: { id: "1", name: "Test" },
+        },
+        result: {
+          data: {
+            updateUser: createSuccessResponse("1", "Test"),
           },
-          result: {
-            data: {
-              updateUser: createSuccessResponse("1", "Test"),
-            },
-          },
-        };
+        },
+      };
 
-        const { result } = renderHook(
-          () =>
-            useCascadeMutation(UPDATE_USER_MUTATION, {
-              optimistic: true,
-              optimisticCascadeResponse,
-              conflictResolution: strategy,
-            }),
-          { wrapper: createWrapper([mockResponse]) }
-        );
+      const { result } = renderHook(
+        () =>
+          useCascadeMutation(UPDATE_USER_MUTATION, {
+            optimistic: true,
+            optimisticCascadeResponse,
+            conflictResolution: strategy,
+          }),
+        { wrapper: createWrapper([mockResponse]) },
+      );
 
-        const [mutate] = result.current;
+      const [mutate] = result.current;
 
-        await act(async () => {
-          await mutate({ variables: { id: "1", name: "Test" } });
-        });
+      await act(async () => {
+        await mutate({ variables: { id: "1", name: "Test" } });
+      });
 
-        // Should complete without error
-        const [, state] = result.current;
-        expect(state.error).toBeUndefined();
-      }
-    );
+      // Should complete without error
+      const [, state] = result.current;
+      expect(state.error).toBeUndefined();
+    });
   });
 
   describe("cascade client integration", () => {
@@ -510,7 +507,7 @@ describe("useCascadeMutation", () => {
 
       const { result } = renderHook(
         () => useCascadeMutation(UPDATE_USER_MUTATION),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
@@ -552,7 +549,7 @@ describe("useCascadeMutation", () => {
 
       const { result } = renderHook(
         () => useCascadeMutation(UPDATE_USER_MUTATION),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
@@ -593,7 +590,7 @@ describe("useCascadeMutation", () => {
           useCascadeMutation(UPDATE_USER_MUTATION, {
             onError,
           }),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
@@ -603,10 +600,10 @@ describe("useCascadeMutation", () => {
       });
 
       // Should call onError callback when cascade processing fails
-      expect(onError).toHaveBeenCalledWith(
-        expect.any(Error),
-        { id: "1", name: "Malformed" }
-      );
+      expect(onError).toHaveBeenCalledWith(expect.any(Error), {
+        id: "1",
+        name: "Malformed",
+      });
     });
 
     it("should handle empty mutation response", async () => {
@@ -622,14 +619,14 @@ describe("useCascadeMutation", () => {
 
       const { result } = renderHook(
         () => useCascadeMutation(UPDATE_USER_MUTATION),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
 
       await act(async () => {
         await expect(
-          mutate({ variables: { id: "1", name: "Empty" } })
+          mutate({ variables: { id: "1", name: "Empty" } }),
         ).rejects.toThrow();
       });
     });
@@ -652,7 +649,7 @@ describe("useCascadeMutation", () => {
 
       const { result } = renderHook(
         () => useCascadeMutation(UPDATE_USER_MUTATION),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
@@ -685,7 +682,7 @@ describe("useCascadeMutation", () => {
 
       const { result, rerender } = renderHook(
         () => useCascadeMutation(UPDATE_USER_MUTATION),
-        { wrapper: createWrapper([mockResponse]) }
+        { wrapper: createWrapper([mockResponse]) },
       );
 
       const [mutate] = result.current;
