@@ -200,6 +200,7 @@ function toCoreCascadeError(apolloError: CascadeError): CoreCascadeError {
  */
 function mapToCoreErrorCode(code: CascadeErrorCode): CoreCascadeErrorCode {
   switch (code) {
+    // Legacy error codes
     case CascadeErrorCode.NETWORK_ERROR:
       return CoreCascadeErrorCode.SERVICE_UNAVAILABLE;
     case CascadeErrorCode.TIMEOUT_ERROR:
@@ -211,6 +212,25 @@ function mapToCoreErrorCode(code: CascadeErrorCode): CoreCascadeErrorCode {
     case CascadeErrorCode.CASCADE_CONFLICT:
       return CoreCascadeErrorCode.CONFLICT;
     case CascadeErrorCode.PARTIAL_CASCADE_FAILURE:
+      return CoreCascadeErrorCode.TRANSACTION_FAILED;
+    // v1.1 error codes (these map to same string values as legacy codes above, but we include them for clarity)
+    case CascadeErrorCode.TIMEOUT:
+      return CoreCascadeErrorCode.TIMEOUT;
+    case CascadeErrorCode.SERVICE_UNAVAILABLE:
+      return CoreCascadeErrorCode.SERVICE_UNAVAILABLE;
+    case CascadeErrorCode.RATE_LIMITED:
+      return CoreCascadeErrorCode.RATE_LIMITED;
+    case CascadeErrorCode.VALIDATION_ERROR:
+      return CoreCascadeErrorCode.VALIDATION_ERROR;
+    case CascadeErrorCode.NOT_FOUND:
+      return CoreCascadeErrorCode.NOT_FOUND;
+    case CascadeErrorCode.UNAUTHORIZED:
+      return CoreCascadeErrorCode.UNAUTHORIZED;
+    case CascadeErrorCode.FORBIDDEN:
+      return CoreCascadeErrorCode.FORBIDDEN;
+    case CascadeErrorCode.CONFLICT:
+      return CoreCascadeErrorCode.CONFLICT;
+    case CascadeErrorCode.TRANSACTION_FAILED:
       return CoreCascadeErrorCode.TRANSACTION_FAILED;
     default:
       return CoreCascadeErrorCode.INTERNAL_ERROR;
