@@ -125,7 +125,7 @@ export function useCascadeMutation<
   // Apollo mutation hook
   const [mutate, { data, loading, error, called }] = useMutation(mutation, {
     ...apolloOptions,
-    onCompleted: (apolloData) => {
+    onCompleted: (apolloData, clientOptions) => {
       try {
         // Extract cascade response from mutation result
         const mutationName = Object.keys(apolloData)[0];
@@ -143,11 +143,14 @@ export function useCascadeMutation<
           if (onCompleted) {
             onCompleted(cascadeResponse.data, cascadeResponse.cascade);
           }
+        } else {
+          // Malformed response - no cascade data
+          throw new Error("Cascade response missing cascade data");
         }
       } catch (err) {
         console.error("Error processing cascade response:", err);
         if (onError) {
-          onError(err as Error, {} as TVariables);
+          onError(err as Error, clientOptions?.variables as TVariables);
         }
       }
     },
@@ -164,6 +167,13 @@ export function useCascadeMutation<
   const cascadeMutate = React.useCallback(
     async (mutateOptions?: MutationHookOptions<TData, TVariables>) => {
       const variables = mutateOptions?.variables;
+
+      // Validate optimistic update configuration
+      if (optimistic && !optimisticCascadeResponse) {
+        throw new Error(
+          "optimisticCascadeResponse function is required for optimistic updates",
+        );
+      }
 
       // Apply optimistic update if enabled
       let rollbackFn: RollbackFunction | undefined;
