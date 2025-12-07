@@ -5,7 +5,6 @@ import {
   createCascadeErrorLink,
   createDefaultCascadeErrorLink,
   extractCascadeError,
-  CascadeErrorLinkOptions,
 } from "./error-handling";
 import { CascadeError, CascadeErrorCode } from "./errors";
 
@@ -29,7 +28,7 @@ function createMockForward(
   results: Array<FetchResult | Error>
 ) {
   let callCount = 0;
-  return (operation: Operation) => {
+  return (_operation: Operation) => {
     return new Observable<FetchResult>((observer) => {
       const result = results[callCount++];
 
@@ -350,8 +349,8 @@ describe("unsubscribe", () => {
     const operation = createMockOperation();
 
     let unsubscribed = false;
-    const forward = (operation: Operation) => {
-      return new Observable<FetchResult>((observer) => {
+    const forward = (_operation: Operation) => {
+      return new Observable<FetchResult>((_observer) => {
         return () => {
           unsubscribed = true;
         };
