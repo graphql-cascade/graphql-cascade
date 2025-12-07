@@ -20,8 +20,7 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       tsconfig: {
-        jsx: 'react-jsx',
-        outDir: './.ts-jest'
+        jsx: 'react-jsx'
       }
     }]
   },
