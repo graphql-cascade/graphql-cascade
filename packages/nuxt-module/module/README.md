@@ -274,6 +274,131 @@ Get access to the Apollo Client with cascade support.
 - `client` - The Apollo Client instance
 - `resolveClient()` - Resolve the client (for multi-client setups)
 
+### `useCascadeTracker()`
+
+Track cascade updates across mutations for debugging and analytics.
+
+**Returns:**
+- `cascadeHistory` - Array of all cascade updates
+- `lastCascade` - Most recent cascade update
+- `cascadeCount` - Total number of cascades tracked
+- `addCascade(cascade)` - Manually add a cascade to history
+- `clearHistory()` - Clear the cascade history
+
+**Example:**
+```vue
+<script setup>
+const { cascadeHistory, lastCascade, cascadeCount } = useCascadeTracker()
+
+watch(lastCascade, (cascade) => {
+  console.log('Cascade update:', cascade)
+  console.log('Total cascades:', cascadeCount.value)
+})
+</script>
+```
+
+### `useCascadeQuery(document, variables, options)`
+
+Enhanced query hook that can automatically refetch when cascade invalidations occur.
+
+**Returns:**
+Same as `useQuery` from `@vue/apollo-composable`
+
+**Options:**
+- `watchInvalidations` - Array of query names to watch for invalidation
+
+### `useCascadeBatch()`
+
+Execute multiple mutations in parallel with cascade tracking.
+
+**Returns:**
+- `executeBatch(mutations)` - Execute array of mutations
+- `loading` - Loading state
+- `results` - Array of successful results
+- `errors` - Array of errors
+
+**Example:**
+```vue
+<script setup>
+const { executeBatch, loading, results } = useCascadeBatch()
+
+async function updateMultiple() {
+  const result = await executeBatch([
+    { mutation: UPDATE_USER, variables: { id: '1', name: 'Alice' } },
+    { mutation: UPDATE_USER, variables: { id: '2', name: 'Bob' } }
+  ])
+
+  if (result.allSucceeded) {
+    console.log('All updates completed!')
+  }
+}
+</script>
+```
+
+### `useCascadeOptimistic()`
+
+Helper for optimistic UI updates that work with cascade.
+
+**Returns:**
+- `optimisticUpdate(data)` - Apply optimistic update to cache
+- `clearOptimisticUpdates()` - Clear all optimistic updates
+- `mutate(mutation, options)` - Execute mutation (reverts optimistic updates on error)
+- `optimisticUpdates` - Array of current optimistic updates
+
+**Example:**
+```vue
+<script setup>
+const { optimisticUpdate, mutate } = useCascadeOptimistic()
+
+async function updateUser(id, name) {
+  // Optimistically update UI
+  optimisticUpdate({ __typename: 'User', id, name })
+
+  // Execute mutation (UI reverts if it fails)
+  await mutate(UPDATE_USER_MUTATION, {
+    variables: { id, name }
+  })
+}
+</script>
+```
+
+### `useCascadeUnionQuery(document, variables, options)`
+
+Enhanced query hook for handling union type responses (like error handling patterns).
+
+**Returns:**
+- Same as `useQuery` plus:
+- `data` - Extracted data from union response
+- `isError` - Whether the response is an error type
+- `errors` - Array of errors from error union types
+
+**Options:**
+- `unionConfig` - Configuration for union type handling (same as `useCascadeMutation`)
+
+**Example:**
+```vue
+<script setup>
+const { data, isError, errors, loading } = useCascadeUnionQuery(
+  GET_USER_QUERY,
+  { id: '123' },
+  {
+    unionConfig: {
+      successTypes: ['GetUserSuccess'],
+      errorTypes: ['GetUserError']
+    }
+  }
+)
+</script>
+
+<template>
+  <div v-if="loading">Loading...</div>
+  <div v-else-if="isError">
+    <p v-for="error in errors">{{ error.message }}</p>
+  </div>
+  <div v-else>{{ data }}</div>
+</template>
+```
+
 ## Examples
 
 ### PrintOptim Integration

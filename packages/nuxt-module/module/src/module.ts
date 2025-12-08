@@ -45,18 +45,23 @@ export default defineNuxtModule<ModuleOptions>({
 
     // Add auto-imports for composables
     if (options.autoImports) {
-      addImports([
-        {
-          name: 'useCascadeMutation',
-          as: 'useCascadeMutation',
+      const composables = [
+        'useCascadeMutation',
+        'useCascadeClient',
+        'useCascadeTracker',
+        'useCascadeQuery',
+        'useCascadeBatch',
+        'useCascadeOptimistic',
+        'useCascadeUnionQuery'
+      ]
+
+      addImports(
+        composables.map(name => ({
+          name,
+          as: name,
           from: resolver.resolve('./runtime/composables')
-        },
-        {
-          name: 'useCascadeClient',
-          as: 'useCascadeClient',
-          from: resolver.resolve('./runtime/composables')
-        }
-      ])
+        }))
+      )
     }
 
     // Add type declarations
