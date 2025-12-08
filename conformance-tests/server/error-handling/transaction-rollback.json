@@ -1,0 +1,29 @@
+{
+  "id": "TC-S-020",
+  "name": "Transaction Rollback on Error",
+  "description": "Servers MUST NOT include cascade data when a mutation fails and transaction is rolled back",
+  "category": "server",
+  "subcategory": "error-handling",
+  "requirement": "REQ-020",
+  "priority": "critical",
+  "input": {
+    "mutation": "mutation UpdateUser($id: ID!, $name: String!) { updateUser(id: $id, name: $name) { id name } }",
+    "context": {
+      "variables": {
+        "id": "nonexistent_user",
+        "name": "New Name"
+      },
+      "entities": []
+    }
+  },
+  "expected": {
+    "error": {
+      "message": "User not found",
+      "extensions": {
+        "code": "NOT_FOUND"
+      }
+    },
+    "cascade": null
+  },
+  "tags": ["error-handling", "rollback", "transaction"]
+}

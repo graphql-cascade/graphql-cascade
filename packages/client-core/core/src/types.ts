@@ -5,7 +5,7 @@
 /**
  * GraphQL Cascade response structure.
  */
-export interface CascadeResponse<T = any> {
+export interface CascadeResponse<T = unknown> {
   success: boolean;
   errors?: CascadeError[];
   data: T;
@@ -35,11 +35,11 @@ export interface CascadeMetadata {
 /**
  * An entity that was updated in the cascade.
  */
-export interface UpdatedEntity {
+export interface UpdatedEntity<T = Record<string, unknown>> {
   __typename: string;
   id: string;
   operation: CascadeOperation;
-  entity: any;
+  entity: T;
 }
 
 /**
@@ -55,9 +55,9 @@ export interface DeletedEntity {
  * Type of cascade operation.
  */
 export enum CascadeOperation {
-  CREATED = 'CREATED',
-  UPDATED = 'UPDATED',
-  DELETED = 'DELETED'
+  CREATED = "CREATED",
+  UPDATED = "UPDATED",
+  DELETED = "DELETED",
 }
 
 /**
@@ -68,20 +68,23 @@ export interface CascadeError {
   code: CascadeErrorCode;
   field?: string;
   path?: string[];
-  extensions?: any;
+  extensions?: Record<string, unknown>;
 }
 
 /**
  * Standard error codes for Cascade mutations.
  */
 export enum CascadeErrorCode {
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  NOT_FOUND = 'NOT_FOUND',
-  UNAUTHORIZED = 'UNAUTHORIZED',
-  FORBIDDEN = 'FORBIDDEN',
-  CONFLICT = 'CONFLICT',
-  INTERNAL_ERROR = 'INTERNAL_ERROR',
-  TRANSACTION_FAILED = 'TRANSACTION_FAILED'
+  VALIDATION_ERROR = "VALIDATION_ERROR",
+  NOT_FOUND = "NOT_FOUND",
+  UNAUTHORIZED = "UNAUTHORIZED",
+  FORBIDDEN = "FORBIDDEN",
+  CONFLICT = "CONFLICT",
+  INTERNAL_ERROR = "INTERNAL_ERROR",
+  TRANSACTION_FAILED = "TRANSACTION_FAILED",
+  TIMEOUT = "TIMEOUT",
+  RATE_LIMITED = "RATE_LIMITED",
+  SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE",
 }
 
 /**
@@ -90,7 +93,7 @@ export enum CascadeErrorCode {
 export interface QueryInvalidation {
   queryName?: string;
   queryHash?: string;
-  arguments?: Record<string, any>;
+  arguments?: Record<string, unknown>;
   queryPattern?: string;
   strategy: InvalidationStrategy;
   scope: InvalidationScope;
@@ -100,35 +103,35 @@ export interface QueryInvalidation {
  * Strategy for cache invalidation.
  */
 export enum InvalidationStrategy {
-  INVALIDATE = 'INVALIDATE',
-  REFETCH = 'REFETCH',
-  REMOVE = 'REMOVE'
+  INVALIDATE = "INVALIDATE",
+  REFETCH = "REFETCH",
+  REMOVE = "REMOVE",
 }
 
 /**
  * Scope of cache invalidation.
  */
 export enum InvalidationScope {
-  EXACT = 'EXACT',
-  PREFIX = 'PREFIX',
-  PATTERN = 'PATTERN',
-  ALL = 'ALL'
+  EXACT = "EXACT",
+  PREFIX = "PREFIX",
+  PATTERN = "PATTERN",
+  ALL = "ALL",
 }
 
 /**
  * Generic cache interface for GraphQL Cascade.
  * Implement this interface to integrate with any cache system.
  */
-export interface CascadeCache {
+export interface CascadeCache<T = Record<string, unknown>> {
   /**
    * Write an entity to the cache.
    */
-  write(typename: string, id: string, data: any): void;
+  write(typename: string, id: string, data: T): void;
 
   /**
    * Read an entity from the cache.
    */
-  read(typename: string, id: string): any | null;
+  read(typename: string, id: string): T | null;
 
   /**
    * Evict (remove) an entity from the cache.
@@ -153,7 +156,7 @@ export interface CascadeCache {
   /**
    * Identify an entity (get cache key).
    */
-  identify(entity: any): string;
+  identify(entity: T): string;
 }
 
 /**
@@ -161,8 +164,8 @@ export interface CascadeCache {
  */
 export interface ConflictDetection {
   hasConflict: boolean;
-  conflictType?: 'VERSION_MISMATCH' | 'TIMESTAMP_MISMATCH' | 'FIELD_CONFLICT';
-  localEntity?: any;
-  serverEntity?: any;
+  conflictType?: "VERSION_MISMATCH" | "TIMESTAMP_MISMATCH" | "FIELD_CONFLICT";
+  localEntity?: Record<string, unknown>;
+  serverEntity?: Record<string, unknown>;
   conflictingFields?: string[];
 }

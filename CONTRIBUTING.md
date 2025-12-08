@@ -25,8 +25,8 @@ Thank you for your interest in contributing to GraphQL Cascade! We welcome contr
 ## Development Setup
 
 ### Prerequisites
-- **Python 3.8+** for server implementation
-- **Node.js 16+** for client packages
+- **Node.js 18+** for development
+- **pnpm 8+** for package management
 - **Git** for version control
 
 ### Clone and Setup
@@ -35,14 +35,11 @@ Thank you for your interest in contributing to GraphQL Cascade! We welcome contr
 git clone https://github.com/your-org/graphql-cascade.git
 cd graphql-cascade
 
-# Set up Python environment (for server)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -e reference/server-python/
+# Install dependencies
+pnpm install
 
-# Set up Node.js environment (for clients)
-cd packages
-npm install
+# Build all packages
+pnpm build
 ```
 
 ### Development Workflow
@@ -54,8 +51,10 @@ git checkout -b feature/your-feature-name
 # ... edit files ...
 
 # Run tests
-./scripts/validate_docs.sh
-python scripts/test_docs_coverage.py
+pnpm test
+
+# Run linting
+pnpm lint
 
 # Commit your changes
 git add .
@@ -67,13 +66,13 @@ git commit -m "Add: brief description of your changes"
 ### Running Tests
 ```bash
 # Run all tests
-python -m pytest
+pnpm test
 
-# Run specific test file
-python -m pytest reference/server-python/tests/test_tracker.py
+# Run tests for specific package
+pnpm test --filter @graphql-cascade/server
 
 # Run with coverage
-python -m pytest --cov=reference/server-python/graphql_cascade
+pnpm test --coverage
 ```
 
 ### Test Guidelines
@@ -90,31 +89,29 @@ python -m pytest --cov=reference/server-python/graphql_cascade
 ## Documentation Standards
 
 ### Code Documentation
-- **Docstrings** for all public functions and classes
-- **Type hints** for Python code
-- **JSDoc comments** for JavaScript/TypeScript code
+- **JSDoc comments** for all public functions and classes
+- **Type annotations** for TypeScript code
 - **Inline comments** for complex logic
 
 ### Example
-```python
-def track_entity_relationship(
-    entity_type: str,
-    entity_id: str,
-    related_type: str,
-    related_id: str
-) -> None:
-    """
-    Track a relationship between two entities for cascade invalidation.
-
-    Args:
-        entity_type: The type of the primary entity
-        entity_id: The ID of the primary entity
-        related_type: The type of the related entity
-        related_id: The ID of the related entity
-
-    Raises:
-        ValueError: If entity_type or related_type is invalid
-    """
+```typescript
+/**
+ * Track a relationship between two entities for cascade invalidation.
+ *
+ * @param entityType - The type of the primary entity
+ * @param entityId - The ID of the primary entity
+ * @param relatedType - The type of the related entity
+ * @param relatedId - The ID of the related entity
+ * @throws {Error} If entityType or relatedType is invalid
+ */
+function trackEntityRelationship(
+  entityType: string,
+  entityId: string,
+  relatedType: string,
+  relatedId: string
+): void {
+  // Implementation here
+}
 ```
 
 ### Documentation Files

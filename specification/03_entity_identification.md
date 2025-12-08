@@ -251,11 +251,11 @@ function writeToCache(cache: CascadeCache, entity: Entity): void {
 ## Security Considerations
 
 ### ID Entropy
-- IDs should not be easily guessable
+- IDs SHOULD NOT be easily guessable
 - Use UUIDs or cryptographically secure random IDs
 - Avoid sequential integer IDs in public APIs
 
 ### Information Leakage
-- IDs should not contain sensitive information
+- IDs SHOULD NOT contain sensitive information
 - Consider using opaque IDs for public APIs
 - Implement proper access controls regardless of ID format

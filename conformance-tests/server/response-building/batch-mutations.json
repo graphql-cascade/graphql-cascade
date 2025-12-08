@@ -1,0 +1,32 @@
+{
+  "id": "TC-S-012",
+  "name": "Batch Mutation Response",
+  "description": "Servers MUST aggregate cascade data from multiple mutations in a single request",
+  "category": "server",
+  "subcategory": "response-building",
+  "requirement": "REQ-012",
+  "priority": "high",
+  "input": {
+    "mutation": "mutation BatchUpdate { updateUser1: updateUser(id: \"1\", name: \"User 1\") { id name } updateUser2: updateUser(id: \"2\", name: \"User 2\") { id name } }",
+    "context": {
+      "entities": [
+        { "__typename": "User", "id": "1", "name": "Old Name 1" },
+        { "__typename": "User", "id": "2", "name": "Old Name 2" }
+      ]
+    }
+  },
+  "expected": {
+    "cascade": {
+      "updated": [
+        { "__typename": "User", "id": "1", "name": "User 1" },
+        { "__typename": "User", "id": "2", "name": "User 2" }
+      ],
+      "invalidations": [],
+      "metadata": {
+        "affectedCount": 2,
+        "operationType": "UPDATE"
+      }
+    }
+  },
+  "tags": ["batch", "multiple-mutations", "aggregation"]
+}

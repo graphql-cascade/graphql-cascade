@@ -1,0 +1,122 @@
+# GraphQL Cascade Formal Grammar
+# EBNF Grammar for GraphQL Cascade Data Structures
+# Follows GraphQL Specification EBNF conventions
+
+# Root response structure
+CascadeResponse ::= '{'
+    '"success"' ':' Boolean ','
+    '"errors"' ':' CascadeErrorArray ','
+    '"data"' ':' ( MutationPayload | 'null' ) ','
+    '"cascade"' ':' CascadeUpdates
+'}'
+
+# Cascade updates container
+CascadeUpdates ::= '{'
+    '"updated"' ':' UpdatedEntityArray ','
+    '"deleted"' ':' DeletedEntityArray ','
+    '"invalidations"' ':' QueryInvalidationArray ','
+    '"metadata"' ':' CascadeMetadata
+'}'
+
+# Updated entity representation
+UpdatedEntity ::= '{'
+    '"__typename"' ':' String ','
+    '"id"' ':' ID ','
+    '"operation"' ':' CascadeOperation ','
+    '"entity"' ':' Node
+'}'
+
+# Deleted entity representation
+DeletedEntity ::= '{'
+    '"__typename"' ':' String ','
+    '"id"' ':' ID ','
+    '"deletedAt"' ':' DateTime
+'}'
+
+# Query invalidation hints
+QueryInvalidation ::= '{'
+    '"queryName"' ':' ( String | 'null' ) ','
+    '"queryHash"' ':' ( String | 'null' ) ','
+    '"arguments"' ':' ( JSON | 'null' ) ','
+    '"queryPattern"' ':' ( String | 'null' ) ','
+    '"strategy"' ':' InvalidationStrategy ','
+    '"scope"' ':' InvalidationScope
+'}'
+
+# Cascade operation metadata
+CascadeMetadata ::= '{'
+    '"timestamp"' ':' DateTime ','
+    '"transactionId"' ':' ( ID | 'null' ) ','
+    '"depth"' ':' Int ','
+    '"affectedCount"' ':' Int
+'}'
+
+# Error structure
+CascadeError ::= '{'
+    '"message"' ':' String ','
+    '"code"' ':' CascadeErrorCode ','
+    '"field"' ':' ( String | 'null' ) ','
+    '"path"' ':' StringArray ','
+    '"extensions"' ':' ( JSON | 'null' )
+'}'
+
+# Enum definitions
+CascadeOperation ::= '"CREATED"' | '"UPDATED"' | '"DELETED"'
+
+InvalidationStrategy ::= '"INVALIDATE"' | '"REFETCH"' | '"REMOVE"'
+
+InvalidationScope ::= '"EXACT"' | '"PREFIX"' | '"PATTERN"' | '"ALL"'
+
+CascadeErrorCode ::= '"VALIDATION_ERROR"'
+                   | '"NOT_FOUND"'
+                   | '"UNAUTHORIZED"'
+                   | '"FORBIDDEN"'
+                   | '"CONFLICT"'
+                   | '"INTERNAL_ERROR"'
+                   | '"TRANSACTION_FAILED"'
+
+# Array types
+UpdatedEntityArray ::= '[' UpdatedEntityList ']'
+UpdatedEntityList ::= | UpdatedEntity ( ',' UpdatedEntity )*
+
+DeletedEntityArray ::= '[' DeletedEntityList ']'
+DeletedEntityList ::= | DeletedEntity ( ',' DeletedEntity )*
+
+QueryInvalidationArray ::= '[' QueryInvalidationList ']'
+QueryInvalidationList ::= | QueryInvalidation ( ',' QueryInvalidation )*
+
+CascadeErrorArray ::= '[' CascadeErrorList ']'
+CascadeErrorList ::= | CascadeError ( ',' CascadeError )*
+
+StringArray ::= '[' StringList ']'
+StringList ::= | String ( ',' String )*
+
+# Primitive types (following GraphQL conventions)
+Boolean ::= 'true' | 'false'
+String ::= '"' StringCharacter* '"'
+ID ::= String  # IDs are serialized as strings
+Int ::= Digit+ | '-' Digit+
+Float ::= Int '.' Digit+ | Int Exponent | Int '.' Digit+ Exponent
+DateTime ::= String  # ISO 8601 datetime string
+JSON ::= Object | Array | String | Number | Boolean | 'null'
+
+# JSON structures for extensions/arguments
+Object ::= '{' MemberList '}'
+MemberList ::= | Member ( ',' Member )*
+Member ::= String ':' JSON
+
+Array ::= '[' ElementList ']'
+ElementList ::= | JSON ( ',' JSON )*
+
+Number ::= Int | Float
+
+# Character classes
+StringCharacter ::= SourceCharacter - '"' - '\' | EscapeSequence
+EscapeSequence ::= '\\' ( '"' | '\\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' | 'u' HexDigit HexDigit HexDigit HexDigit )
+HexDigit ::= Digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+SourceCharacter ::= # Any valid Unicode character
+Digit ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+
+# Abstract types (defined by schema, not grammar)
+MutationPayload ::= JSON  # Schema-defined mutation result
+Node ::= JSON            # Schema-defined entity interface

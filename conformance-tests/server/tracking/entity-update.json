@@ -1,0 +1,48 @@
+{
+  "id": "TC-S-002",
+  "name": "Entity Update Tracking",
+  "description": "Servers MUST track entity field updates during mutation execution and include modified entities in the cascade response",
+  "category": "server",
+  "subcategory": "tracking",
+  "requirement": "REQ-002",
+  "priority": "critical",
+  "input": {
+    "mutation": "mutation UpdateUser($id: ID!, $input: UpdateUserInput!) { updateUser(id: $id, input: $input) { id name email } }",
+    "context": {
+      "variables": {
+        "id": "user_123",
+        "input": {
+          "name": "Jane Doe",
+          "email": "jane@example.com"
+        }
+      },
+      "entities": [
+        {
+          "__typename": "User",
+          "id": "user_123",
+          "name": "John Doe",
+          "email": "john@example.com"
+        }
+      ],
+      "schema": "type Mutation { updateUser(id: ID!, input: UpdateUserInput!): User } type User { id: ID! name: String! email: String! } input UpdateUserInput { name: String email: String }"
+    }
+  },
+  "expected": {
+    "cascade": {
+      "updated": [
+        {
+          "__typename": "User",
+          "id": "user_123",
+          "name": "Jane Doe",
+          "email": "jane@example.com"
+        }
+      ],
+      "invalidations": [],
+      "metadata": {
+        "affectedCount": 1,
+        "operationType": "UPDATE"
+      }
+    }
+  },
+  "tags": ["entity-update", "tracking", "mutation"]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@graphql-cascade/docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GraphQL Cascade documentation site",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview",
+    "serve": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.0.0-rc.31",
+    "vue": "^3.3.11"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

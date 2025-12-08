@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://graphql-cascade.org/schema/v1/metadata",
+  "title": "CascadeMetadata",
+  "description": "Metadata about a GraphQL Cascade operation",
+  "type": "object",
+  "required": ["timestamp", "depth", "affectedCount"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "description": "Server timestamp when mutation executed (ISO 8601)",
+      "format": "date-time"
+    },
+    "transactionId": {
+      "type": ["string", "null"],
+      "description": "Transaction ID for tracking (optional)"
+    },
+    "depth": {
+      "type": "integer",
+      "description": "Maximum relationship depth traversed",
+      "minimum": 0
+    },
+    "affectedCount": {
+      "type": "integer",
+      "description": "Total number of entities affected",
+      "minimum": 0
+    }
+  },
+  "examples": [
+    {
+      "timestamp": "2023-11-26T10:30:00Z",
+      "transactionId": "txn_123456",
+      "depth": 2,
+      "affectedCount": 5
+    },
+    {
+      "timestamp": "2023-11-26T10:30:00Z",
+      "transactionId": null,
+      "depth": 1,
+      "affectedCount": 1
+    }
+  ]
+}

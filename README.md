@@ -5,7 +5,7 @@
 </p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Specification](https://img.shields.io/badge/Specification-v0.1-blue)](./specification/)
+[![Specification](https://img.shields.io/badge/Specification-v1.1-blue)](./specification/)
 
 **Cascading cache updates for GraphQL** - Automatic, intelligent cache invalidation that cascades through your entire data graph.
 
@@ -24,37 +24,15 @@ GraphQL caching is hard. When you mutate data, you need to manually invalidate a
 
 ### Manual Cache Management (Traditional)
 
-```mermaid
-graph TD
-    A[Mutation] --> B[Update Database]
-    B --> C[Manual Cache Logic]
-    C --> D[Find Related Queries]
-    D --> E[Invalidate Cache Entries]
-    E --> F[Refetch Data]
-    F --> G[Update UI]
-
-    C --> H{Missed any<br/>relationships?}
-    H -->|Yes| I[Stale Data Bug]
-    H -->|No| J[Correct UI]
-
-    style I fill:#ffebee
-    style J fill:#e8f5e8
-```
+<p align="center">
+  <img src="docs/diagrams/manual-cache-management.png" alt="Manual Cache Management Flow" width="600">
+</p>
 
 ### Automatic Cache Management (GraphQL Cascade)
 
-```mermaid
-graph TD
-    A[Mutation] --> B[Update Database]
-    B --> C[Server Tracks Relationships]
-    C --> D[Build Cascade Response]
-    D --> E[Client Applies Cascade]
-    E --> F[Cache Auto-Updated]
-    F --> G[UI Auto-Updated]
-
-    style F fill:#e8f5e8
-    style G fill:#e8f5e8
-```
+<p align="center">
+  <img src="docs/diagrams/automatic-cache-management.png" alt="Automatic Cache Management Flow" width="600">
+</p>
 
 ## Solution
 
@@ -62,67 +40,23 @@ GraphQL Cascade automatically tracks entity relationships and cascades cache inv
 
 ### How It Works
 
-```mermaid
-graph TD
-    A[Client Mutation] --> B[GraphQL Server]
-    B --> C[Execute Mutation]
-    C --> D[Track Entity Changes]
-    D --> E[Find Related Entities]
-    E --> F[Build Cascade Response]
-
-    F --> G[Return to Client]
-    G --> H[Apply to Cache]
-    H --> I[Auto-Update UI]
-
-    style A fill:#e1f5fe
-    style C fill:#f3e5f5
-    style H fill:#e8f5e8
-```
+<p align="center">
+  <img src="docs/diagrams/how-it-works.png" alt="How GraphQL Cascade Works" width="600">
+</p>
 
 ### Cascade Flow Example
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Server
-    participant Database
-
-    Client->>Server: updateUser(id: "123", name: "John")
-    Server->>Database: UPDATE users SET name = 'John' WHERE id = 123
-    Database-->>Server: User updated
-    Server->>Database: Find related entities (posts, comments, etc.)
-    Database-->>Server: Related: Post[456], Comment[789]
-    Server->>Server: Build cascade response
-    Server-->>Client: { data: User, cascade: { updated: [User, Post, Comment] } }
-    Client->>Client: Auto-update cache with cascade
-    Note over Client: UI automatically shows updated data
-```
+<p align="center">
+  <img src="docs/diagrams/cascade-flow.png" alt="Cascade Flow Sequence Diagram" width="700">
+</p>
 
 ### Entity Relationship Tracking
 
 GraphQL Cascade automatically discovers and tracks entity relationships to ensure complete cache invalidation:
 
-```mermaid
-graph TD
-    A[User<br/>id: 123] --> B[Posts<br/>authorId: 123]
-    A --> C[Comments<br/>authorId: 123]
-    A --> D[Profile<br/>userId: 123]
-    B --> E[Post Likes<br/>postId: *]
-    C --> F[Comment Likes<br/>commentId: *]
-
-    style A fill:#e1f5fe
-    style B fill:#f3e5f5
-    style C fill:#f3e5f5
-    style D fill:#f3e5f5
-
-    subgraph "When User 123 is updated:"
-        G[✅ User cache updated]
-        H[✅ All posts cache updated]
-        I[✅ All comments cache updated]
-        J[✅ Profile cache updated]
-        K[✅ Related likes cache updated]
-    end
-```
+<p align="center">
+  <img src="docs/diagrams/entity-relationships.png" alt="Entity Relationship Tracking" width="600">
+</p>
 
 ### Before GraphQL Cascade
 ```javascript
@@ -150,54 +84,67 @@ const updateUser = async (userId, updates) => {
 
 ## Quick Start
 
-Get started in 5 minutes:
+### Server (TypeScript/Node.js)
 
-1. **Install** the server package:
-   ```bash
-   pip install graphql-cascade
-   # or
-   npm install @graphql-cascade/server
-   ```
+```bash
+npm install @graphql-cascade/server
+```
 
-2. **Add cascade tracking** to your schema:
-   ```graphql
-   type Mutation {
-     updateUser(id: ID!, input: UserInput!): User
-       @cascade(entity: "User", operation: "update")
-   }
-   ```
+```typescript
+import { CascadeTracker, CascadeBuilder } from '@graphql-cascade/server';
 
-3. **Configure your client**:
-   ```javascript
-   import { ApolloClient } from '@apollo/client';
-   import { cascadeLink } from '@graphql-cascade/apollo';
+// Create tracker and builder
+const tracker = new CascadeTracker();
+const builder = new CascadeBuilder(tracker);
 
-   const client = new ApolloClient({
-     link: cascadeLink.concat(httpLink),
-     cache: new InMemoryCache()
-   });
-   ```
+// In your mutation resolver
+const transactionId = tracker.startTransaction();
+tracker.trackUpdate({ id: userId, __typename: 'User', name: 'John' });
+const response = builder.buildResponse(mutationResult);
+// Response includes cascade data for automatic cache updates
+```
 
-That's it! Cache invalidation now cascades automatically.
+### Client (Apollo)
 
-## Getting Started
+```bash
+npm install @graphql-cascade/client-apollo @apollo/client
+```
 
-- **[Quick Start Guide](./docs/getting-started/quick-start.md)** - 5-minute setup
-- **[Concepts](./docs/getting-started/concepts.md)** - Core concepts explained
-- **[First Cascade](./docs/getting-started/first-cascade.md)** - Build your first implementation
+```typescript
+import { ApolloClient, InMemoryCache } from '@apollo/client';
+import { ApolloCascadeClient } from '@graphql-cascade/client-apollo';
+
+const client = new ApolloClient({
+  uri: 'http://localhost:4000/graphql',
+  cache: new InMemoryCache()
+});
+
+const cascade = new ApolloCascadeClient(client);
+
+// Mutations automatically update the cache!
+const result = await cascade.mutate(UPDATE_USER, { id: '123', name: 'John' });
+```
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| [@graphql-cascade/server](./packages/server-node) | Server implementation for Node.js/TypeScript |
+| [@graphql-cascade/client-apollo](./packages/client-apollo) | Apollo Client integration |
+| [@graphql-cascade/client-react-query](./packages/client-react-query) | React Query integration |
+| [@graphql-cascade/client-relay](./packages/client-relay) | Relay Modern integration |
+| [@graphql-cascade/client-urql](./packages/client-urql) | URQL integration |
+| [@graphql-cascade/cli](./packages/cli) | CLI tools for development and debugging |
+| [@graphql-cascade/conformance](./packages/conformance) | Conformance test suite |
 
 ## Documentation
 
-- **[Specification](./specification/)** - Complete technical specification
-- **[Guides](./docs/guides/)** - Implementation guides for different frameworks
+- **[Guide](./docs/guide/)** - Getting started and core concepts
+- **[Server Documentation](./docs/server/)** - Server implementation guides
+- **[Client Documentation](./docs/clients/)** - Client library guides
+- **[CLI Documentation](./docs/cli/)** - Command-line tools
+- **[Specification](./docs/specification/)** - Technical specification
 - **[API Reference](./docs/api/)** - Complete API documentation
-- **[Examples](./examples/)** - Working examples for different use cases
-
-## Examples
-
-- **[Todo App](./examples/todo-app/)** - Simple CRUD with cascades
-- **[Blog Platform](./examples/blog-platform/)** - Complex relationships
-- **[Real-time Collaboration](./examples/real-time-collab/)** - Subscriptions with cascades
 
 ## Community
 
@@ -206,13 +153,14 @@ That's it! Cache invalidation now cascades automatically.
 
 ## Status
 
-🚧 **Early Development** - Specification and reference implementations available. Production-ready packages coming soon.
-
 - ✅ Core specification complete
-- ✅ Python/FraiseQL server implementation
+- ✅ TypeScript server implementation
 - ✅ Apollo Client integration
-- 🚧 React Query integration (in progress)
-- 🚧 Relay integration (planned)
+- ✅ React Query integration
+- ✅ Relay integration
+- ✅ URQL integration
+- ✅ CLI tools
+- ✅ Conformance test suite
 
 ## License
 

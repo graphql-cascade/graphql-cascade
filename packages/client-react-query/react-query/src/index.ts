@@ -1,4 +1,7 @@
 // React Query integration exports
-export * from './cache';
-export * from './client';
-export * from './hook';
+export * from "./cache";
+export * from "./client";
+export * from "./hook";
+
+// Version
+export const VERSION = "0.2.0";

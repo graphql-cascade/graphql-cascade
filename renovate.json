@@ -1,0 +1,44 @@
+{
+  "extends": [
+    "config:base",
+    ":semanticCommits",
+    ":preserveSemverRanges",
+    ":groupAllNonMajor"
+  ],
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["@types/*"],
+      "groupName": "TypeScript types",
+      "automerge": true
+    },
+    {
+      "matchPackageNames": ["eslint", "prettier"],
+      "matchPackagePatterns": ["@typescript-eslint/*"],
+      "groupName": "Linting tools",
+      "automerge": true
+    },
+    {
+      "matchPackageNames": ["jest"],
+      "matchPackagePatterns": ["@jest/*"],
+      "groupName": "Jest testing",
+      "automerge": true
+    },
+    {
+      "matchPackageNames": ["ts-jest"],
+      "groupName": "Jest testing",
+      "automerge": true
+    },
+    {
+      "matchPackageNames": ["graphql"],
+      "groupName": "GraphQL core"
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major"],
+      "automerge": false
+    }
+  ],
+  "schedule": ["after 9am on monday"]
+}

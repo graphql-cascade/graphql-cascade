@@ -1,0 +1,99 @@
+TASK: Add Subscription Edge Case Tests (Issue 2.2)
+
+CONTEXT:
+- Project: GraphQL Cascade - a GraphQL cache invalidation library
+- Language: TypeScript with Jest
+- Directory: /home/lionel/code/graphql-cascade
+- Missing tests for subscription reconnection, concurrent subscriptions, and cleanup
+
+OBJECTIVE:
+Add comprehensive edge case tests for the subscription functionality in the Apollo client package.
+
+FILES TO MODIFY:
+- packages/client-apollo/apollo/src/subscriptions.test.ts
+
+IMPLEMENTATION STEPS:
+
+1. Add reconnection tests:
+```typescript
+describe('Subscription Reconnection', () => {
+  it('should handle disconnection gracefully', async () => {
+    // Test that subscription handles WebSocket close without crashing
+  });
+  
+  it('should track reconnection attempts', () => {
+    // Test that manager tracks connection state
+  });
+});
+```
+
+2. Add concurrent subscription tests:
+```typescript
+describe('Concurrent Subscriptions', () => {
+  it('should handle multiple subscriptions simultaneously', async () => {
+    // Create 3 subscriptions, verify all are active
+  });
+  
+  it('should deliver messages to correct subscribers', async () => {
+    // Subscribe to users and posts, emit users cascade
+    // Verify only users handler is called
+  });
+  
+  it('should track subscription count correctly', () => {
+    // Add/remove subscriptions, verify count
+  });
+});
+```
+
+3. Add cleanup tests:
+```typescript
+describe('Subscription Cleanup', () => {
+  it('should unsubscribe properly', () => {
+    // Subscribe, unsubscribe, verify cleanup
+  });
+  
+  it('should handle multiple unsubscribes safely', () => {
+    // Unsubscribe twice, no errors
+  });
+  
+  it('should cleanup all on manager dispose', () => {
+    // Create multiple subscriptions, dispose manager
+    // Verify all cleaned up
+  });
+});
+```
+
+4. Add error handling tests:
+```typescript
+describe('Error Handling', () => {
+  it('should handle subscription errors', () => {
+    // Test error callback is invoked
+  });
+  
+  it('should continue other subscriptions after one errors', () => {
+    // Error in one subscription shouldn't affect others
+  });
+});
+```
+
+VERIFICATION:
+- pnpm test --filter @graphql-cascade/apollo -- --testPathPattern=subscriptions
+- All new tests should pass
+
+ACCEPTANCE CRITERIA:
+- [ ] Reconnection tests added
+- [ ] Concurrent subscription tests added
+- [ ] Cleanup tests added
+- [ ] Error handling tests added
+- [ ] All tests pass
+
+DO NOT:
+- Modify the subscription implementation code
+- Change existing tests (add new ones)
+- Use features that don't exist in the current implementation
+
+COMPLETION SIGNAL:
+When done, write your status to: /tmp/opencode-issue-2-2-6cba71f1-cf49-40e8-ad22-84f177a3cddd.marker
+- On success: echo 'SUCCESS' > /tmp/opencode-issue-2-2-6cba71f1-cf49-40e8-ad22-84f177a3cddd.marker
+- On failure: echo 'FAILURE:<reason>' > /tmp/opencode-issue-2-2-6cba71f1-cf49-40e8-ad22-84f177a3cddd.marker
+This marker file is REQUIRED - do not skip this step.

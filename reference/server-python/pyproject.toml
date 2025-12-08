@@ -4,15 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "graphql-cascade"
-version = "0.1.0"
+version = "1.1.0"
 description = "GraphQL Cascade server reference implementation"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -24,6 +25,7 @@ classifiers = [
 dependencies = [
     "pydantic>=2.0.0",
     "typing-extensions>=4.0.0",
+    "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -62,7 +64,7 @@ profile = "black"
 line_length = 100
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -127,7 +129,9 @@ exclude_lines = [
     "def __repr__",
     "raise AssertionError",
     "raise NotImplementedError",
-]</content>
-</xai:function_call">\
-<xai:function_call name="write">
-<parameter name="filePath">server-reference/README.md
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14.1",
+]

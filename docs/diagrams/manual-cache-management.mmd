@@ -1,0 +1,14 @@
+graph TD
+    A[Mutation] --> B[Update Database]
+    B --> C[Manual Cache Logic]
+    C --> D[Find Related Queries]
+    D --> E[Invalidate Cache Entries]
+    E --> F[Refetch Data]
+    F --> G[Update UI]
+
+    C --> H{Missed any<br/>relationships?}
+    H -->|Yes| I[Stale Data Bug]
+    H -->|No| J[Correct UI]
+
+    style I fill:#ffebee
+    style J fill:#e8f5e8

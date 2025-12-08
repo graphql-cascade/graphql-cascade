@@ -95,7 +95,7 @@ GraphQL Cascade builds on the official GraphQL specification without changing it
 - **Additive**: Only adds fields to mutation responses, doesn't modify core GraphQL behavior
 - **Compatible**: Works with existing GraphQL queries, mutations, and subscriptions
 - **Standard**: Uses standard GraphQL SDL for schema definitions
-- **Optional**: Clients can opt-in to cascade processing
+- **Optional**: Clients MAY opt-in to cascade processing
 
 ### Relationship to Other Specifications
 

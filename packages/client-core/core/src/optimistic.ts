@@ -1,6 +1,6 @@
-import { DocumentNode } from 'graphql';
-import { CascadeClient } from './client';
-import { CascadeResponse, ConflictDetection } from './types';
+import { DocumentNode } from "graphql";
+import { CascadeClient } from "./client";
+import { CascadeResponse, ConflictDetection } from "./types";
 
 /**
  * Optimistic update manager for GraphQL Cascade.
@@ -14,7 +14,7 @@ export class OptimisticCascadeClient extends CascadeClient {
   async mutateOptimistic<T = any>(
     mutation: DocumentNode,
     variables: any,
-    optimisticResponse: CascadeResponse<T>
+    optimisticResponse: CascadeResponse<T>,
   ): Promise<T> {
     const mutationId = this.generateMutationId();
 
@@ -29,7 +29,6 @@ export class OptimisticCascadeClient extends CascadeClient {
       this.confirmOptimistic(mutationId);
 
       return result;
-
     } catch (error) {
       // 4. Rollback on error
       this.rollbackOptimistic(mutationId);
@@ -73,7 +72,7 @@ export class OptimisticCascadeClient extends CascadeClient {
     return () => {
       // Restore previous state
       previousState.forEach((data, key) => {
-        const [typename, id] = key.split(':');
+        const [typename, id] = key.split(":");
         if (data === null) {
           this.cache.evict(typename, id);
         } else {
@@ -95,18 +94,15 @@ export class CascadeConflictResolver {
   /**
    * Detect conflicts between local and server versions.
    */
-  detectConflicts(
-    localEntity: any,
-    serverEntity: any
-  ): ConflictDetection {
+  detectConflicts(localEntity: any, serverEntity: any): ConflictDetection {
     // Version-based conflict detection
     if (localEntity.version && serverEntity.version) {
       if (localEntity.version !== serverEntity.version) {
         return {
           hasConflict: true,
-          conflictType: 'VERSION_MISMATCH',
+          conflictType: "VERSION_MISMATCH",
           localEntity,
-          serverEntity
+          serverEntity,
         };
       }
     }
@@ -119,9 +115,9 @@ export class CascadeConflictResolver {
       if (localTime > serverTime) {
         return {
           hasConflict: true,
-          conflictType: 'TIMESTAMP_MISMATCH',
+          conflictType: "TIMESTAMP_MISMATCH",
           localEntity,
-          serverEntity
+          serverEntity,
         };
       }
     }
@@ -131,7 +127,7 @@ export class CascadeConflictResolver {
     for (const key in localEntity) {
       if (key in serverEntity && localEntity[key] !== serverEntity[key]) {
         // Skip metadata fields
-        if (!['updatedAt', 'version', '__typename', 'id'].includes(key)) {
+        if (!["updatedAt", "version", "__typename", "id"].includes(key)) {
           conflictingFields.push(key);
         }
       }
@@ -140,10 +136,10 @@ export class CascadeConflictResolver {
     if (conflictingFields.length > 0) {
       return {
         hasConflict: true,
-        conflictType: 'FIELD_CONFLICT',
+        conflictType: "FIELD_CONFLICT",
         localEntity,
         serverEntity,
-        conflictingFields
+        conflictingFields,
       };
     }
 
@@ -155,24 +151,28 @@ export class CascadeConflictResolver {
    */
   resolveConflicts(
     conflict: ConflictDetection,
-    strategy: 'SERVER_WINS' | 'CLIENT_WINS' | 'MERGE' | 'MANUAL' = 'SERVER_WINS'
+    strategy:
+      | "SERVER_WINS"
+      | "CLIENT_WINS"
+      | "MERGE"
+      | "MANUAL" = "SERVER_WINS",
   ): any {
     if (!conflict.hasConflict) {
       return conflict.serverEntity;
     }
 
     switch (strategy) {
-      case 'SERVER_WINS':
+      case "SERVER_WINS":
         return conflict.serverEntity;
 
-      case 'CLIENT_WINS':
+      case "CLIENT_WINS":
         return conflict.localEntity;
 
-      case 'MERGE':
+      case "MERGE":
         return this.mergeEntities(conflict.localEntity, conflict.serverEntity);
 
-      case 'MANUAL':
-        throw new Error('Manual conflict resolution required');
+      case "MANUAL":
+        throw new Error("Manual conflict resolution required");
 
       default:
         return conflict.serverEntity;

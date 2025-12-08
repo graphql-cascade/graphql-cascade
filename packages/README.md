@@ -9,12 +9,14 @@ This directory contains the client-side reference implementation for GraphQL Cas
 The core package provides the fundamental interfaces and base classes for GraphQL Cascade client implementations.
 
 **Key Components:**
+
 - `CascadeClient`: Base client class that handles cascade response processing
 - `OptimisticCascadeClient`: Extended client with optimistic update support
 - `CascadeConflictResolver`: Handles conflict resolution between local and server data
 - Type definitions for all Cascade response structures
 
 **Installation:**
+
 ```bash
 npm install @graphql-cascade/client
 ```
@@ -24,24 +26,27 @@ npm install @graphql-cascade/client
 Provides seamless integration with Apollo Client's normalized cache.
 
 **Key Features:**
+
 - Automatic cache updates from cascade responses
 - Query invalidation based on cascade hints
 - Support for optimistic updates
 - Full Apollo Client compatibility
 
 **Installation:**
+
 ```bash
 npm install @graphql-cascade/apollo @apollo/client
 ```
 
 **Usage:**
+
 ```typescript
-import { ApolloClient, InMemoryCache } from '@apollo/client';
-import { ApolloCascadeClient } from '@graphql-cascade/apollo';
+import { ApolloClient, InMemoryCache } from "@apollo/client";
+import { ApolloCascadeClient } from "@graphql-cascade/apollo";
 
 const client = new ApolloClient({
-  uri: 'http://localhost:4000/graphql',
-  cache: new InMemoryCache()
+  uri: "http://localhost:4000/graphql",
+  cache: new InMemoryCache(),
 });
 
 const cascade = new ApolloCascadeClient(client);
@@ -55,17 +60,20 @@ const result = await cascade.mutate(MY_MUTATION, variables);
 Integrates with React Query for non-normalized cache scenarios.
 
 **Key Features:**
+
 - Query invalidation based on cascade hints
 - Entity updates within query data
 - React hooks for cascade mutations
 - Optimistic update support
 
 **Installation:**
+
 ```bash
 npm install @graphql-cascade/react-query @tanstack/react-query
 ```
 
 **Usage:**
+
 ```typescript
 import { QueryClient } from '@tanstack/react-query';
 import { ReactQueryCascadeClient, useCascadeMutation } from '@graphql-cascade/react-query';
@@ -120,7 +128,7 @@ The `OptimisticCascadeClient` supports optimistic updates:
 const result = await cascade.mutateOptimistic(
   mutation,
   variables,
-  optimisticResponse
+  optimisticResponse,
 );
 ```
 
@@ -128,8 +136,8 @@ const result = await cascade.mutateOptimistic(
 
 - ✅ **Apollo Client**: Full normalized cache integration
 - ✅ **React Query**: Query invalidation and entity updates
-- 🚧 **URQL**: Planned (cache adapter implementation needed)
-- 🚧 **Relay**: Planned (environment integration needed)
+- ✅ **URQL**: Cascade exchange and cache adapter
+- ✅ **Relay**: Environment integration with store updates
 
 ## 🧪 Testing
 

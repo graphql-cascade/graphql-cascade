@@ -1,0 +1,53 @@
+{
+  "id": "TC-S-005",
+  "name": "Cycle Detection in Entity Relationships",
+  "description": "Servers MUST detect and prevent infinite loops when tracking cascading entity relationships",
+  "category": "server",
+  "subcategory": "tracking",
+  "requirement": "REQ-005",
+  "priority": "high",
+  "input": {
+    "mutation": "mutation UpdateUser($id: ID!, $input: UpdateUserInput!) { updateUser(id: $id, input: $input) { id name manager { id name } } }",
+    "context": {
+      "variables": {
+        "id": "user_123",
+        "input": {
+          "name": "Updated Name"
+        }
+      },
+      "entities": [
+        {
+          "__typename": "User",
+          "id": "user_123",
+          "name": "John Doe",
+          "managerId": "user_456"
+        },
+        {
+          "__typename": "User",
+          "id": "user_456",
+          "name": "Jane Smith",
+          "managerId": "user_123"
+        }
+      ],
+      "schema": "type Mutation { updateUser(id: ID!, input: UpdateUserInput!): User } type User { id: ID! name: String! manager: User } input UpdateUserInput { name: String }"
+    }
+  },
+  "expected": {
+    "cascade": {
+      "updated": [
+        {
+          "__typename": "User",
+          "id": "user_123",
+          "name": "Updated Name",
+          "managerId": "user_456"
+        }
+      ],
+      "invalidations": [],
+      "metadata": {
+        "affectedCount": 1,
+        "operationType": "UPDATE"
+      }
+    }
+  },
+  "tags": ["cycle-detection", "relationships", "prevention"]
+}

@@ -20,7 +20,7 @@ directive @cascade(
 
   """
   Whether to automatically compute invalidation hints.
-  If false, server must manually specify invalidations.
+  If false, server MUST manually specify invalidations.
   """
   autoInvalidate: Boolean = true
 
@@ -270,12 +270,12 @@ type Order {
 - **Arguments:**
   - `queries`: Required, non-empty array
   - `strategy`: Must be valid `InvalidationStrategy` value
-- **Query validation:** Referenced queries must exist in schema
+- **Query validation:** Referenced queries MUST exist in schema
 
 ### Runtime Validation
-- **Directive parsing:** Server must parse directives at schema load time
-- **Rule storage:** Invalidation rules must be efficiently accessible
-- **Error handling:** Invalid directives should fail schema validation
+- **Directive parsing:** Server MUST parse directives at schema load time
+- **Rule storage:** Invalidation rules MUST be efficiently accessible
+- **Error handling:** Invalid directives SHOULD fail schema validation
 
 ## Implementation Examples
 

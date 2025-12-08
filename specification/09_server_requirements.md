@@ -1,6 +1,6 @@
 # Server-Side Implementation Requirements
 
-This document defines what GraphQL servers must implement to be GraphQL Cascade compliant.
+This document defines what GraphQL servers MUST implement to be GraphQL Cascade compliant.
 
 ## Overview
 
@@ -12,9 +12,9 @@ GraphQL Cascade requires servers to track entity changes during mutations and co
 
 Servers MUST track all entity changes that occur during mutation execution:
 
-1. **Transaction-Level Tracking**: All changes within a mutation's database transaction must be captured
-2. **Relationship Traversal**: Changes must cascade through entity relationships up to configured depth
-3. **Operation Classification**: Each change must be classified as CREATED, UPDATED, or DELETED
+1. **Transaction-Level Tracking**: All changes within a mutation's database transaction MUST be captured
+2. **Relationship Traversal**: Changes MUST cascade through entity relationships up to configured depth
+3. **Operation Classification**: Each change MUST be classified as CREATED, UPDATED, or DELETED
 
 ### Response Construction
 

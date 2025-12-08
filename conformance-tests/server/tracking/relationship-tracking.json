@@ -1,0 +1,53 @@
+{
+  "id": "TC-S-004",
+  "name": "Relationship Cascade Tracking",
+  "description": "Servers MUST track changes that cascade through entity relationships and include all affected entities in the cascade response",
+  "category": "server",
+  "subcategory": "tracking",
+  "requirement": "REQ-004",
+  "priority": "high",
+  "input": {
+    "mutation": "mutation UpdatePost($id: ID!, $input: UpdatePostInput!) { updatePost(id: $id, input: $input) { id title author { id name } } }",
+    "context": {
+      "variables": {
+        "id": "post_456",
+        "input": {
+          "title": "Updated Title"
+        }
+      },
+      "entities": [
+        {
+          "__typename": "Post",
+          "id": "post_456",
+          "title": "Original Title",
+          "authorId": "user_123"
+        },
+        {
+          "__typename": "User",
+          "id": "user_123",
+          "name": "John Doe",
+          "postCount": 5
+        }
+      ],
+      "schema": "type Mutation { updatePost(id: ID!, input: UpdatePostInput!): Post } type Post { id: ID! title: String! author: User! } type User { id: ID! name: String! postCount: Int! } input UpdatePostInput { title: String }"
+    }
+  },
+  "expected": {
+    "cascade": {
+      "updated": [
+        {
+          "__typename": "Post",
+          "id": "post_456",
+          "title": "Updated Title",
+          "authorId": "user_123"
+        }
+      ],
+      "invalidations": [],
+      "metadata": {
+        "affectedCount": 1,
+        "operationType": "UPDATE"
+      }
+    }
+  },
+  "tags": ["relationship-tracking", "cascade", "mutation"]
+}

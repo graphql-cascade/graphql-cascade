@@ -1,0 +1,33 @@
+{
+  "id": "TC-S-021",
+  "name": "Partial Failure Handling",
+  "description": "Servers MAY include cascade data for successful operations when some mutations in a batch fail",
+  "category": "server",
+  "subcategory": "error-handling",
+  "requirement": "REQ-021",
+  "priority": "medium",
+  "input": {
+    "mutation": "mutation BatchUpdate { user1: updateUser(id: \"1\", name: \"New Name\") { id name } user2: updateUser(id: \"999\", name: \"Fail\") { id name } }",
+    "context": {
+      "entities": [
+        { "__typename": "User", "id": "1", "name": "Old Name" }
+      ]
+    }
+  },
+  "expected": {
+    "cascade": {
+      "updated": [
+        { "__typename": "User", "id": "1", "name": "New Name" }
+      ],
+      "invalidations": [],
+      "metadata": {
+        "affectedCount": 1,
+        "operationType": "UPDATE"
+      }
+    },
+    "error": {
+      "message": "User not found: 999"
+    }
+  },
+  "tags": ["error-handling", "partial-failure", "batch"]
+}

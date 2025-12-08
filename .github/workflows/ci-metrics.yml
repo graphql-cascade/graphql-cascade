@@ -1,0 +1,26 @@
+name: CI Performance Metrics
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect metrics
+        run: |
+          DURATION_MS=$(gh run view ${{ github.event.workflow_run.id }} --json durationMs -q '.durationMs')
+          DURATION_MIN=$(echo "scale=2; $DURATION_MS / 60000" | bc)
+
+          echo "CI Duration: ${DURATION_MIN} minutes"
+
+          # Store in workflow summary
+          echo "### CI Performance" >> $GITHUB_STEP_SUMMARY
+          echo "- Duration: ${DURATION_MIN} minutes" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ github.event.workflow_run.conclusion }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Workflow: ${{ github.event.workflow_run.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Run ID: ${{ github.event.workflow_run.id }}" >> $GITHUB_STEP_SUMMARY
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
