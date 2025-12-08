@@ -962,7 +962,6 @@ describe("CascadeBuilder", () => {
       expect(typeof serialized.functionField).toBe("string"); // Function converted to string
     });
 
-
     it("should handle entity type detection fallbacks", () => {
       const streamingBuilder = new StreamingCascadeBuilder(
         tracker,
@@ -993,6 +992,5 @@ describe("CascadeBuilder", () => {
       expect(types).toContain("WithUnderscore");
       expect(types).toContain("Object"); // constructor name fallback
     });
-
   });
 });
