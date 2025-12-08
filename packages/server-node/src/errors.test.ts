@@ -1,5 +1,7 @@
 import { CascadeErrorCode } from "./types";
 import {
+  CascadeError,
+  formatErrorMessage,
   validationError,
   notFoundError,
   timeoutError,
@@ -195,5 +197,132 @@ describe("Convenience Functions", () => {
       expect(error.path).toEqual(["input", "email"]);
       expect(error.extensions).toEqual({ constraint: "unique_email" });
     });
+  });
+});
+
+describe("CascadeError", () => {
+  describe("constructor", () => {
+    it("should create error with all fields", () => {
+      const error = new CascadeError(
+        "Test error",
+        "TEST_ERROR",
+        "Try again",
+        "/docs/errors",
+      );
+
+      expect(error.message).toBe("Test error");
+      expect(error.code).toBe("TEST_ERROR");
+      expect(error.hint).toBe("Try again");
+      expect(error.docsPath).toBe("/docs/errors");
+      expect(error.name).toBe("CascadeError");
+    });
+
+    it("should create error with minimal fields", () => {
+      const error = new CascadeError("Test error", "TEST_ERROR");
+
+      expect(error.message).toBe("Test error");
+      expect(error.code).toBe("TEST_ERROR");
+      expect(error.hint).toBeUndefined();
+      expect(error.docsPath).toBeUndefined();
+    });
+
+    it("should have proper stack trace", () => {
+      const error = new CascadeError("Test", "TEST_ERROR");
+      expect(error.stack).toBeDefined();
+      expect(error.stack).toContain("CascadeError");
+    });
+  });
+
+  describe("formatErrorMessage", () => {
+    it("should format error with all components", () => {
+      const error = new CascadeError(
+        "Test error",
+        "TEST_ERROR",
+        "Try again",
+        "/docs/errors",
+      );
+
+      const formatted = error.formatErrorMessage();
+      expect(formatted).toBe(
+        "CascadeError [TEST_ERROR]: Test error\nHint: Try again\nSee: /docs/errors",
+      );
+    });
+
+    it("should format error without hint", () => {
+      const error = new CascadeError(
+        "Test error",
+        "TEST_ERROR",
+        undefined,
+        "/docs/errors",
+      );
+
+      const formatted = error.formatErrorMessage();
+      expect(formatted).toBe(
+        "CascadeError [TEST_ERROR]: Test error\nSee: /docs/errors",
+      );
+    });
+
+    it("should format error without docs path", () => {
+      const error = new CascadeError("Test error", "TEST_ERROR", "Try again");
+
+      const formatted = error.formatErrorMessage();
+      expect(formatted).toBe(
+        "CascadeError [TEST_ERROR]: Test error\nHint: Try again",
+      );
+    });
+
+    it("should format error with minimal fields", () => {
+      const error = new CascadeError("Test error", "TEST_ERROR");
+
+      const formatted = error.formatErrorMessage();
+      expect(formatted).toBe("CascadeError [TEST_ERROR]: Test error");
+    });
+  });
+
+  describe("toString", () => {
+    it("should return formatted error message", () => {
+      const error = new CascadeError(
+        "Test error",
+        "TEST_ERROR",
+        "Try again",
+        "/docs/errors",
+      );
+
+      const stringified = error.toString();
+      expect(stringified).toBe(
+        "CascadeError [TEST_ERROR]: Test error\nHint: Try again\nSee: /docs/errors",
+      );
+    });
+  });
+});
+
+describe("formatErrorMessage helper", () => {
+  it("should format message with all components", () => {
+    const formatted = formatErrorMessage(
+      "Test error",
+      "Try again",
+      "/docs/errors",
+    );
+
+    expect(formatted).toBe("Test error\nHint: Try again\nSee: /docs/errors");
+  });
+
+  it("should format message without hint", () => {
+    const formatted = formatErrorMessage(
+      "Test error",
+      undefined,
+      "/docs/errors",
+    );
+    expect(formatted).toBe("Test error\nSee: /docs/errors");
+  });
+
+  it("should format message without docs path", () => {
+    const formatted = formatErrorMessage("Test error", "Try again");
+    expect(formatted).toBe("Test error\nHint: Try again");
+  });
+
+  it("should format message with minimal fields", () => {
+    const formatted = formatErrorMessage("Test error");
+    expect(formatted).toBe("Test error");
   });
 });
