@@ -66,10 +66,27 @@ export class CascadeVisitor {
 
     if (!fieldType) return;
 
-    // Check if field has cascade subfield
-    const hasCascade = field.selectionSet?.selections.some(
-      sel => sel.kind === 'Field' && sel.name.value === 'cascade'
-    ) || false;
+    // Check if field has cascade subfield (direct or in inline fragments)
+    let hasCascade = false;
+
+    if (field.selectionSet) {
+      for (const selection of field.selectionSet.selections) {
+        if (selection.kind === 'Field' && selection.name.value === 'cascade') {
+          hasCascade = true;
+          break;
+        }
+        // Check inline fragments (for union types)
+        if (selection.kind === 'InlineFragment' && selection.selectionSet) {
+          for (const innerSelection of selection.selectionSet.selections) {
+            if (innerSelection.kind === 'Field' && innerSelection.name.value === 'cascade') {
+              hasCascade = true;
+              break;
+            }
+          }
+          if (hasCascade) break;
+        }
+      }
+    }
 
     const isUnion = isUnionType(fieldType);
     const unionTypes = isUnion && isUnionType(fieldType)
