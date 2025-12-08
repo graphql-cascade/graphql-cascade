@@ -864,7 +864,8 @@ describe("CascadeSubscriptionManager", () => {
 
       manager.subscribeToEntity("User", mockSubscription, {
         onCascade,
-        filter: (event) => event.cascade.updated.some((u) => u.id === "specific-id"),
+        filter: (event) =>
+          event.cascade.updated.some((u) => u.id === "specific-id"),
       });
 
       // Send update for different ID (should be filtered out)
@@ -933,7 +934,9 @@ describe("CascadeSubscriptionManager", () => {
         }),
       } as any);
 
-      manager.subscribeToEntityById("User", "123", mockSubscription, { onCascade });
+      manager.subscribeToEntityById("User", "123", mockSubscription, {
+        onCascade,
+      });
 
       // Send delete event for matching ID
       subscriber.next({
@@ -1039,7 +1042,8 @@ describe("CascadeSubscriptionManager", () => {
       let subscriber1: any;
       let subscriber2: any;
 
-      jest.spyOn(apolloClient, "subscribe")
+      jest
+        .spyOn(apolloClient, "subscribe")
         .mockReturnValueOnce({
           subscribe: jest.fn((sub) => {
             subscriber1 = sub;
@@ -1053,8 +1057,12 @@ describe("CascadeSubscriptionManager", () => {
           }),
         } as any);
 
-      const handle1 = manager.subscribe(mockSubscription, { onCascade: onCascade1 });
-      const handle2 = manager.subscribe(mockSubscription, { onCascade: onCascade2 });
+      const handle1 = manager.subscribe(mockSubscription, {
+        onCascade: onCascade1,
+      });
+      const handle2 = manager.subscribe(mockSubscription, {
+        onCascade: onCascade2,
+      });
 
       // Pause all
       manager.pauseAll();
