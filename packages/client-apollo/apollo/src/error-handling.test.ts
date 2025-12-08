@@ -342,8 +342,7 @@ describe("cascade error extraction and retry", () => {
   });
 
   describe("retry logic with cascade errors", () => {
-    // TODO: Fix bug in error-handling.ts where forward observable completion prevents retries
-    it.skip("should invoke onRetryAttempt callback when retrying cascade error", () => {
+    it("should invoke onRetryAttempt callback when retrying cascade error", () => {
       const onRetryAttempt = jest.fn();
       const onRetrySuccess = jest.fn();
 
@@ -414,8 +413,7 @@ describe("cascade error extraction and retry", () => {
       expect(error).toBeUndefined();
     });
 
-    //TODO: Fix bug (same as above)
-    it.skip("should invoke onRetryFailure when max retries exhausted", () => {
+    it("should invoke onRetryFailure when max retries exhausted", () => {
       const onRetryAttempt = jest.fn();
       const onRetryFailure = jest.fn();
 
@@ -517,8 +515,7 @@ describe("cascade error extraction and retry", () => {
       expect(result).toEqual(cascadeErrorResult);
     });
 
-    // Note: Skipped due to same bug as cascade error severity test
-    it.skip("should handle multiple cascade errors in single response", () => {
+    it("should handle multiple cascade errors in single response", () => {
       const onRetryAttempt = jest.fn();
       const onRetrySuccess = jest.fn();
 
@@ -581,8 +578,7 @@ describe("cascade error extraction and retry", () => {
       expect(completed).toBe(true);
     });
 
-    // Note: Skipped due to same bug as cascade error severity test
-    it.skip("should handle cascade error with partial data", () => {
+    it("should handle cascade error with partial data", () => {
       const onRetryAttempt = jest.fn();
       const onRetrySuccess = jest.fn();
 
@@ -638,14 +634,14 @@ describe("cascade error extraction and retry", () => {
       expect(completed).toBe(true);
     });
 
-    // TODO: Fix bug (same as above)
-    it.skip("should handle network error followed by cascade error", () => {
+    it("should handle network error followed by cascade error", () => {
       const onRetryAttempt = jest.fn();
       const onRetrySuccess = jest.fn();
 
       const link = new CascadeErrorLink({
         maxRetries: 3, // maxRetries includes initial attempt, so 3 allows 2 retries
         baseDelay: 100,
+        exponentialBackoff: false, // Disable exponential backoff for predictable delays
         onRetryAttempt,
         onRetrySuccess,
       });
@@ -750,10 +746,7 @@ describe("cascade error extraction and retry", () => {
       expect(onRetryAttempt).toHaveBeenCalledTimes(2);
     });
 
-    // Note: This test is currently skipped due to a bug in the implementation where
-    // the forward observable completes before the retry happens, causing the outer
-    // observable to complete prematurely. This needs to be fixed in error-handling.ts
-    it.skip("should handle cascade error severity levels appropriately", () => {
+    it("should handle cascade error severity levels appropriately", () => {
       const onRetryAttempt = jest.fn();
       const onRetrySuccess = jest.fn();
 

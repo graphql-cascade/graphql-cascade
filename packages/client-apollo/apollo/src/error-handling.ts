@@ -82,9 +82,11 @@ export class CascadeErrorLink extends ApolloLink {
     return new Observable<FetchResult>((observer) => {
       let attempt = 0;
       let subscription: { unsubscribe: () => void } | null = null;
+      let retryPending = false;
 
       const execute = () => {
         attempt++;
+        retryPending = false;
 
         subscription = forward(operation).subscribe({
           next: (result) => {
@@ -103,6 +105,9 @@ export class CascadeErrorLink extends ApolloLink {
                     attempt,
                     cascadeError,
                   );
+
+                  // Mark retry as pending to prevent premature completion
+                  retryPending = true;
 
                   // Calculate delay and retry
                   const delay = calculateRetryDelay(
@@ -146,6 +151,9 @@ export class CascadeErrorLink extends ApolloLink {
             if (shouldRetry(coreError, attempt, this.options)) {
               this.options.onRetryAttempt?.(operation, attempt, cascadeError);
 
+              // Mark retry as pending to prevent premature completion
+              retryPending = true;
+
               // Calculate delay and retry
               const delay = calculateRetryDelay(
                 coreError,
@@ -163,7 +171,10 @@ export class CascadeErrorLink extends ApolloLink {
           },
 
           complete: () => {
-            observer.complete();
+            // Only forward completion if no retry is pending
+            if (!retryPending) {
+              observer.complete();
+            }
           },
         });
       };
