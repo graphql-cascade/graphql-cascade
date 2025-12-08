@@ -704,4 +704,303 @@ describe("useCascadeMutation", () => {
       expect(result.current[1].cascade).toBe(cascadeBeforeRerender);
     });
   });
+
+  describe("Advanced Conflict Resolution", () => {
+    it("should trigger conflict resolution when optimistic and server differ", async () => {
+      const optimisticCascadeResponse = (variables: any) => ({
+        data: { id: variables.id, name: "Optimistic Name" },
+        success: true,
+        cascade: {
+          updated: [
+            {
+              __typename: "User",
+              id: variables.id,
+              operation: CascadeOperation.UPDATED,
+              entity: { id: variables.id, name: "Optimistic Name", age: 25 },
+            },
+          ],
+          deleted: [],
+          invalidations: [],
+          metadata: {
+            timestamp: new Date().toISOString(),
+            depth: 1,
+            affectedCount: 1,
+          },
+        },
+      });
+
+      // Server returns different data - this will trigger conflict
+      const mockResponse: MockedResponse = {
+        request: {
+          query: UPDATE_USER_MUTATION,
+          variables: { id: "1", name: "Different Name" },
+        },
+        result: {
+          data: {
+            updateUser: {
+              ...createSuccessResponse("1", "Server Name"),
+              cascade: {
+                updated: [
+                  {
+                    __typename: "User",
+                    id: "1",
+                    operation: CascadeOperation.UPDATED,
+                    entity: { id: "1", name: "Server Name", age: 30 },
+                  },
+                ],
+                deleted: [],
+                invalidations: [],
+                metadata: {
+                  timestamp: new Date().toISOString(),
+                  depth: 1,
+                  affectedCount: 1,
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const { result } = renderHook(
+        () =>
+          useCascadeMutation(UPDATE_USER_MUTATION, {
+            optimistic: true,
+            optimisticCascadeResponse,
+            conflictResolution: "SERVER_WINS",
+          }),
+        { wrapper: createWrapper([mockResponse]) },
+      );
+
+      const [mutate] = result.current;
+
+      await act(async () => {
+        await mutate({ variables: { id: "1", name: "Different Name" } });
+      });
+
+      // Should complete successfully with server data winning
+      await waitFor(() => {
+        expect(result.current[1].data).toBeDefined();
+      });
+    });
+
+    it("should handle CLIENT_WINS conflict resolution strategy", async () => {
+      const optimisticCascadeResponse = (variables: any) => ({
+        data: { id: variables.id, name: "Client Name" },
+        success: true,
+        cascade: {
+          updated: [
+            {
+              __typename: "User",
+              id: variables.id,
+              operation: CascadeOperation.UPDATED,
+              entity: { id: variables.id, name: "Client Name", score: 100 },
+            },
+          ],
+          deleted: [],
+          invalidations: [],
+          metadata: {
+            timestamp: new Date().toISOString(),
+            depth: 1,
+            affectedCount: 1,
+          },
+        },
+      });
+
+      const mockResponse: MockedResponse = {
+        request: {
+          query: UPDATE_USER_MUTATION,
+          variables: { id: "2", name: "Test" },
+        },
+        result: {
+          data: {
+            updateUser: {
+              ...createSuccessResponse("2", "Server Name"),
+              cascade: {
+                updated: [
+                  {
+                    __typename: "User",
+                    id: "2",
+                    operation: CascadeOperation.UPDATED,
+                    entity: { id: "2", name: "Server Name", score: 50 },
+                  },
+                ],
+                deleted: [],
+                invalidations: [],
+                metadata: {
+                  timestamp: new Date().toISOString(),
+                  depth: 1,
+                  affectedCount: 1,
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const { result } = renderHook(
+        () =>
+          useCascadeMutation(UPDATE_USER_MUTATION, {
+            optimistic: true,
+            optimisticCascadeResponse,
+            conflictResolution: "CLIENT_WINS",
+          }),
+        { wrapper: createWrapper([mockResponse]) },
+      );
+
+      const [mutate] = result.current;
+
+      await act(async () => {
+        await mutate({ variables: { id: "2", name: "Test" } });
+      });
+
+      await waitFor(() => {
+        expect(result.current[1].data).toBeDefined();
+      });
+    });
+
+    it("should rollback optimistically created entities on error", async () => {
+      const optimisticCascadeResponse = (variables: any) => ({
+        data: { id: "new-id", name: variables.name },
+        success: true,
+        cascade: {
+          updated: [
+            {
+              __typename: "User",
+              id: "new-id",
+              operation: CascadeOperation.CREATED,
+              entity: { id: "new-id", name: variables.name },
+            },
+          ],
+          deleted: [],
+          invalidations: [],
+          metadata: {
+            timestamp: new Date().toISOString(),
+            depth: 1,
+            affectedCount: 1,
+          },
+        },
+      });
+
+      const mockResponse: MockedResponse = {
+        request: {
+          query: UPDATE_USER_MUTATION,
+          variables: { id: "new-id", name: "New User" },
+        },
+        error: new Error("Creation failed"),
+      };
+
+      const { result } = renderHook(
+        () =>
+          useCascadeMutation(UPDATE_USER_MUTATION, {
+            optimistic: true,
+            optimisticCascadeResponse,
+          }),
+        { wrapper: createWrapper([mockResponse]) },
+      );
+
+      const [mutate] = result.current;
+
+      await act(async () => {
+        try {
+          await mutate({ variables: { id: "new-id", name: "New User" } });
+        } catch (e) {
+          // Expected error
+        }
+      });
+
+      // Should have rolled back the optimistic create
+      await waitFor(() => {
+        expect(result.current[1].error).toBeDefined();
+      });
+    });
+
+    it("should handle optimistic deletes with rollback", async () => {
+      const optimisticCascadeResponse = (_variables: any) => ({
+        data: { success: true },
+        success: true,
+        cascade: {
+          updated: [],
+          deleted: [
+            {
+              __typename: "User",
+              id: "delete-me",
+              operation: CascadeOperation.DELETED,
+            },
+          ],
+          invalidations: [],
+          metadata: {
+            timestamp: new Date().toISOString(),
+            depth: 1,
+            affectedCount: 1,
+          },
+        },
+      });
+
+      const mockResponse: MockedResponse = {
+        request: {
+          query: UPDATE_USER_MUTATION,
+          variables: { id: "delete-me" },
+        },
+        error: new Error("Delete failed"),
+      };
+
+      const { result } = renderHook(
+        () =>
+          useCascadeMutation(UPDATE_USER_MUTATION, {
+            optimistic: true,
+            optimisticCascadeResponse,
+          }),
+        { wrapper: createWrapper([mockResponse]) },
+      );
+
+      const [mutate] = result.current;
+
+      await act(async () => {
+        try {
+          await mutate({ variables: { id: "delete-me" } });
+        } catch (e) {
+          // Expected error
+        }
+      });
+
+      // Should have rolled back the optimistic delete
+      await waitFor(() => {
+        expect(result.current[1].error).toBeDefined();
+      });
+    });
+
+    it("should throw error when optimistic enabled without optimisticCascadeResponse", async () => {
+      const mockResponse: MockedResponse = {
+        request: {
+          query: UPDATE_USER_MUTATION,
+          variables: { id: "1", name: "Test" },
+        },
+        result: {
+          data: {
+            updateUser: createSuccessResponse("1", "Test"),
+          },
+        },
+      };
+
+      const { result } = renderHook(
+        () =>
+          useCascadeMutation(UPDATE_USER_MUTATION, {
+            optimistic: true,
+            // Missing optimisticCascadeResponse!
+          }),
+        { wrapper: createWrapper([mockResponse]) },
+      );
+
+      const [mutate] = result.current;
+
+      await act(async () => {
+        try {
+          await mutate({ variables: { id: "1", name: "Test" } });
+          fail("Should have thrown an error");
+        } catch (error: any) {
+          expect(error.message).toContain("optimisticCascadeResponse");
+        }
+      });
+    });
+  });
 });
