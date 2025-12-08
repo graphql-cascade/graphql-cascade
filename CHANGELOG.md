@@ -15,6 +15,82 @@ This project uses **semantic versioning** for package versions:
 - **"v1.1 error codes"**: Refers to specification v1.1, not package version.
   These are included in package version 0.2.0.
 
+## [0.3.1] - 2025-12-08
+
+### Added
+
+#### TypeScript Code Generation 🎉
+- **New Package**: `@graphql-cascade/codegen` - GraphQL Code Generator plugin for cascade-aware type generation
+  - Auto-generates helper types: `CascadeOf<T>`, `DataOf<T>`, `UpdatedEntitiesOf<T>`, `DeletedEntitiesOf<T>`, `InvalidationsOf<T>`
+  - Generates union type guards for discriminated union responses
+  - Creates pre-configured `UnionCascadeConfig` objects for union types with cascade
+  - Comprehensive test suite with 10 test cases (100% passing)
+
+- **CLI Enhancements**: New codegen commands
+  - `cascade codegen` - Run GraphQL Code Generator with cascade plugin
+  - `cascade codegen init` - Scaffold codegen.yml configuration
+  - Integrates seamlessly with existing GraphQL Code Generator ecosystem
+
+#### Nuxt Module 🎉
+- **New Package**: `@graphql-cascade/nuxt` - Zero-config Nuxt module for GraphQL Cascade
+  - Auto-imports 7 Vue Composition API helpers
+  - Full TypeScript support with generic type parameters
+  - Smoke tests validating module metadata and exports
+
+- **7 Vue Composables**:
+  - `useCascadeMutation` - Enhanced mutation with automatic cascade tracking
+  - `useCascadeClient` - Access to cascade-enabled Apollo Client
+  - `useCascadeTracker` - Track cascade history across mutations
+  - `useCascadeQuery` - Auto-refetch on cascade invalidations
+  - `useCascadeBatch` - Batch multiple mutations with cascade coordination
+  - `useCascadeOptimistic` - Optimistic updates with automatic rollback
+  - `useCascadeUnionQuery` - Handle union type responses with type safety
+
+#### Apollo Client Improvements
+- **Union Type Support**: Enhanced cascade extraction for union responses
+  - `extractCascadeFromMutationResult` utility function
+  - Configurable `UnionCascadeConfig` for success/error type discrimination
+  - Handles both success variants (with cascade) and error variants
+  - Automatic cascade data extraction from union responses
+
+#### TypeScript Improvements
+- All composables and hooks now accept `TypedDocumentNode<TResult, TVariables>`
+- Full generic type support across Nuxt composables
+- Enhanced type inference for cascade data structures
+- Works seamlessly with generated types from `@graphql-cascade/codegen`
+
+### Fixed
+
+- **Codegen**: Fixed union cascade detection - now properly traverses inline fragments to find cascade fields
+  - Previous logic only checked direct field selections
+  - Now correctly identifies cascade in `... on SuccessType { cascade { ... } }` patterns
+  - Enables proper `UnionCascadeConfig` generation for union types
+
+### Documentation
+
+- Added comprehensive TypeScript codegen section to main README with before/after examples
+- Created detailed DevTools integration proposal document (8-week implementation plan)
+- Added codegen package documentation with usage examples and configuration options
+- Documented all 7 Nuxt composables with code examples
+- Added testing strategy documentation for Nuxt module
+
+### Testing
+
+- Added Jest test suite for codegen plugin (10 tests, all passing)
+- Added smoke tests for Nuxt module (validates exports and configuration)
+- Test coverage for:
+  - Helper type generation
+  - Union type guard generation
+  - UnionCascadeConfig generation
+  - Configuration options (cascadeImportFrom, generateTypeGuards, generateUnionHelpers)
+  - Edge cases (operations without cascade, empty documents)
+
+### Internal
+
+- Testing revealed and fixed critical union cascade detection bug
+- Added comprehensive test infrastructure for future development
+- Improved visitor pattern for GraphQL AST traversal
+
 ## [0.3.0] - 2025-12-05
 
 ### Added
