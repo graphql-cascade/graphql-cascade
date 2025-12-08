@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
+import { codegenCommand } from "./commands/codegen";
 import { doctorCommand } from "./commands/doctor";
 import { initCommand } from "./commands/init";
 import { validateCommand } from "./commands/validate";
@@ -16,5 +17,6 @@ program
 program.addCommand(initCommand);
 program.addCommand(doctorCommand);
 program.addCommand(validateCommand);
+program.addCommand(codegenCommand);
 
 program.parse();

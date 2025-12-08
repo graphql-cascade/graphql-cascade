@@ -5,6 +5,7 @@ packages:
   - 'packages/client-relay/relay'
   - 'packages/client-urql/urql'
   - 'packages/cli'
+  - 'packages/codegen'
   - 'packages/conformance'
   - 'packages/server-node'
   - 'docs'

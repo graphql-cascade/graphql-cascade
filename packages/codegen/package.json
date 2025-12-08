@@ -1,0 +1,55 @@
+{
+  "name": "@graphql-cascade/codegen",
+  "version": "0.3.0",
+  "description": "GraphQL Code Generator plugin for GraphQL Cascade type generation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./preset": {
+      "types": "./dist/preset.d.ts",
+      "default": "./dist/preset.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "@graphql-codegen/plugin-helpers": "^5.0.0",
+    "@graphql-codegen/visitor-plugin-common": "^5.0.0",
+    "@graphql-tools/utils": "^10.0.0",
+    "tslib": "^2.6.2"
+  },
+  "devDependencies": {
+    "@graphql-codegen/testing": "^3.0.0",
+    "@types/node": "^18.0.0",
+    "typescript": "^5.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/parser": "^5.0.0"
+  },
+  "peerDependencies": {
+    "graphql": "^15.0.0 || ^16.0.0"
+  },
+  "keywords": [
+    "graphql",
+    "codegen",
+    "cascade",
+    "typescript",
+    "graphql-codegen-plugin"
+  ],
+  "files": [
+    "dist"
+  ],
+  "author": "GraphQL Cascade Team",
+  "license": "MIT"
+}

@@ -1,6 +1,6 @@
 import { useNuxtApp } from '#app'
 import { useMutation, useApolloClient, useQuery, useSubscription } from '@vue/apollo-composable'
-import type { DocumentNode } from '@apollo/client'
+import type { DocumentNode, TypedDocumentNode } from '@apollo/client'
 import type { MutationOptions, MutationResult, UseQueryOptions, UseSubscriptionOptions } from '@vue/apollo-composable'
 import { extractCascadeFromMutationResult, type UnionCascadeConfig } from '@graphql-cascade/apollo'
 import { ref, unref, computed, watch, type Ref } from 'vue'
@@ -45,7 +45,7 @@ export interface CascadeMutationOptions<TResult, TVariables> extends MutationOpt
  * ```
  */
 export function useCascadeMutation<TResult = any, TVariables = any>(
-  document: DocumentNode,
+  document: DocumentNode | TypedDocumentNode<TResult, TVariables>,
   options?: CascadeMutationOptions<TResult, TVariables>
 ) {
   const { cascadeConfig, onCascade, ...mutationOptions } = options || {}
@@ -191,7 +191,7 @@ export function useCascadeTracker() {
  * ```
  */
 export function useCascadeQuery<TResult = any, TVariables = any>(
-  document: DocumentNode,
+  document: DocumentNode | TypedDocumentNode<TResult, TVariables>,
   variables?: TVariables | Ref<TVariables>,
   options?: UseQueryOptions<TResult, TVariables> & {
     watchInvalidations?: string[]
@@ -375,7 +375,7 @@ export function useCascadeOptimistic() {
  * ```
  */
 export function useCascadeUnionQuery<TResult = any, TVariables = any>(
-  document: DocumentNode,
+  document: DocumentNode | TypedDocumentNode<TResult, TVariables>,
   variables?: TVariables | Ref<TVariables>,
   options?: UseQueryOptions<TResult, TVariables> & {
     unionConfig?: UnionCascadeConfig

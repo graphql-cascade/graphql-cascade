@@ -152,6 +152,49 @@ const cascade = new ApolloCascadeClient(client);
 const result = await cascade.mutate(UPDATE_USER, { id: '123', name: 'John' });
 ```
 
+## TypeScript Code Generation
+
+Get full type safety with automatic TypeScript code generation:
+
+```bash
+# Initialize codegen configuration
+npx cascade codegen init
+
+# Install dependencies
+npm install -D @graphql-codegen/cli @graphql-codegen/typescript @graphql-codegen/typescript-operations @graphql-cascade/codegen
+
+# Generate types
+npx cascade codegen
+```
+
+**Before codegen:**
+```typescript
+const [createTodo] = useCascadeMutation(CREATE_TODO);
+//    ^ any type, no autocomplete
+```
+
+**After codegen:**
+```typescript
+import { CreateTodoDocument, CreateTodoMutation } from './generated/graphql';
+
+const [createTodo] = useCascadeMutation<CreateTodoMutation>(CreateTodoDocument);
+//    ^ Fully typed with IDE autocomplete for cascade updates!
+
+const result = await createTodo({ variables: { title: 'New Todo' } });
+result.cascade.updated.forEach(entity => {
+  // Full type safety on cascade data
+  console.log(`Updated ${entity.__typename}`);
+});
+```
+
+The codegen plugin automatically generates:
+- Type-safe mutation and query types
+- Cascade helper types (`CascadeOf<T>`, `DataOf<T>`)
+- Union type guards for error handling
+- Pre-configured `UnionCascadeConfig` objects
+
+See [@graphql-cascade/codegen](./packages/codegen) for full documentation.
+
 ## Packages
 
 | Package | Description |
@@ -161,6 +204,7 @@ const result = await cascade.mutate(UPDATE_USER, { id: '123', name: 'John' });
 | [@graphql-cascade/client-react-query](./packages/client-react-query) | React Query integration |
 | [@graphql-cascade/client-relay](./packages/client-relay) | Relay Modern integration |
 | [@graphql-cascade/client-urql](./packages/client-urql) | URQL integration |
+| [@graphql-cascade/codegen](./packages/codegen) | TypeScript code generation plugin |
 | [@graphql-cascade/cli](./packages/cli) | CLI tools for development and debugging |
 | [@graphql-cascade/conformance](./packages/conformance) | Conformance test suite |
 
