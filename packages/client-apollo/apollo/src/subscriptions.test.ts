@@ -733,4 +733,442 @@ describe("CascadeSubscriptionManager", () => {
     expect(_handle1.isActive).toBe(true);
     expect(_handle2.isActive).toBe(true);
   });
+
+  describe("Additional Coverage Tests", () => {
+    it("should handle resume after pause", () => {
+      const onCascade = jest.fn();
+      let subscriber: any;
+
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
+        subscribe: jest.fn((sub) => {
+          subscriber = sub;
+          return { unsubscribe: jest.fn() };
+        }),
+      } as any);
+
+      const handle = manager.subscribe(mockSubscription, { onCascade });
+
+      // Pause
+      handle.pause();
+      expect(handle.isPaused).toBe(true);
+
+      // Send event while paused (should be ignored)
+      subscriber.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [
+                {
+                  __typename: "User",
+                  id: "1",
+                  operation: "UPDATED",
+                  entity: { id: "1" },
+                },
+              ],
+              deleted: [],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      expect(onCascade).not.toHaveBeenCalled();
+
+      // Resume
+      handle.resume();
+      expect(handle.isPaused).toBe(false);
+
+      // Send event after resume (should be processed)
+      subscriber.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [
+                {
+                  __typename: "User",
+                  id: "2",
+                  operation: "UPDATED",
+                  entity: { id: "2" },
+                },
+              ],
+              deleted: [],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      expect(onCascade).toHaveBeenCalledTimes(1);
+    });
+
+    it("should handle subscribeToEntity with deleted items", () => {
+      const onCascade = jest.fn();
+      let subscriber: any;
+
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
+        subscribe: jest.fn((sub) => {
+          subscriber = sub;
+          return { unsubscribe: jest.fn() };
+        }),
+      } as any);
+
+      manager.subscribeToEntity("User", mockSubscription, { onCascade });
+
+      // Send delete event
+      subscriber.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [],
+              deleted: [
+                {
+                  __typename: "User",
+                  id: "1",
+                  operation: "DELETED",
+                },
+              ],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      expect(onCascade).toHaveBeenCalledTimes(1);
+    });
+
+    it("should handle subscribeToEntity with additional user filter", () => {
+      const onCascade = jest.fn();
+      let subscriber: any;
+
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
+        subscribe: jest.fn((sub) => {
+          subscriber = sub;
+          return { unsubscribe: jest.fn() };
+        }),
+      } as any);
+
+      manager.subscribeToEntity("User", mockSubscription, {
+        onCascade,
+        filter: (event) => event.cascade.updated.some((u) => u.id === "specific-id"),
+      });
+
+      // Send update for different ID (should be filtered out)
+      subscriber.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [
+                {
+                  __typename: "User",
+                  id: "other-id",
+                  operation: "UPDATED",
+                  entity: { id: "other-id" },
+                },
+              ],
+              deleted: [],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      expect(onCascade).not.toHaveBeenCalled();
+
+      // Send update for specific ID (should pass filter)
+      subscriber.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [
+                {
+                  __typename: "User",
+                  id: "specific-id",
+                  operation: "UPDATED",
+                  entity: { id: "specific-id" },
+                },
+              ],
+              deleted: [],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      expect(onCascade).toHaveBeenCalledTimes(1);
+    });
+
+    it("should handle subscribeToEntityById with deleted items", () => {
+      const onCascade = jest.fn();
+      let subscriber: any;
+
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
+        subscribe: jest.fn((sub) => {
+          subscriber = sub;
+          return { unsubscribe: jest.fn() };
+        }),
+      } as any);
+
+      manager.subscribeToEntityById("User", "123", mockSubscription, { onCascade });
+
+      // Send delete event for matching ID
+      subscriber.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [],
+              deleted: [
+                {
+                  __typename: "User",
+                  id: "123",
+                  operation: "DELETED",
+                },
+              ],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      expect(onCascade).toHaveBeenCalledTimes(1);
+    });
+
+    it("should handle subscribeToEntityById with additional user filter", () => {
+      const onCascade = jest.fn();
+      let subscriber: any;
+
+      jest.spyOn(apolloClient, "subscribe").mockReturnValue({
+        subscribe: jest.fn((sub) => {
+          subscriber = sub;
+          return { unsubscribe: jest.fn() };
+        }),
+      } as any);
+
+      manager.subscribeToEntityById("User", "123", mockSubscription, {
+        onCascade,
+        filter: (event) => event.cascade.metadata.depth > 5,
+      });
+
+      // Send update with depth <= 5 (should be filtered out)
+      subscriber.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [
+                {
+                  __typename: "User",
+                  id: "123",
+                  operation: "UPDATED",
+                  entity: { id: "123" },
+                },
+              ],
+              deleted: [],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 3,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      expect(onCascade).not.toHaveBeenCalled();
+
+      // Send update with depth > 5 (should pass filter)
+      subscriber.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [
+                {
+                  __typename: "User",
+                  id: "123",
+                  operation: "UPDATED",
+                  entity: { id: "123" },
+                },
+              ],
+              deleted: [],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 10,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      expect(onCascade).toHaveBeenCalledTimes(1);
+    });
+
+    it("should handle pauseAll and resumeAll", () => {
+      const onCascade1 = jest.fn();
+      const onCascade2 = jest.fn();
+      let subscriber1: any;
+      let subscriber2: any;
+
+      jest.spyOn(apolloClient, "subscribe")
+        .mockReturnValueOnce({
+          subscribe: jest.fn((sub) => {
+            subscriber1 = sub;
+            return { unsubscribe: jest.fn() };
+          }),
+        } as any)
+        .mockReturnValueOnce({
+          subscribe: jest.fn((sub) => {
+            subscriber2 = sub;
+            return { unsubscribe: jest.fn() };
+          }),
+        } as any);
+
+      const handle1 = manager.subscribe(mockSubscription, { onCascade: onCascade1 });
+      const handle2 = manager.subscribe(mockSubscription, { onCascade: onCascade2 });
+
+      // Pause all
+      manager.pauseAll();
+      expect(handle1.isPaused).toBe(true);
+      expect(handle2.isPaused).toBe(true);
+
+      // Send events while paused (both should be ignored)
+      subscriber1.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [
+                {
+                  __typename: "User",
+                  id: "1",
+                  operation: "UPDATED",
+                  entity: { id: "1" },
+                },
+              ],
+              deleted: [],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      subscriber2.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [
+                {
+                  __typename: "User",
+                  id: "2",
+                  operation: "UPDATED",
+                  entity: { id: "2" },
+                },
+              ],
+              deleted: [],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      expect(onCascade1).not.toHaveBeenCalled();
+      expect(onCascade2).not.toHaveBeenCalled();
+
+      // Resume all
+      manager.resumeAll();
+      expect(handle1.isPaused).toBe(false);
+      expect(handle2.isPaused).toBe(false);
+
+      // Send events after resume (both should be processed)
+      subscriber1.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [
+                {
+                  __typename: "User",
+                  id: "3",
+                  operation: "UPDATED",
+                  entity: { id: "3" },
+                },
+              ],
+              deleted: [],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      subscriber2.next({
+        data: {
+          userUpdated: {
+            cascade: {
+              updated: [
+                {
+                  __typename: "User",
+                  id: "4",
+                  operation: "UPDATED",
+                  entity: { id: "4" },
+                },
+              ],
+              deleted: [],
+              invalidations: [],
+              metadata: {
+                timestamp: new Date().toISOString(),
+                depth: 1,
+                affectedCount: 1,
+              },
+            },
+          },
+        },
+      });
+
+      expect(onCascade1).toHaveBeenCalledTimes(1);
+      expect(onCascade2).toHaveBeenCalledTimes(1);
+    });
+  });
 });
