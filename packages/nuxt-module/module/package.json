@@ -15,6 +15,8 @@
     "build": "unbuild",
     "dev": "unbuild --stub",
     "prepack": "pnpm build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
@@ -45,10 +47,13 @@
     "@graphql-cascade/apollo": "workspace:*",
     "@nuxt/kit": "^3.14.0",
     "@nuxt/schema": "^3.14.0",
+    "@nuxt/test-utils": "^3.14.0",
     "@types/node": "^20.0.0",
     "@vue/apollo-composable": "^4.2.2",
+    "@vitest/coverage-v8": "^2.0.0",
     "nuxt": "^4.1.2",
     "typescript": "^5.0.0",
-    "unbuild": "^3.0.0"
+    "unbuild": "^3.0.0",
+    "vitest": "^2.0.0"
   }
 }
