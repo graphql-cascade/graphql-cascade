@@ -4,8 +4,35 @@
   <img src="cascade.png" alt="GraphQL Cascade Logo" width="300">
 </p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Specification](https://img.shields.io/badge/Specification-v1.1-blue)](./specification/)
+<p align="center">
+  <a href="https://github.com/graphql-cascade/graphql-cascade/actions/workflows/ci.yml">
+    <img src="https://github.com/graphql-cascade/graphql-cascade/actions/workflows/ci.yml/badge.svg" alt="CI Status">
+  </a>
+  <a href="https://github.com/graphql-cascade/graphql-cascade/actions/workflows/codeql.yml">
+    <img src="https://github.com/graphql-cascade/graphql-cascade/actions/workflows/codeql.yml/badge.svg" alt="CodeQL">
+  </a>
+  <a href="https://codecov.io/gh/graphql-cascade/graphql-cascade">
+    <img src="https://codecov.io/gh/graphql-cascade/graphql-cascade/branch/main/graph/badge.svg" alt="Coverage">
+  </a>
+  <a href="https://www.npmjs.com/package/@graphql-cascade/server">
+    <img src="https://badge.fury.io/js/%40graphql-cascade%2Fserver.svg" alt="npm version">
+  </a>
+  <a href="https://www.npmjs.com/package/@graphql-cascade/server">
+    <img src="https://img.shields.io/npm/dm/@graphql-cascade/server.svg" alt="npm downloads">
+  </a>
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
+  </a>
+  <a href="./specification/">
+    <img src="https://img.shields.io/badge/Specification-v1.1-blue" alt="Specification v1.1">
+  </a>
+  <a href="https://github.com/graphql-cascade/graphql-cascade/issues">
+    <img src="https://img.shields.io/github/issues/graphql-cascade/graphql-cascade" alt="GitHub issues">
+  </a>
+  <a href="https://github.com/graphql-cascade/graphql-cascade/blob/main/CONTRIBUTING.md">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome">
+  </a>
+</p>
 
 **Cascading cache updates for GraphQL** - Automatic, intelligent cache invalidation that cascades through your entire data graph.
 
