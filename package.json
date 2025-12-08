@@ -8,6 +8,7 @@
     "packages/client-react-query/react-query",
     "packages/client-relay/relay",
     "packages/client-urql/urql",
+    "packages/nuxt-module/module",
     "packages/cli",
     "packages/conformance",
     "packages/server-node"

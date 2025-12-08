@@ -1,0 +1,54 @@
+{
+  "name": "@graphql-cascade/nuxt",
+  "version": "0.1.0",
+  "description": "Nuxt module for GraphQL Cascade - Zero-config integration for automatic cache invalidation",
+  "main": "dist/module.mjs",
+  "types": "dist/types.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/module.mjs",
+      "require": "./dist/module.cjs"
+    }
+  },
+  "scripts": {
+    "build": "unbuild",
+    "dev": "unbuild --stub",
+    "prepack": "pnpm build",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "nuxt",
+    "nuxt-module",
+    "graphql",
+    "cascade",
+    "apollo",
+    "cache",
+    "invalidation"
+  ],
+  "author": "GraphQL Cascade Team",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@nuxt/kit": "^3.0.0"
+  },
+  "peerDependencies": {
+    "@graphql-cascade/apollo": "workspace:*",
+    "@apollo/client": "^3.0.0 || ^4.0.0",
+    "@vue/apollo-composable": "^4.0.0",
+    "nuxt": "^3.0.0 || ^4.0.0"
+  },
+  "devDependencies": {
+    "@apollo/client": "^4.0.7",
+    "@graphql-cascade/apollo": "workspace:*",
+    "@nuxt/kit": "^3.14.0",
+    "@nuxt/schema": "^3.14.0",
+    "@types/node": "^20.0.0",
+    "@vue/apollo-composable": "^4.2.2",
+    "nuxt": "^4.1.2",
+    "typescript": "^5.0.0",
+    "unbuild": "^3.0.0"
+  }
+}
