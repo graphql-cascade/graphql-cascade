@@ -61,6 +61,11 @@ This project uses **semantic versioning** for package versions:
 
 ### Fixed
 
+- **Security**: Fixed security vulnerabilities by adding pnpm override for vite >= 5.4.20
+  - Addresses GitHub security advisories for vite's server.fs settings not applied to HTML files
+  - Addresses vite middleware serving files with similar names to public directory
+  - Existing esbuild override (>=0.25.0) continues to protect against esbuild CORS bypass vulnerability
+
 - **Codegen**: Fixed union cascade detection - now properly traverses inline fragments to find cascade fields
   - Previous logic only checked direct field selections
   - Now correctly identifies cascade in `... on SuccessType { cascade { ... } }` patterns

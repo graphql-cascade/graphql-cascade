@@ -1,6 +1,6 @@
 {
   "name": "@graphql-cascade/nuxt",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Nuxt module for GraphQL Cascade - Zero-config integration for automatic cache invalidation",
   "main": "dist/module.mjs",
   "types": "dist/types.d.ts",
