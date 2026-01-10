@@ -67,47 +67,67 @@ GraphQL Cascade automatically tracks entity relationships and cascades cache inv
 
 ### How It Works
 
-<p align="center">
-  <img src="docs/diagrams/how-it-works.png" alt="How GraphQL Cascade Works" width="600">
-</p>
+**The Problem:** After a mutation, clients don't know which queries to refetch.
 
-### Cascade Flow Example
+```graphql
+mutation CreatePost($input: CreatePostInput!) {
+  createPost(input: $input) {
+    post { id, title }
+    # Now what? Need to refetch getUserPosts? getNotifications? postCount?
+    # Client has to guess which queries are affected by this mutation
+  }
+}
+```
 
-<p align="center">
-  <img src="docs/diagrams/cascade-flow.png" alt="Cascade Flow Sequence Diagram" width="700">
-</p>
+**The Solution:** Cascade returns ALL affected data directly in the mutation response.
 
-### Entity Relationship Tracking
+```graphql
+mutation CreatePost($input: CreatePostInput!) {
+  createPost(input: $input) {
+    post { id, title }
+    cascade {
+      updated {
+        User { id, postCount }           # ← Updated automatically
+        Notification { id, message }     # ← New notifications
+      }
+    }
+  }
+}
+```
 
-GraphQL Cascade automatically discovers and tracks entity relationships to ensure complete cache invalidation:
-
-<p align="center">
-  <img src="docs/diagrams/entity-relationships.png" alt="Entity Relationship Tracking" width="600">
-</p>
+The client receives everything in one response — no guessing, no refetching required.
 
 ### Before GraphQL Cascade
 ```javascript
-// Manual cache invalidation - error prone and incomplete
-const updateUser = async (userId, updates) => {
-  await mutate({ variables: { userId, updates } });
+// Client must guess which queries to refetch
+const createPost = async (input) => {
+  const result = await mutate(CREATE_POST, input);
 
-  // Manually invalidate all related cache entries
-  cache.evict({ fieldName: 'user', args: { id: userId } });
-  cache.evict({ fieldName: 'posts', args: { authorId: userId } });
-  cache.evict({ fieldName: 'comments', args: { authorId: userId } });
-  cache.evict({ fieldName: 'notifications', args: { userId } });
-  // ... and many more - easy to miss some!
+  // Did this mutation affect postCount? notifications?
+  // Must manually refetch related queries
+  await refetch(['getUserPosts', 'getNotifications', 'getUser']);
 };
 ```
 
 ### After GraphQL Cascade
 ```javascript
-// Automatic cascading invalidation
-const updateUser = async (userId, updates) => {
-  await mutate({ variables: { userId, updates } });
-  // Cache automatically cascades through all relationships!
+// Server tells client exactly what changed
+const createPost = async (input) => {
+  const result = await mutate(CREATE_POST, input);
+
+  // Cascade data is in the response - no refetching needed
+  cache.updateEntity('User', result.cascade.updated.User);
+  cache.updateEntity('Notification', result.cascade.updated.Notification);
 };
 ```
+
+### Entity Relationship Tracking
+
+GraphQL Cascade automatically discovers and tracks entity relationships to ensure complete cache updates:
+
+<p align="center">
+  <img src="docs/diagrams/entity-relationships.png" alt="Entity Relationship Tracking" width="600">
+</p>
 
 ## Quick Start
 
