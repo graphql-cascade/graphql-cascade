@@ -71,15 +71,29 @@ Without Cascade, this forces clients to:
 
 ### Manual Cache Management (Traditional)
 
-<p align="center">
-  <img src="docs/diagrams/manual-cache-management.png" alt="Manual Cache Management Flow" width="600">
-</p>
+<figure style="text-align: center; margin: 2rem 0;">
+  <img
+    src="docs/diagrams/manual-cache-management.png"
+    alt="Manual Cache Management Flow - Traditional approach requires manual cache invalidation after mutations"
+    width="800"
+    height="400"
+    style="max-width: 100%; height: auto; display: block; margin: 0 auto;"
+  />
+  <figcaption style="font-size: 0.9em; color: #666; margin-top: 0.5rem;">Traditional approach: Client must manually guess and refetch affected queries</figcaption>
+</figure>
 
 ### Automatic Cache Management (GraphQL Cascade)
 
-<p align="center">
-  <img src="docs/diagrams/automatic-cache-management.png" alt="Automatic Cache Management Flow" width="600">
-</p>
+<figure style="text-align: center; margin: 2rem 0;">
+  <img
+    src="docs/diagrams/automatic-cache-management.png"
+    alt="Automatic Cache Management with GraphQL Cascade - Server returns all affected data in mutation response"
+    width="800"
+    height="400"
+    style="max-width: 100%; height: auto; display: block; margin: 0 auto;"
+  />
+  <figcaption style="font-size: 0.9em; color: #666; margin-top: 0.5rem;">GraphQL Cascade: Server returns all affected entities in one response</figcaption>
+</figure>
 
 ## Solution
 
@@ -210,9 +224,16 @@ const createPost = async (input) => {
 
 GraphQL Cascade automatically discovers and tracks entity relationships to ensure complete cache updates:
 
-<p align="center">
-  <img src="docs/diagrams/entity-relationships.png" alt="Entity Relationship Tracking" width="600">
-</p>
+<figure style="text-align: center; margin: 2rem 0;">
+  <img
+    src="docs/diagrams/entity-relationships.png"
+    alt="Entity Relationship Tracking - Shows how Cascade tracks relationships between User, Post, Comment, and Notification entities"
+    width="800"
+    height="600"
+    style="max-width: 100%; height: auto; display: block; margin: 0 auto;"
+  />
+  <figcaption style="font-size: 0.9em; color: #666; margin-top: 0.5rem;">Cascade automatically discovers entity relationships for complete cache invalidation</figcaption>
+</figure>
 
 ## Quick Start
 
