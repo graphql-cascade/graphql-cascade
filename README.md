@@ -268,7 +268,7 @@ const resolvers = {
       const followers = await db.users.getFollowersOf(input.authorId);
       followers.forEach(follower => {
         cascade.addCreated('Notification', {
-          id: generateId(),
+          id: crypto.randomUUID(), // Use your preferred ID strategy (uuid, nanoid, etc.)
           recipientId: follower.id,
           message: `${user.name} posted something new`,
           createdAt: new Date()
@@ -323,6 +323,8 @@ const CREATE_POST = gql`
 `;
 
 function CreatePostButton() {
+  const client = useApolloClient(); // Apollo Client from ApolloProvider context
+
   const [createPost, { loading }] = useMutation(CREATE_POST, {
     onCompleted: (data) => {
       const { cascade } = data.createPost;
@@ -375,7 +377,10 @@ npm install @tanstack/react-query
 
 ```typescript
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { gql } from 'graphql-request';
+import { GraphQLClient, gql } from 'graphql-request';
+
+// Initialize GraphQL client
+const graphqlClient = new GraphQLClient('http://localhost:4000/graphql');
 
 const CREATE_POST = gql`
   mutation CreatePost($input: CreatePostInput!) {
