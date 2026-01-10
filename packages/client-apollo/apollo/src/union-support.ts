@@ -137,7 +137,7 @@ export function extractCascadeFromUnion<T = any>(
     // Not a union type - check if it has cascade data directly
     if (hasCascadeField(response)) {
       // Extract data field (everything except cascade, __typename, and metadata fields like 'success')
-      const { cascade, __typename, success, ...dataFields } = response as any;
+      const { cascade, __typename, _success, ...dataFields } = response as any;
 
       let data: T | null = null;
       if (config.dataField) {
