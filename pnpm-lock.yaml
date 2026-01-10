@@ -414,7 +414,7 @@ importers:
         specifier: ^8.45.0
         version: 8.57.1
       express:
-        specifier: ^4.19.0
+        specifier: ^4.22.1
         version: 4.22.1
       fast-check:
         specifier: ^3.23.2
