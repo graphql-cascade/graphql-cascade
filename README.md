@@ -75,8 +75,6 @@ Without Cascade, this forces clients to:
   <img
     src="docs/diagrams/manual-cache-management.png"
     alt="Manual Cache Management Flow - Traditional approach requires manual cache invalidation after mutations"
-    width="800"
-    height="400"
     style="max-width: 100%; height: auto; display: block; margin: 0 auto;"
   />
   <figcaption style="font-size: 0.9em; color: #666; margin-top: 0.5rem;">Traditional approach: Client must manually guess and refetch affected queries</figcaption>
@@ -88,8 +86,6 @@ Without Cascade, this forces clients to:
   <img
     src="docs/diagrams/automatic-cache-management.png"
     alt="Automatic Cache Management with GraphQL Cascade - Server returns all affected data in mutation response"
-    width="800"
-    height="400"
     style="max-width: 100%; height: auto; display: block; margin: 0 auto;"
   />
   <figcaption style="font-size: 0.9em; color: #666; margin-top: 0.5rem;">GraphQL Cascade: Server returns all affected entities in one response</figcaption>
@@ -228,8 +224,6 @@ GraphQL Cascade automatically discovers and tracks entity relationships to ensur
   <img
     src="docs/diagrams/entity-relationships.png"
     alt="Entity Relationship Tracking - Shows how Cascade tracks relationships between User, Post, Comment, and Notification entities"
-    width="800"
-    height="600"
     style="max-width: 100%; height: auto; display: block; margin: 0 auto;"
   />
   <figcaption style="font-size: 0.9em; color: #666; margin-top: 0.5rem;">Cascade automatically discovers entity relationships for complete cache invalidation</figcaption>
