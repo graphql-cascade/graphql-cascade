@@ -24,11 +24,11 @@ generates:
     plugins:
       - typescript
       - typescript-operations
-      - '@graphql-cascade/codegen'
+      - "@graphql-cascade/codegen"
     config:
       skipTypename: false
       enumsAsTypes: true
-      cascadeImportFrom: '@graphql-cascade/client'
+      cascadeImportFrom: "@graphql-cascade/client"
       generateUnionHelpers: true
       generateTypeGuards: true
 ```
@@ -44,21 +44,25 @@ pnpm graphql-codegen
 ### 3. Use generated types
 
 ```typescript
-import { useCascadeMutation } from '@graphql-cascade/client-apollo';
-import { CreateTodoDocument, CreateTodoMutation, CreateTodoCascadeConfig } from './generated/graphql';
+import { useCascadeMutation } from "@graphql-cascade/client-apollo";
+import {
+  CreateTodoDocument,
+  CreateTodoMutation,
+  CreateTodoCascadeConfig,
+} from "./generated/graphql";
 
 // Fully typed mutation with cascade support
 const [createTodo] = useCascadeMutation<CreateTodoMutation>(
   CreateTodoDocument,
   {
     cascadeConfig: CreateTodoCascadeConfig, // Auto-generated config
-  }
+  },
 );
 
-const result = await createTodo({ variables: { title: 'New Todo' } });
+const result = await createTodo({ variables: { title: "New Todo" } });
 
 // Full type safety on cascade data
-result.data?.createTodo.cascade.updated.forEach(entity => {
+result.data?.createTodo.cascade.updated.forEach((entity) => {
   console.log(`Updated ${entity.__typename} with ID ${entity.id}`);
 });
 ```
@@ -74,7 +78,7 @@ Customize the import path for cascade core types.
 
 ```yaml
 config:
-  cascadeImportFrom: '@graphql-cascade/client'
+  cascadeImportFrom: "@graphql-cascade/client"
 ```
 
 ### `generateUnionHelpers`
@@ -93,8 +97,8 @@ When enabled, the plugin generates configurations like:
 
 ```typescript
 export const CreateTodoCascadeConfig = {
-  successTypes: ['CreateTodoSuccess'],
-  errorTypes: ['CreateTodoError'],
+  successTypes: ["CreateTodoSuccess"],
+  errorTypes: ["CreateTodoError"],
 } as const;
 ```
 
@@ -114,9 +118,9 @@ When enabled, the plugin generates type guards like:
 
 ```typescript
 export function isCreateTodoSuccess(
-  result: CreateTodoMutation | null | undefined
-): result is Extract<CreateTodoMutation, { __typename: 'CreateTodoSuccess' }> {
-  return result?.__typename === 'CreateTodoSuccess';
+  result: CreateTodoMutation | null | undefined,
+): result is Extract<CreateTodoMutation, { __typename: "CreateTodoSuccess" }> {
+  return result?.__typename === "CreateTodoSuccess";
 }
 ```
 
@@ -129,7 +133,7 @@ The plugin generates several utility types:
 Extract cascade updates from a mutation response.
 
 ```typescript
-type TodoCascade = CascadeOf<CreateTodoMutation['createTodo']>;
+type TodoCascade = CascadeOf<CreateTodoMutation["createTodo"]>;
 ```
 
 ### `DataOf<T>`
@@ -137,7 +141,7 @@ type TodoCascade = CascadeOf<CreateTodoMutation['createTodo']>;
 Extract the data payload from a cascade response.
 
 ```typescript
-type TodoData = DataOf<CreateTodoMutation['createTodo']>;
+type TodoData = DataOf<CreateTodoMutation["createTodo"]>;
 ```
 
 ### `UpdatedEntitiesOf<T>`
@@ -145,7 +149,7 @@ type TodoData = DataOf<CreateTodoMutation['createTodo']>;
 Extract updated entities from cascade updates.
 
 ```typescript
-type UpdatedTodos = UpdatedEntitiesOf<CreateTodoMutation['createTodo']>;
+type UpdatedTodos = UpdatedEntitiesOf<CreateTodoMutation["createTodo"]>;
 ```
 
 ### `DeletedEntitiesOf<T>`
@@ -153,7 +157,7 @@ type UpdatedTodos = UpdatedEntitiesOf<CreateTodoMutation['createTodo']>;
 Extract deleted entities from cascade updates.
 
 ```typescript
-type DeletedTodos = DeletedEntitiesOf<CreateTodoMutation['createTodo']>;
+type DeletedTodos = DeletedEntitiesOf<CreateTodoMutation["createTodo"]>;
 ```
 
 ### `InvalidationsOf<T>`
@@ -161,7 +165,7 @@ type DeletedTodos = DeletedEntitiesOf<CreateTodoMutation['createTodo']>;
 Extract query invalidations from cascade updates.
 
 ```typescript
-type TodoInvalidations = InvalidationsOf<CreateTodoMutation['createTodo']>;
+type TodoInvalidations = InvalidationsOf<CreateTodoMutation["createTodo"]>;
 ```
 
 ## Example Output
@@ -209,11 +213,11 @@ import type {
   UpdatedEntity,
   DeletedEntity,
   QueryInvalidation,
-} from '@graphql-cascade/client';
+} from "@graphql-cascade/client";
 
 // Standard types from typescript-operations plugin
 export type CreateTodoMutationVariables = {
-  title: Scalars['String'];
+  title: Scalars["String"];
 };
 
 export type CreateTodoMutation = {
@@ -226,22 +230,33 @@ export type CreateTodoMutation = {
 
 // Cascade utility types
 export type CascadeOf<T> = T extends { cascade: infer C }
-  ? C extends CascadeUpdates ? C : never
+  ? C extends CascadeUpdates
+    ? C
+    : never
   : never;
 
 export type DataOf<T> = T extends { data: infer D } ? D : never;
 
-export type UpdatedEntitiesOf<T> = CascadeOf<T> extends { updated: infer U }
-  ? U extends UpdatedEntity<any>[] ? U : never
-  : never;
+export type UpdatedEntitiesOf<T> =
+  CascadeOf<T> extends { updated: infer U }
+    ? U extends UpdatedEntity<any>[]
+      ? U
+      : never
+    : never;
 
-export type DeletedEntitiesOf<T> = CascadeOf<T> extends { deleted: infer D }
-  ? D extends DeletedEntity[] ? D : never
-  : never;
+export type DeletedEntitiesOf<T> =
+  CascadeOf<T> extends { deleted: infer D }
+    ? D extends DeletedEntity[]
+      ? D
+      : never
+    : never;
 
-export type InvalidationsOf<T> = CascadeOf<T> extends { invalidations: infer I }
-  ? I extends QueryInvalidation[] ? I : never
-  : never;
+export type InvalidationsOf<T> =
+  CascadeOf<T> extends { invalidations: infer I }
+    ? I extends QueryInvalidation[]
+      ? I
+      : never
+    : never;
 ```
 
 ## Integration with Other Plugins

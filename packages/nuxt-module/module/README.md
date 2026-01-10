@@ -31,15 +31,15 @@ Add the module to your `nuxt.config.ts`:
 
 ```typescript
 export default defineNuxtConfig({
-  modules: ['@graphql-cascade/nuxt'],
+  modules: ["@graphql-cascade/nuxt"],
 
   // Optional configuration
   graphqlCascade: {
     enabled: true,
     debug: false,
-    autoImports: true
-  }
-})
+    autoImports: true,
+  },
+});
 ```
 
 ## Usage
@@ -50,63 +50,74 @@ If you already have an Apollo Client plugin (like PrintOptim), you can use the c
 
 ```vue
 <script setup lang="ts">
-import { gql } from '@apollo/client'
+import { gql } from "@apollo/client";
 
 // Auto-imported from the module
-const { mutate, loading, error, extractedData, isError, errors } = useCascadeMutation(
-  gql`
-    mutation CreatePrintServer($hostname: Hostname!) {
-      createPrintServer(input: { hostname: $hostname }) {
-        ... on CreatePrintServerSuccess {
-          printServer {
-            id
-            hostname
-            nTotalAllocations
+const { mutate, loading, error, extractedData, isError, errors } =
+  useCascadeMutation(
+    gql`
+      mutation CreatePrintServer($hostname: Hostname!) {
+        createPrintServer(input: { hostname: $hostname }) {
+          ... on CreatePrintServerSuccess {
+            printServer {
+              id
+              hostname
+              nTotalAllocations
+            }
+            cascade {
+              updated {
+                __typename
+                id
+                operation
+                entity
+              }
+              deleted {
+                __typename
+                id
+              }
+              invalidations {
+                queryName
+                strategy
+                scope
+              }
+            }
           }
-          cascade {
-            updated { __typename id operation entity }
-            deleted { __typename id }
-            invalidations { queryName strategy scope }
-          }
-        }
-        ... on CreatePrintServerError {
-          errors {
-            identifier
-            message
+          ... on CreatePrintServerError {
+            errors {
+              identifier
+              message
+            }
           }
         }
       }
-    }
-  `,
-  {
-    cascadeConfig: {
-      successTypes: ['CreatePrintServerSuccess'],
-      errorTypes: ['CreatePrintServerError']
+    `,
+    {
+      cascadeConfig: {
+        successTypes: ["CreatePrintServerSuccess"],
+        errorTypes: ["CreatePrintServerError"],
+      },
+      onCascade: (cascade) => {
+        console.log("Cascade updates applied:", cascade);
+      },
     },
-    onCascade: (cascade) => {
-      console.log('Cascade updates applied:', cascade)
-    }
-  }
-)
+  );
 
 async function createServer() {
   const result = await mutate({
-    hostname: 'printer.example.com'
-  })
+    hostname: "printer.example.com",
+  });
 
   if (result.isError) {
-    console.error('Failed to create server:', result.errors)
+    console.error("Failed to create server:", result.errors);
   } else {
-    console.log('Server created:', result.data)
+    console.log("Server created:", result.data);
   }
 }
 </script>
 
 <template>
   <div>
-    <button @click="createServer" :disabled="loading">
-      Create Server
-    </button>
+    <button @click="createServer" :disabled="loading">Create Server</button>
     <div v-if="error">{{ error.message }}</div>
     <div v-if="isError">
       <p v-for="err in errors" :key="err.message">{{ err.message }}</p>
@@ -124,40 +135,40 @@ If you're setting up Apollo Client from scratch, add the cascade link to your li
 
 ```typescript
 // plugins/1.apollo.client.ts
-import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client'
-import { SetContextLink } from '@apollo/client/link/context'
-import { ErrorLink } from '@apollo/client/link/error'
-import { DefaultApolloClient } from '@vue/apollo-composable'
+import { ApolloClient, InMemoryCache, HttpLink } from "@apollo/client";
+import { SetContextLink } from "@apollo/client/link/context";
+import { ErrorLink } from "@apollo/client/link/error";
+import { DefaultApolloClient } from "@vue/apollo-composable";
 
 export default defineNuxtPlugin(({ vueApp, $cascadeLink }) => {
   const httpLink = new HttpLink({
-    uri: 'https://api.example.com/graphql'
-  })
+    uri: "https://api.example.com/graphql",
+  });
 
   const authLink = new SetContextLink(async (_, { headers }) => {
-    const token = await getAuthToken()
+    const token = await getAuthToken();
     return {
       headers: {
         ...headers,
-        authorization: token ? `Bearer ${token}` : ''
-      }
-    }
-  })
+        authorization: token ? `Bearer ${token}` : "",
+      },
+    };
+  });
 
   const errorLink = new ErrorLink(({ graphQLErrors, networkError }) => {
     // Handle errors
-  })
+  });
 
   const apolloClient = new ApolloClient({
     link: authLink
       .concat(errorLink)
-      .concat($cascadeLink)  // Add cascade link here
+      .concat($cascadeLink) // Add cascade link here
       .concat(httpLink),
-    cache: new InMemoryCache()
-  })
+    cache: new InMemoryCache(),
+  });
 
-  vueApp.provide(DefaultApolloClient, apolloClient)
-})
+  vueApp.provide(DefaultApolloClient, apolloClient);
+});
 ```
 
 ### Non-Union Type Mutations
@@ -176,21 +187,29 @@ const { mutate, cascadeData } = useCascadeMutation(gql`
         email
       }
       cascade {
-        updated { __typename id operation entity }
-        deleted { __typename id }
+        updated {
+          __typename
+          id
+          operation
+          entity
+        }
+        deleted {
+          __typename
+          id
+        }
       }
     }
   }
-`)
+`);
 
 async function updateUser() {
   await mutate({
-    id: '123',
-    input: { name: 'John Doe' }
-  })
+    id: "123",
+    input: { name: "John Doe" },
+  });
 
   // Cascade data is automatically extracted and available
-  console.log('Cascade:', cascadeData.value)
+  console.log("Cascade:", cascadeData.value);
 }
 </script>
 ```
@@ -205,19 +224,19 @@ interface ModuleOptions {
    * Enable GraphQL Cascade integration
    * @default true
    */
-  enabled?: boolean
+  enabled?: boolean;
 
   /**
    * Enable debug logging
    * @default false
    */
-  debug?: boolean
+  debug?: boolean;
 
   /**
    * Auto-import cascade composables
    * @default true
    */
-  autoImports?: boolean
+  autoImports?: boolean;
 }
 ```
 
@@ -230,24 +249,24 @@ interface UnionCascadeConfig {
   /**
    * Union type names that contain cascade data (e.g., "CreateUserSuccess")
    */
-  successTypes?: string[]
+  successTypes?: string[];
 
   /**
    * Union type names that indicate errors (e.g., "CreateUserError")
    */
-  errorTypes?: string[]
+  errorTypes?: string[];
 
   /**
    * Field name containing the actual data in success responses
    * Default: auto-detected from first non-cascade field
    */
-  dataField?: string
+  dataField?: string;
 
   /**
    * Whether to throw an error if cascade data is not found
    * @default false
    */
-  throwOnMissing?: boolean
+  throwOnMissing?: boolean;
 }
 ```
 
@@ -258,6 +277,7 @@ interface UnionCascadeConfig {
 Enhanced mutation hook with automatic cascade processing.
 
 **Returns:**
+
 - `mutate(variables)` - Execute the mutation
 - `loading` - Loading state
 - `error` - Error state
@@ -271,6 +291,7 @@ Enhanced mutation hook with automatic cascade processing.
 Get access to the Apollo Client with cascade support.
 
 **Returns:**
+
 - `client` - The Apollo Client instance
 - `resolveClient()` - Resolve the client (for multi-client setups)
 
@@ -279,6 +300,7 @@ Get access to the Apollo Client with cascade support.
 Track cascade updates across mutations for debugging and analytics.
 
 **Returns:**
+
 - `cascadeHistory` - Array of all cascade updates
 - `lastCascade` - Most recent cascade update
 - `cascadeCount` - Total number of cascades tracked
@@ -286,14 +308,15 @@ Track cascade updates across mutations for debugging and analytics.
 - `clearHistory()` - Clear the cascade history
 
 **Example:**
+
 ```vue
 <script setup>
-const { cascadeHistory, lastCascade, cascadeCount } = useCascadeTracker()
+const { cascadeHistory, lastCascade, cascadeCount } = useCascadeTracker();
 
 watch(lastCascade, (cascade) => {
-  console.log('Cascade update:', cascade)
-  console.log('Total cascades:', cascadeCount.value)
-})
+  console.log("Cascade update:", cascade);
+  console.log("Total cascades:", cascadeCount.value);
+});
 </script>
 ```
 
@@ -305,6 +328,7 @@ Enhanced query hook that can automatically refetch when cascade invalidations oc
 Same as `useQuery` from `@vue/apollo-composable`
 
 **Options:**
+
 - `watchInvalidations` - Array of query names to watch for invalidation
 
 ### `useCascadeBatch()`
@@ -312,24 +336,26 @@ Same as `useQuery` from `@vue/apollo-composable`
 Execute multiple mutations in parallel with cascade tracking.
 
 **Returns:**
+
 - `executeBatch(mutations)` - Execute array of mutations
 - `loading` - Loading state
 - `results` - Array of successful results
 - `errors` - Array of errors
 
 **Example:**
+
 ```vue
 <script setup>
-const { executeBatch, loading, results } = useCascadeBatch()
+const { executeBatch, loading, results } = useCascadeBatch();
 
 async function updateMultiple() {
   const result = await executeBatch([
-    { mutation: UPDATE_USER, variables: { id: '1', name: 'Alice' } },
-    { mutation: UPDATE_USER, variables: { id: '2', name: 'Bob' } }
-  ])
+    { mutation: UPDATE_USER, variables: { id: "1", name: "Alice" } },
+    { mutation: UPDATE_USER, variables: { id: "2", name: "Bob" } },
+  ]);
 
   if (result.allSucceeded) {
-    console.log('All updates completed!')
+    console.log("All updates completed!");
   }
 }
 </script>
@@ -340,24 +366,26 @@ async function updateMultiple() {
 Helper for optimistic UI updates that work with cascade.
 
 **Returns:**
+
 - `optimisticUpdate(data)` - Apply optimistic update to cache
 - `clearOptimisticUpdates()` - Clear all optimistic updates
 - `mutate(mutation, options)` - Execute mutation (reverts optimistic updates on error)
 - `optimisticUpdates` - Array of current optimistic updates
 
 **Example:**
+
 ```vue
 <script setup>
-const { optimisticUpdate, mutate } = useCascadeOptimistic()
+const { optimisticUpdate, mutate } = useCascadeOptimistic();
 
 async function updateUser(id, name) {
   // Optimistically update UI
-  optimisticUpdate({ __typename: 'User', id, name })
+  optimisticUpdate({ __typename: "User", id, name });
 
   // Execute mutation (UI reverts if it fails)
   await mutate(UPDATE_USER_MUTATION, {
-    variables: { id, name }
-  })
+    variables: { id, name },
+  });
 }
 </script>
 ```
@@ -367,27 +395,30 @@ async function updateUser(id, name) {
 Enhanced query hook for handling union type responses (like error handling patterns).
 
 **Returns:**
+
 - Same as `useQuery` plus:
 - `data` - Extracted data from union response
 - `isError` - Whether the response is an error type
 - `errors` - Array of errors from error union types
 
 **Options:**
+
 - `unionConfig` - Configuration for union type handling (same as `useCascadeMutation`)
 
 **Example:**
+
 ```vue
 <script setup>
 const { data, isError, errors, loading } = useCascadeUnionQuery(
   GET_USER_QUERY,
-  { id: '123' },
+  { id: "123" },
   {
     unionConfig: {
-      successTypes: ['GetUserSuccess'],
-      errorTypes: ['GetUserError']
-    }
-  }
-)
+      successTypes: ["GetUserSuccess"],
+      errorTypes: ["GetUserError"],
+    },
+  },
+);
 </script>
 
 <template>
@@ -406,35 +437,35 @@ const { data, isError, errors, loading } = useCascadeUnionQuery(
 ```typescript
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ['@graphql-cascade/nuxt'],
+  modules: ["@graphql-cascade/nuxt"],
   graphqlCascade: {
-    debug: process.env.NODE_ENV === 'development'
-  }
-})
+    debug: process.env.NODE_ENV === "development",
+  },
+});
 ```
 
 ```vue
 <!-- pages/print-servers/create.vue -->
 <script setup lang="ts">
-import { CREATE_PRINT_SERVER_MUTATION } from '@/gql/printServers'
+import { CREATE_PRINT_SERVER_MUTATION } from "@/gql/printServers";
 
-const hostname = ref('')
+const hostname = ref("");
 
 const { mutate, loading, isError, errors, extractedData } = useCascadeMutation(
   CREATE_PRINT_SERVER_MUTATION,
   {
     cascadeConfig: {
-      successTypes: ['CreatePrintServerSuccess'],
-      errorTypes: ['CreatePrintServerError']
-    }
-  }
-)
+      successTypes: ["CreatePrintServerSuccess"],
+      errorTypes: ["CreatePrintServerError"],
+    },
+  },
+);
 
 async function submit() {
-  const result = await mutate({ hostname: hostname.value })
+  const result = await mutate({ hostname: hostname.value });
 
   if (!result.isError) {
-    navigateTo('/print-servers')
+    navigateTo("/print-servers");
   }
 }
 </script>
@@ -458,13 +489,13 @@ async function submit() {
 The module provides full TypeScript support with auto-completion:
 
 ```typescript
-import type { ModuleOptions } from '@graphql-cascade/nuxt'
+import type { ModuleOptions } from "@graphql-cascade/nuxt";
 
 const config: ModuleOptions = {
   enabled: true,
   debug: false,
-  autoImports: true
-}
+  autoImports: true,
+};
 ```
 
 ## Requirements

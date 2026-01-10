@@ -19,12 +19,14 @@ This module uses a **smoke testing** approach rather than comprehensive unit tes
 ## What We Test
 
 ### ✅ Smoke Tests (module.test.ts)
+
 - Module metadata is correct
 - Default options are set properly
 - All composables are exported
 - Type definitions are valid
 
 ### ✅ Core Logic Tests
+
 - Union type extraction: `packages/client-apollo/apollo/src/union-support.test.ts`
 - 34 comprehensive tests
 - 93.61% code coverage
@@ -70,11 +72,13 @@ pnpm typecheck
 ## Coverage Note
 
 The "low coverage" reported for this package is expected because:
+
 - Most code is runtime-only (requires Vue/Nuxt context)
 - Core logic is tested in the apollo package
 - Module registration code is validated through smoke tests
 
 For production use, the module has been validated through:
+
 1. Manual testing in a Nuxt 4 app
 2. Comprehensive tests of core union extraction logic
 3. TypeScript type checking
