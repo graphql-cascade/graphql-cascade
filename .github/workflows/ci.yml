@@ -175,14 +175,17 @@ jobs:
           console.log('All coverage checks passed');
           "
 
-      - name: Upload coverage to Codecov
+      - name: Merge coverage reports
         if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
-        uses: codecov/codecov-action@v4
+        run: |
+          mkdir -p coverage
+          find packages -name "lcov.info" -exec cat {} \; > coverage/lcov.info
+
+      - name: Upload coverage reports to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        uses: codecov/codecov-action@v5
         with:
-          file: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   build:
     name: Build
