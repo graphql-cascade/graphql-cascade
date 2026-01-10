@@ -216,45 +216,219 @@ GraphQL Cascade automatically discovers and tracks entity relationships to ensur
 
 ## Quick Start
 
-### Server (TypeScript/Node.js)
+### Server Implementation
+
+Server implementations vary by framework. Here's a TypeScript/Node.js example with Apollo Server:
 
 ```bash
 npm install @graphql-cascade/server
 ```
 
 ```typescript
-import { CascadeTracker, CascadeBuilder } from '@graphql-cascade/server';
+// schema.ts - Define cascade response types
+type CascadeEntity = User | Post | Notification;
 
-// Create tracker and builder
-const tracker = new CascadeTracker();
-const builder = new CascadeBuilder(tracker);
+type CreatePostPayload {
+  post: Post!
+  cascade: CascadeResponse!
+}
 
-// In your mutation resolver
-const transactionId = tracker.startTransaction();
-tracker.trackUpdate({ id: userId, __typename: 'User', name: 'John' });
-const response = builder.buildResponse(mutationResult);
-// Response includes cascade data for automatic cache updates
+type CascadeResponse {
+  updated: [CascadeEntity!]!
+  deleted: [CascadeEntity!]
+}
+
+// resolvers.ts - Implement cascade tracking
+import { createCascadeBuilder } from '@graphql-cascade/server';
+
+const resolvers = {
+  Mutation: {
+    async createPost(_, { input }, { db }) {
+      // Create post
+      const post = await db.posts.create({
+        title: input.title,
+        content: input.content,
+        authorId: input.authorId
+      });
+
+      // Get affected user
+      const user = await db.users.findById(input.authorId);
+
+      // Build cascade response - server tells client what changed
+      const cascade = createCascadeBuilder();
+
+      // User's postCount changed
+      cascade.addUpdated('User', {
+        id: user.id,
+        postCount: user.posts.length,
+        lastPostAt: new Date()
+      });
+
+      // Create notifications for followers
+      const followers = await db.users.getFollowersOf(input.authorId);
+      followers.forEach(follower => {
+        cascade.addCreated('Notification', {
+          id: generateId(),
+          recipientId: follower.id,
+          message: `${user.name} posted something new`,
+          createdAt: new Date()
+        });
+      });
+
+      return {
+        post,
+        cascade: cascade.build()
+      };
+    }
+  }
+};
 ```
 
 ### Client (Apollo)
 
 ```bash
-npm install @graphql-cascade/client-apollo @apollo/client
+npm install @apollo/client
 ```
 
 ```typescript
-import { ApolloClient, InMemoryCache } from '@apollo/client';
-import { ApolloCascadeClient } from '@graphql-cascade/client-apollo';
+import { useMutation, gql, ApolloClient, InMemoryCache } from '@apollo/client';
 
-const client = new ApolloClient({
-  uri: 'http://localhost:4000/graphql',
-  cache: new InMemoryCache()
-});
+const CREATE_POST = gql`
+  mutation CreatePost($input: CreatePostInput!) {
+    createPost(input: $input) {
+      post {
+        id
+        title
+        content
+        authorId
+      }
+      cascade {
+        updated {
+          __typename
+          ... on User {
+            id
+            postCount
+            lastPostAt
+          }
+          ... on Notification {
+            id
+            message
+            recipientId
+            createdAt
+          }
+        }
+      }
+    }
+  }
+`;
 
-const cascade = new ApolloCascadeClient(client);
+function CreatePostButton() {
+  const [createPost, { loading }] = useMutation(CREATE_POST, {
+    onCompleted: (data) => {
+      const { cascade } = data.createPost;
 
-// Mutations automatically update the cache!
-const result = await cascade.mutate(UPDATE_USER, { id: '123', name: 'John' });
+      // Server told us what changed - update cache automatically
+      cascade.updated.forEach(entity => {
+        client.cache.modify({
+          fields: {
+            user(existing = {}, { readField }) {
+              // Update user fields if this is a User entity
+              if (entity.__typename === 'User' && entity.id === readField('id', existing)) {
+                return { ...existing, ...entity };
+              }
+              return existing;
+            },
+            notifications(existing = [], { readField }) {
+              // Add new notifications if this is a Notification entity
+              if (entity.__typename === 'Notification') {
+                return [...existing, entity];
+              }
+              return existing;
+            }
+          }
+        });
+      });
+    }
+  });
+
+  const handleClick = async () => {
+    await createPost({
+      variables: {
+        input: {
+          title: 'New Post',
+          content: 'Hello world',
+          authorId: 'user-123'
+        }
+      }
+    });
+  };
+
+  return <button onClick={handleClick} disabled={loading}>Create Post</button>;
+}
+```
+
+### Client (React Query)
+
+```bash
+npm install @tanstack/react-query
+```
+
+```typescript
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { gql } from 'graphql-request';
+
+const CREATE_POST = gql`
+  mutation CreatePost($input: CreatePostInput!) {
+    createPost(input: $input) {
+      post { id, title, content, authorId }
+      cascade {
+        updated {
+          __typename
+          ... on User { id, postCount, lastPostAt }
+          ... on Notification { id, message, recipientId, createdAt }
+        }
+      }
+    }
+  }
+`;
+
+function CreatePostButton() {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async (input) => {
+      const response = await graphqlClient.request(CREATE_POST, { input });
+      return response.createPost;
+    },
+    onSuccess: (data) => {
+      const { cascade } = data;
+
+      // Server told us exactly what changed
+      cascade.updated.forEach(entity => {
+        if (entity.__typename === 'User') {
+          // Invalidate and refetch user-related queries
+          queryClient.setQueryData(['user', entity.id], entity);
+        } else if (entity.__typename === 'Notification') {
+          // Update notifications cache
+          queryClient.setQueryData(['notifications'], (old = []) => [...old, entity]);
+        }
+      });
+    }
+  });
+
+  return (
+    <button
+      onClick={() => mutation.mutate({
+        title: 'New Post',
+        content: 'Hello world',
+        authorId: 'user-123'
+      })}
+      disabled={mutation.isPending}
+    >
+      Create Post
+    </button>
+  );
+}
 ```
 
 ## TypeScript Code Generation
