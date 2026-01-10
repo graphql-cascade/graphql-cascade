@@ -191,4 +191,35 @@ describe("validate command", () => {
     expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("100"));
     expect(mockConsoleLog).toHaveBeenCalledWith(expect.stringContaining("%"));
   });
+
+  it("should show warning for low compatibility score (<50%)", async () => {
+    const mockSchema = buildSchema("type Query { hello: String }");
+    mockSchemaValidator.loadSchema.mockReturnValue(mockSchema);
+    mockSchemaValidator.validateCascadeCompatibility.mockReturnValue({
+      errors: [
+        "Error 1",
+        "Error 2",
+        "Error 3",
+        "Error 4",
+        "Error 5",
+        "Error 6",
+        "Error 7",
+        "Error 8",
+        "Error 9",
+        "Error 10",
+        "Error 11",
+      ],
+      warnings: [],
+      compatibility: 45,
+    });
+
+    await expect(validateCommand.parseAsync(["node", "test"])).rejects.toThrow(
+      "Process.exit called with code 1",
+    );
+
+    expect(mockConsoleLog).toHaveBeenCalledWith(
+      expect.stringContaining("Schema requires substantial changes"),
+    );
+    expect(mockProcessExit).toHaveBeenCalledWith(1);
+  });
 });
