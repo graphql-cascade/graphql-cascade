@@ -1,20 +1,18 @@
-import { defineBuildConfig } from 'unbuild'
+import { defineBuildConfig } from "unbuild";
 
 export default defineBuildConfig({
-  entries: [
-    'src/module'
-  ],
+  entries: ["src/module"],
   declaration: true,
   rollup: {
-    emitCJS: true
+    emitCJS: true,
   },
   externals: [
-    '@nuxt/kit',
-    '@nuxt/schema',
-    '#app',
-    '#imports',
-    'vue',
-    '@apollo/client',
-    '@vue/apollo-composable'
-  ]
-})
+    "@nuxt/kit",
+    "@nuxt/schema",
+    "#app",
+    "#imports",
+    "vue",
+    "@apollo/client",
+    "@vue/apollo-composable",
+  ],
+});

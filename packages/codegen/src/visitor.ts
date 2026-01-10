@@ -6,8 +6,8 @@ import {
   isUnionType,
   GraphQLOutputType,
   getNullableType,
-} from 'graphql';
-import { CascadePluginConfig } from './plugin';
+} from "graphql";
+import { CascadePluginConfig } from "./plugin";
 
 interface CascadeField {
   operationName: string;
@@ -22,35 +22,35 @@ export class CascadeVisitor {
 
   constructor(
     private schema: GraphQLSchema,
-    private config: CascadePluginConfig
+    private config: CascadePluginConfig,
   ) {}
 
   buildContent(operations: any[]): string {
     // Analyze operations for cascade patterns
-    operations.forEach(op => {
-      if (op.kind === 'OperationDefinition') {
+    operations.forEach((op) => {
+      if (op.kind === "OperationDefinition") {
         this.visitOperation(op as OperationDefinitionNode);
       }
     });
 
     // Generate type helpers
     const helpers = this.generateHelpers();
-    const typeGuards = this.config.generateTypeGuards !== false
-      ? this.generateTypeGuards()
-      : '';
-    const unionHelpers = this.config.generateUnionHelpers !== false
-      ? this.generateUnionHelpers()
-      : '';
+    const typeGuards =
+      this.config.generateTypeGuards !== false ? this.generateTypeGuards() : "";
+    const unionHelpers =
+      this.config.generateUnionHelpers !== false
+        ? this.generateUnionHelpers()
+        : "";
 
-    return [helpers, typeGuards, unionHelpers].filter(Boolean).join('\n\n');
+    return [helpers, typeGuards, unionHelpers].filter(Boolean).join("\n\n");
   }
 
   private visitOperation(operation: OperationDefinitionNode) {
     const operationName = operation.name?.value;
     if (!operationName) return;
 
-    operation.selectionSet.selections.forEach(selection => {
-      if (selection.kind === 'Field') {
+    operation.selectionSet.selections.forEach((selection) => {
+      if (selection.kind === "Field") {
         this.visitField(selection, operationName, operation.operation);
       }
     });
@@ -59,7 +59,7 @@ export class CascadeVisitor {
   private visitField(
     field: FieldNode,
     operationName: string,
-    operationType: 'query' | 'mutation' | 'subscription'
+    operationType: "query" | "mutation" | "subscription",
   ) {
     const fieldName = field.name.value;
     const fieldType = this.getFieldType(fieldName, operationType);
@@ -71,14 +71,17 @@ export class CascadeVisitor {
 
     if (field.selectionSet) {
       for (const selection of field.selectionSet.selections) {
-        if (selection.kind === 'Field' && selection.name.value === 'cascade') {
+        if (selection.kind === "Field" && selection.name.value === "cascade") {
           hasCascade = true;
           break;
         }
         // Check inline fragments (for union types)
-        if (selection.kind === 'InlineFragment' && selection.selectionSet) {
+        if (selection.kind === "InlineFragment" && selection.selectionSet) {
           for (const innerSelection of selection.selectionSet.selections) {
-            if (innerSelection.kind === 'Field' && innerSelection.name.value === 'cascade') {
+            if (
+              innerSelection.kind === "Field" &&
+              innerSelection.name.value === "cascade"
+            ) {
               hasCascade = true;
               break;
             }
@@ -89,9 +92,10 @@ export class CascadeVisitor {
     }
 
     const isUnion = isUnionType(fieldType);
-    const unionTypes = isUnion && isUnionType(fieldType)
-      ? fieldType.getTypes().map(t => t.name)
-      : undefined;
+    const unionTypes =
+      isUnion && isUnionType(fieldType)
+        ? fieldType.getTypes().map((t) => t.name)
+        : undefined;
 
     this.cascadeFields.push({
       operationName,
@@ -104,12 +108,12 @@ export class CascadeVisitor {
 
   private getFieldType(
     fieldName: string,
-    operationType: 'query' | 'mutation' | 'subscription'
+    operationType: "query" | "mutation" | "subscription",
   ) {
     let rootType;
-    if (operationType === 'query') {
+    if (operationType === "query") {
       rootType = this.schema.getQueryType();
-    } else if (operationType === 'mutation') {
+    } else if (operationType === "mutation") {
       rootType = this.schema.getMutationType();
     } else {
       rootType = this.schema.getSubscriptionType();
@@ -127,7 +131,8 @@ export class CascadeVisitor {
   }
 
   getImports(): string[] {
-    const importFrom = this.config.cascadeImportFrom || '@graphql-cascade/client';
+    const importFrom =
+      this.config.cascadeImportFrom || "@graphql-cascade/client";
     return [
       `import type {`,
       `  CascadeResponse,`,
@@ -178,21 +183,23 @@ export type InvalidationsOf<T> = CascadeOf<T> extends { invalidations: infer I }
 
   private generateTypeGuards(): string {
     const guards = this.cascadeFields
-      .filter(f => f.isUnionType && f.unionTypes)
-      .flatMap(f => this.generateUnionTypeGuard(f))
-      .join('\n\n');
+      .filter((f) => f.isUnionType && f.unionTypes)
+      .flatMap((f) => this.generateUnionTypeGuard(f))
+      .join("\n\n");
 
-    return guards ? `\n// Type Guards\n${guards}` : '';
+    return guards ? `\n// Type Guards\n${guards}` : "";
   }
 
   private generateUnionTypeGuard(field: CascadeField): string[] {
     const { operationName, unionTypes = [] } = field;
 
     // Generate capitalized operation name for type reference
-    const capitalizedOpName = operationName.charAt(0).toUpperCase() + operationName.slice(1);
+    const capitalizedOpName =
+      operationName.charAt(0).toUpperCase() + operationName.slice(1);
     const operationTypeName = `${capitalizedOpName}Mutation`;
 
-    return unionTypes.map(typeName => `
+    return unionTypes.map((typeName) =>
+      `
 /**
  * Type guard for ${typeName} in ${operationName}
  */
@@ -200,36 +207,43 @@ export function is${typeName}(
   result: ${operationTypeName} | null | undefined
 ): result is Extract<${operationTypeName}, { __typename: '${typeName}' }> {
   return result?.__typename === '${typeName}';
-}`.trim());
+}`.trim(),
+    );
   }
 
   private generateUnionHelpers(): string {
     const helpers = this.cascadeFields
-      .filter(f => f.isUnionType && f.hasCascadeField)
-      .map(f => this.generateUnionCascadeConfig(f))
-      .join('\n\n');
+      .filter((f) => f.isUnionType && f.hasCascadeField)
+      .map((f) => this.generateUnionCascadeConfig(f))
+      .join("\n\n");
 
-    return helpers ? `\n// Union Cascade Configurations\n${helpers}` : '';
+    return helpers ? `\n// Union Cascade Configurations\n${helpers}` : "";
   }
 
   private generateUnionCascadeConfig(field: CascadeField): string {
     const { operationName, unionTypes = [] } = field;
 
     // Heuristic: types with "Success" or ending in "Success" are success types
-    const successTypes = unionTypes.filter(t =>
-      t.includes('Success') || t.endsWith('Success')
+    const successTypes = unionTypes.filter(
+      (t) => t.includes("Success") || t.endsWith("Success"),
     );
-    const errorTypes = unionTypes.filter(t => !successTypes.includes(t));
+    const errorTypes = unionTypes.filter((t) => !successTypes.includes(t));
 
     // If heuristic fails, make educated guess based on naming
     if (successTypes.length === 0 && errorTypes.length === 0) {
       // Look for Result, Response, Error patterns
-      successTypes.push(...unionTypes.filter(t =>
-        t.includes('Result') || t.includes('Response') && !t.includes('Error')
-      ));
-      errorTypes.push(...unionTypes.filter(t =>
-        t.includes('Error') || t.includes('Failure')
-      ));
+      successTypes.push(
+        ...unionTypes.filter(
+          (t) =>
+            t.includes("Result") ||
+            (t.includes("Response") && !t.includes("Error")),
+        ),
+      );
+      errorTypes.push(
+        ...unionTypes.filter(
+          (t) => t.includes("Error") || t.includes("Failure"),
+        ),
+      );
     }
 
     // If still nothing, take first as success, rest as errors
@@ -238,17 +252,18 @@ export function is${typeName}(
       errorTypes.push(...unionTypes.slice(1));
     }
 
-    const capitalizedOpName = operationName.charAt(0).toUpperCase() + operationName.slice(1);
+    const capitalizedOpName =
+      operationName.charAt(0).toUpperCase() + operationName.slice(1);
 
     return `
 /**
  * Pre-configured UnionCascadeConfig for ${operationName}
- * Success types: ${successTypes.join(', ') || 'none'}
- * Error types: ${errorTypes.join(', ') || 'none'}
+ * Success types: ${successTypes.join(", ") || "none"}
+ * Error types: ${errorTypes.join(", ") || "none"}
  */
 export const ${capitalizedOpName}CascadeConfig = {
-  successTypes: [${successTypes.map(t => `'${t}'`).join(', ')}],
-  errorTypes: [${errorTypes.map(t => `'${t}'`).join(', ')}],
+  successTypes: [${successTypes.map((t) => `'${t}'`).join(", ")}],
+  errorTypes: [${errorTypes.map((t) => `'${t}'`).join(", ")}],
 } as const;`.trim();
   }
 }

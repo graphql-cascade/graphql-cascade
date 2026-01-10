@@ -1,6 +1,6 @@
-import { PluginFunction, Types } from '@graphql-codegen/plugin-helpers';
-import { GraphQLSchema } from 'graphql';
-import { CascadeVisitor } from './visitor';
+import { PluginFunction, Types } from "@graphql-codegen/plugin-helpers";
+import { GraphQLSchema } from "graphql";
+import { CascadeVisitor } from "./visitor";
 
 export interface CascadePluginConfig {
   /**
@@ -25,13 +25,13 @@ export interface CascadePluginConfig {
 export const plugin: PluginFunction<CascadePluginConfig> = (
   schema: GraphQLSchema,
   documents: Types.DocumentFile[],
-  config: CascadePluginConfig
+  config: CascadePluginConfig,
 ) => {
   const visitor = new CascadeVisitor(schema, config);
 
   // Visit all documents and extract cascade patterns
-  const operations = documents.flatMap(doc =>
-    doc.document?.definitions || []
+  const operations = documents.flatMap(
+    (doc) => doc.document?.definitions || [],
   );
 
   const content = visitor.buildContent(operations);
@@ -47,10 +47,10 @@ export const preset = {
     return [
       {
         plugins: [
-          { add: { content: '/* eslint-disable */' } },
-          'typescript',
-          'typescript-operations',
-          '@graphql-cascade/codegen',
+          { add: { content: "/* eslint-disable */" } },
+          "typescript",
+          "typescript-operations",
+          "@graphql-cascade/codegen",
         ],
         config: {
           skipTypename: false,

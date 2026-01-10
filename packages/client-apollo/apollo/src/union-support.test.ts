@@ -9,12 +9,14 @@ import { CascadeUpdates, CascadeOperation } from "@graphql-cascade/client";
 
 describe("union-support", () => {
   const mockCascade: CascadeUpdates = {
-    updated: [{
-      __typename: "User",
-      id: "1",
-      operation: CascadeOperation.UPDATED,
-      entity: { id: "1", name: "John" },
-    }],
+    updated: [
+      {
+        __typename: "User",
+        id: "1",
+        operation: CascadeOperation.UPDATED,
+        entity: { id: "1", name: "John" },
+      },
+    ],
     deleted: [],
     invalidations: [],
     metadata: { timestamp: "2024-01-01", depth: 1, affectedCount: 1 },
@@ -483,16 +485,18 @@ describe("union-support", () => {
             nTotalAllocations: 0,
           },
           cascade: {
-            updated: [{
-              __typename: "PrintServer",
-              id: "123",
-              operation: CascadeOperation.CREATED,
-              entity: {
+            updated: [
+              {
+                __typename: "PrintServer",
                 id: "123",
-                hostname: "printer.example.com",
-                nTotalAllocations: 0,
+                operation: CascadeOperation.CREATED,
+                entity: {
+                  id: "123",
+                  hostname: "printer.example.com",
+                  nTotalAllocations: 0,
+                },
               },
-            }],
+            ],
             deleted: [],
             invalidations: [],
             metadata: {

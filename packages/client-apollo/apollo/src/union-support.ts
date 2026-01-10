@@ -145,12 +145,12 @@ export function extractCascadeFromUnion<T = any>(
         data = (response as any)[config.dataField];
       } else {
         // Look for a field named 'data' first
-        if ('data' in response) {
+        if ("data" in response) {
           data = (response as any).data as T;
         } else {
           // Otherwise, use the first remaining field after filtering out metadata
           const firstDataKey = Object.keys(dataFields)[0];
-          data = firstDataKey ? (dataFields as any)[firstDataKey] as T : null;
+          data = firstDataKey ? ((dataFields as any)[firstDataKey] as T) : null;
         }
       }
 
@@ -212,7 +212,11 @@ export function extractCascadeFromUnion<T = any>(
   // Extract data payload
   // Look for the first field that's not cascade, __typename, errors, or metadata fields like 'success'
   const dataKeys = Object.keys(response).filter(
-    (key) => key !== "cascade" && key !== "__typename" && key !== "errors" && key !== "success",
+    (key) =>
+      key !== "cascade" &&
+      key !== "__typename" &&
+      key !== "errors" &&
+      key !== "success",
   );
 
   let data: T | null = null;
@@ -284,9 +288,10 @@ export function extractCascadeFromMutationResult<T = any>(
 /**
  * Type for mutation responses that use the union pattern
  */
-export type UnionMutationResponse<TSuccess, TError = { errors: Array<{ message: string; code?: string }> }> =
-  | (TSuccess & { __typename: string })
-  | (TError & { __typename: string });
+export type UnionMutationResponse<
+  TSuccess,
+  TError = { errors: Array<{ message: string; code?: string }> },
+> = (TSuccess & { __typename: string }) | (TError & { __typename: string });
 
 /**
  * Type guard to check if a union response is a success type
@@ -299,7 +304,7 @@ export function isSuccessResponse<TSuccess>(
     response &&
     typeof response === "object" &&
     "__typename" in response &&
-    successTypes.includes(response.__typename)
+    successTypes.includes(response.__typename),
   );
 }
 
@@ -315,6 +320,6 @@ export function isErrorResponse<TError>(
     typeof response === "object" &&
     "__typename" in response &&
     (errorTypes.includes(response.__typename) ||
-      response.__typename.toLowerCase().includes("error"))
+      response.__typename.toLowerCase().includes("error")),
   );
 }

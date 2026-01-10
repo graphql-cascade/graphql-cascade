@@ -1,12 +1,12 @@
-import type { ModuleOptions } from './module'
+import type { ModuleOptions } from "./module";
 
-declare module '@nuxt/schema' {
+declare module "@nuxt/schema" {
   interface NuxtConfig {
-    graphqlCascade?: ModuleOptions
+    graphqlCascade?: ModuleOptions;
   }
   interface NuxtOptions {
-    graphqlCascade?: ModuleOptions
+    graphqlCascade?: ModuleOptions;
   }
 }
 
-export { ModuleOptions }
+export { ModuleOptions };

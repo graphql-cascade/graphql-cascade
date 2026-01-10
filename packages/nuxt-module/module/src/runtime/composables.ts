@@ -1,20 +1,36 @@
-import { useNuxtApp } from '#app'
-import { useMutation, useApolloClient, useQuery, useSubscription } from '@vue/apollo-composable'
-import type { DocumentNode, TypedDocumentNode } from '@apollo/client'
-import type { MutationOptions, MutationResult, UseQueryOptions, UseSubscriptionOptions } from '@vue/apollo-composable'
-import { extractCascadeFromMutationResult, type UnionCascadeConfig } from '@graphql-cascade/apollo'
-import { ref, unref, computed, watch, type Ref } from 'vue'
+import { useNuxtApp } from "#app";
+import {
+  useMutation,
+  useApolloClient,
+  useQuery,
+  useSubscription,
+} from "@vue/apollo-composable";
+import type { DocumentNode, TypedDocumentNode } from "@apollo/client";
+import type {
+  MutationOptions,
+  MutationResult,
+  UseQueryOptions,
+  UseSubscriptionOptions,
+} from "@vue/apollo-composable";
+import {
+  extractCascadeFromMutationResult,
+  type UnionCascadeConfig,
+} from "@graphql-cascade/apollo";
+import { ref, unref, computed, watch, type Ref } from "vue";
 
-export interface CascadeMutationOptions<TResult, TVariables> extends MutationOptions<TResult, TVariables> {
+export interface CascadeMutationOptions<
+  TResult,
+  TVariables,
+> extends MutationOptions<TResult, TVariables> {
   /**
    * Configuration for extracting cascade data from union types
    */
-  cascadeConfig?: UnionCascadeConfig
+  cascadeConfig?: UnionCascadeConfig;
 
   /**
    * Callback when cascade updates are applied
    */
-  onCascade?: (cascade: any) => void
+  onCascade?: (cascade: any) => void;
 }
 
 /**
@@ -46,53 +62,59 @@ export interface CascadeMutationOptions<TResult, TVariables> extends MutationOpt
  */
 export function useCascadeMutation<TResult = any, TVariables = any>(
   document: DocumentNode | TypedDocumentNode<TResult, TVariables>,
-  options?: CascadeMutationOptions<TResult, TVariables>
+  options?: CascadeMutationOptions<TResult, TVariables>,
 ) {
-  const { cascadeConfig, onCascade, ...mutationOptions } = options || {}
+  const { cascadeConfig, onCascade, ...mutationOptions } = options || {};
 
   // Use the standard Vue Apollo useMutation
-  const mutation = useMutation<TResult, TVariables>(document, mutationOptions)
+  const mutation = useMutation<TResult, TVariables>(document, mutationOptions);
 
   // Create a wrapped mutate function that processes cascade data
-  const originalMutate = mutation.mutate
-  const cascadeData = ref<any>(null)
-  const extractedData = ref<any>(null)
-  const isError = ref(false)
-  const errors = ref<any[]>([])
+  const originalMutate = mutation.mutate;
+  const cascadeData = ref<any>(null);
+  const extractedData = ref<any>(null);
+  const isError = ref(false);
+  const errors = ref<any[]>([]);
 
   const mutate = async (variables?: TVariables, overrideOptions?: any) => {
     try {
-      const result = await originalMutate(variables, overrideOptions)
+      const result = await originalMutate(variables, overrideOptions);
 
       if (result?.data) {
         // Extract cascade data from the result
-        const extracted = extractCascadeFromMutationResult(result.data, cascadeConfig)
+        const extracted = extractCascadeFromMutationResult(
+          result.data,
+          cascadeConfig,
+        );
 
-        cascadeData.value = extracted.cascade
-        extractedData.value = extracted.data
-        isError.value = extracted.isError
-        errors.value = extracted.errors || []
+        cascadeData.value = extracted.cascade;
+        extractedData.value = extracted.data;
+        isError.value = extracted.isError;
+        errors.value = extracted.errors || [];
 
         if (extracted.cascade && !extracted.isError) {
           // Call the onCascade callback if provided
-          onCascade?.(extracted.cascade)
+          onCascade?.(extracted.cascade);
 
           if (process.dev) {
-            console.log('[useCascadeMutation] Cascade updates:', extracted.cascade)
+            console.log(
+              "[useCascadeMutation] Cascade updates:",
+              extracted.cascade,
+            );
           }
         }
 
-        return extracted
+        return extracted;
       }
 
-      return result
+      return result;
     } catch (error) {
       if (process.dev) {
-        console.error('[useCascadeMutation] Mutation failed:', error)
+        console.error("[useCascadeMutation] Mutation failed:", error);
       }
-      throw error
+      throw error;
     }
-  }
+  };
 
   return {
     ...mutation,
@@ -100,8 +122,8 @@ export function useCascadeMutation<TResult = any, TVariables = any>(
     cascadeData,
     extractedData,
     isError,
-    errors
-  }
+    errors,
+  };
 }
 
 /**
@@ -122,12 +144,12 @@ export function useCascadeMutation<TResult = any, TVariables = any>(
  * ```
  */
 export function useCascadeClient() {
-  const apollo = useApolloClient()
+  const apollo = useApolloClient();
 
   return {
     client: apollo.client,
-    resolveClient: apollo.resolveClient
-  }
+    resolveClient: apollo.resolveClient,
+  };
 }
 
 /**
@@ -149,28 +171,30 @@ export function useCascadeClient() {
  * ```
  */
 export function useCascadeTracker() {
-  const cascadeHistory = ref<any[]>([])
-  const lastCascade = computed(() => cascadeHistory.value[cascadeHistory.value.length - 1])
-  const cascadeCount = computed(() => cascadeHistory.value.length)
+  const cascadeHistory = ref<any[]>([]);
+  const lastCascade = computed(
+    () => cascadeHistory.value[cascadeHistory.value.length - 1],
+  );
+  const cascadeCount = computed(() => cascadeHistory.value.length);
 
   const addCascade = (cascade: any) => {
     cascadeHistory.value.push({
       ...cascade,
-      timestamp: new Date().toISOString()
-    })
-  }
+      timestamp: new Date().toISOString(),
+    });
+  };
 
   const clearHistory = () => {
-    cascadeHistory.value = []
-  }
+    cascadeHistory.value = [];
+  };
 
   return {
     cascadeHistory,
     lastCascade,
     cascadeCount,
     addCascade,
-    clearHistory
-  }
+    clearHistory,
+  };
 }
 
 /**
@@ -194,15 +218,19 @@ export function useCascadeQuery<TResult = any, TVariables = any>(
   document: DocumentNode | TypedDocumentNode<TResult, TVariables>,
   variables?: TVariables | Ref<TVariables>,
   options?: UseQueryOptions<TResult, TVariables> & {
-    watchInvalidations?: string[]
-  }
+    watchInvalidations?: string[];
+  },
 ) {
-  const { watchInvalidations, ...queryOptions } = options || {}
-  const query = useQuery<TResult, TVariables>(document, variables, queryOptions)
+  const { watchInvalidations, ...queryOptions } = options || {};
+  const query = useQuery<TResult, TVariables>(
+    document,
+    variables,
+    queryOptions,
+  );
 
   // TODO: Implement cascade invalidation watching when cascade client is available
   // For now, just return the standard query
-  return query
+  return query;
 }
 
 /**
@@ -226,60 +254,67 @@ export function useCascadeQuery<TResult = any, TVariables = any>(
  * ```
  */
 export function useCascadeBatch() {
-  const loading = ref(false)
-  const results = ref<any[]>([])
-  const errors = ref<any[]>([])
-  const apollo = useApolloClient()
+  const loading = ref(false);
+  const results = ref<any[]>([]);
+  const errors = ref<any[]>([]);
+  const apollo = useApolloClient();
 
-  const executeBatch = async (mutations: Array<{
-    mutation: DocumentNode
-    variables?: any
-    cascadeConfig?: UnionCascadeConfig
-  }>) => {
-    loading.value = true
-    results.value = []
-    errors.value = []
+  const executeBatch = async (
+    mutations: Array<{
+      mutation: DocumentNode;
+      variables?: any;
+      cascadeConfig?: UnionCascadeConfig;
+    }>,
+  ) => {
+    loading.value = true;
+    results.value = [];
+    errors.value = [];
 
     try {
-      const promises = mutations.map(async ({ mutation, variables, cascadeConfig }) => {
-        try {
-          const result = await apollo.client.mutate({
-            mutation,
-            variables
-          })
+      const promises = mutations.map(
+        async ({ mutation, variables, cascadeConfig }) => {
+          try {
+            const result = await apollo.client.mutate({
+              mutation,
+              variables,
+            });
 
-          if (result.data) {
-            const extracted = extractCascadeFromMutationResult(result.data, cascadeConfig)
-            return { success: true, data: extracted }
+            if (result.data) {
+              const extracted = extractCascadeFromMutationResult(
+                result.data,
+                cascadeConfig,
+              );
+              return { success: true, data: extracted };
+            }
+
+            return { success: false, error: "No data returned" };
+          } catch (error) {
+            return { success: false, error };
           }
+        },
+      );
 
-          return { success: false, error: 'No data returned' }
-        } catch (error) {
-          return { success: false, error }
-        }
-      })
+      const batchResults = await Promise.all(promises);
 
-      const batchResults = await Promise.all(promises)
-
-      results.value = batchResults.filter(r => r.success).map(r => r.data)
-      errors.value = batchResults.filter(r => !r.success).map(r => r.error)
+      results.value = batchResults.filter((r) => r.success).map((r) => r.data);
+      errors.value = batchResults.filter((r) => !r.success).map((r) => r.error);
 
       return {
         results: results.value,
         errors: errors.value,
-        allSucceeded: errors.value.length === 0
-      }
+        allSucceeded: errors.value.length === 0,
+      };
     } finally {
-      loading.value = false
+      loading.value = false;
     }
-  }
+  };
 
   return {
     executeBatch,
     loading,
     results,
-    errors
-  }
+    errors,
+  };
 }
 
 /**
@@ -307,51 +342,57 @@ export function useCascadeBatch() {
  * ```
  */
 export function useCascadeOptimistic() {
-  const apollo = useApolloClient()
-  const optimisticUpdates = ref<any[]>([])
+  const apollo = useApolloClient();
+  const optimisticUpdates = ref<any[]>([]);
 
-  const optimisticUpdate = (data: { __typename: string; id: string; [key: string]: any }) => {
-    const cacheId = apollo.client.cache.identify(data)
+  const optimisticUpdate = (data: {
+    __typename: string;
+    id: string;
+    [key: string]: any;
+  }) => {
+    const cacheId = apollo.client.cache.identify(data);
     if (cacheId) {
       apollo.client.cache.writeFragment({
         id: cacheId,
-        fragment: require('@apollo/client').gql`
+        fragment: require("@apollo/client").gql`
           fragment OptimisticUpdate on ${data.__typename} {
-            ${Object.keys(data).filter(k => k !== '__typename').join('\n            ')}
+            ${Object.keys(data)
+              .filter((k) => k !== "__typename")
+              .join("\n            ")}
           }
         `,
-        data
-      })
-      optimisticUpdates.value.push({ cacheId, data })
+        data,
+      });
+      optimisticUpdates.value.push({ cacheId, data });
     }
-  }
+  };
 
   const clearOptimisticUpdates = () => {
-    optimisticUpdates.value = []
-  }
+    optimisticUpdates.value = [];
+  };
 
   const mutate = async (mutation: DocumentNode, options: any) => {
-    const apollo = useApolloClient()
+    const apollo = useApolloClient();
     try {
       const result = await apollo.client.mutate({
         ...options,
-        mutation
-      })
-      clearOptimisticUpdates()
-      return result
+        mutation,
+      });
+      clearOptimisticUpdates();
+      return result;
     } catch (error) {
       // Revert optimistic updates on error
-      clearOptimisticUpdates()
-      throw error
+      clearOptimisticUpdates();
+      throw error;
     }
-  }
+  };
 
   return {
     optimisticUpdate,
     clearOptimisticUpdates,
     mutate,
-    optimisticUpdates
-  }
+    optimisticUpdates,
+  };
 }
 
 /**
@@ -378,76 +419,83 @@ export function useCascadeUnionQuery<TResult = any, TVariables = any>(
   document: DocumentNode | TypedDocumentNode<TResult, TVariables>,
   variables?: TVariables | Ref<TVariables>,
   options?: UseQueryOptions<TResult, TVariables> & {
-    unionConfig?: UnionCascadeConfig
-  }
+    unionConfig?: UnionCascadeConfig;
+  },
 ) {
-  const { unionConfig, ...queryOptions } = options || {}
-  const query = useQuery<TResult, TVariables>(document, variables, queryOptions)
+  const { unionConfig, ...queryOptions } = options || {};
+  const query = useQuery<TResult, TVariables>(
+    document,
+    variables,
+    queryOptions,
+  );
 
   const data = computed(() => {
-    if (!query.result.value) return null
+    if (!query.result.value) return null;
 
     // Extract data from union type response
-    const firstKey = Object.keys(query.result.value)[0]
-    if (!firstKey) return null
+    const firstKey = Object.keys(query.result.value)[0];
+    if (!firstKey) return null;
 
-    const response = (query.result.value as any)[firstKey]
+    const response = (query.result.value as any)[firstKey];
 
     // Check if it's a union type with __typename
-    if (response && typeof response === 'object' && '__typename' in response) {
-      const typename = response.__typename
+    if (response && typeof response === "object" && "__typename" in response) {
+      const typename = response.__typename;
 
       // Check if it's an error type
-      const isErrorType = unionConfig?.errorTypes?.includes(typename) ||
-                          typename.toLowerCase().includes('error')
+      const isErrorType =
+        unionConfig?.errorTypes?.includes(typename) ||
+        typename.toLowerCase().includes("error");
 
       if (isErrorType) {
-        return null
+        return null;
       }
 
       // Extract the data field (first non-metadata field)
       const dataKeys = Object.keys(response).filter(
-        key => key !== '__typename' && key !== 'errors' && key !== 'success'
-      )
+        (key) => key !== "__typename" && key !== "errors" && key !== "success",
+      );
 
-      return dataKeys.length > 0 ? response[dataKeys[0]] : response
+      return dataKeys.length > 0 ? response[dataKeys[0]] : response;
     }
 
-    return response
-  })
+    return response;
+  });
 
   const isError = computed(() => {
-    if (!query.result.value) return false
+    if (!query.result.value) return false;
 
-    const firstKey = Object.keys(query.result.value)[0]
-    if (!firstKey) return false
+    const firstKey = Object.keys(query.result.value)[0];
+    if (!firstKey) return false;
 
-    const response = (query.result.value as any)[firstKey]
+    const response = (query.result.value as any)[firstKey];
 
-    if (response && typeof response === 'object' && '__typename' in response) {
-      const typename = response.__typename
-      return unionConfig?.errorTypes?.includes(typename) ||
-             typename.toLowerCase().includes('error') ||
-             'errors' in response
+    if (response && typeof response === "object" && "__typename" in response) {
+      const typename = response.__typename;
+      return (
+        unionConfig?.errorTypes?.includes(typename) ||
+        typename.toLowerCase().includes("error") ||
+        "errors" in response
+      );
     }
 
-    return false
-  })
+    return false;
+  });
 
   const errors = computed(() => {
-    if (!isError.value || !query.result.value) return []
+    if (!isError.value || !query.result.value) return [];
 
-    const firstKey = Object.keys(query.result.value)[0]
-    if (!firstKey) return []
+    const firstKey = Object.keys(query.result.value)[0];
+    if (!firstKey) return [];
 
-    const response = (query.result.value as any)[firstKey]
-    return response?.errors || []
-  })
+    const response = (query.result.value as any)[firstKey];
+    return response?.errors || [];
+  });
 
   return {
     ...query,
     data,
     isError,
-    errors
-  }
+    errors,
+  };
 }
