@@ -10,7 +10,9 @@
     "packages/client-urql/urql",
     "packages/nuxt-module/module",
     "packages/cli",
+    "packages/codegen",
     "packages/conformance",
+    "packages/integration-tests",
     "packages/server-node"
   ],
   "scripts": {
