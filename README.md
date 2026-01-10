@@ -34,20 +34,40 @@
   </a>
 </p>
 
-**Cascading cache updates for GraphQL** - Automatic, intelligent cache invalidation that cascades through your entire data graph.
+**Automatic cache consistency for GraphQL** - Servers return all affected entities in mutation responses, eliminating the need for clients to guess which queries to refetch.
 
 ## Overview
 
-GraphQL Cascade solves the cache invalidation problem by automatically tracking entity relationships and cascading invalidations through your data graph. When you mutate data, related cache entries are automatically invalidated and refetched, ensuring your UI stays consistent without manual cache management.
+GraphQL Cascade solves the cache consistency problem by having **servers return all affected entities in mutation responses**. Instead of clients manually invalidating queries and refetching, the server tells you exactly what changed. This makes cache updates automatic, predictable, and impossible to miss.
 
 ## Problem
 
-GraphQL caching is hard. When you mutate data, you need to manually invalidate all related cache entries across your entire application. This leads to:
+When mutations have side effects across multiple entities, clients don't know which queries to refetch.
 
-- **Stale data** - Cache entries become outdated after mutations
-- **Complex invalidation logic** - Developers must track all relationships manually
-- **Race conditions** - Multiple mutations can conflict
-- **Poor UX** - Users see inconsistent data states
+**Example:** User creates a post
+
+```
+Backend mutation updates:
+  ✓ posts table (new row)
+  ✓ users.postCount (aggregate)
+  ✓ creates notifications (for followers)
+  ✓ affects trending rankings
+  ✓ affects user's timeline
+
+Client currently must guess:
+  "Do I need to refetch getUserPosts?"  ← Maybe
+  "What about getNotifications?"       ← Maybe
+  "What about postCount?"              ← Maybe
+  "What about trending?"               ← Maybe
+  → Must refetch multiple queries, guessing what's affected
+  → Easy to miss something and show stale data
+```
+
+Without Cascade, this forces clients to:
+- **Manually track all side effects** - Error-prone and brittle
+- **Refetch multiple queries** - Slow and wastes bandwidth
+- **Show stale data** - When a refetch is forgotten
+- **Create race conditions** - Multiple mutations conflicting
 
 ### Manual Cache Management (Traditional)
 
@@ -63,49 +83,99 @@ GraphQL caching is hard. When you mutate data, you need to manually invalidate a
 
 ## Solution
 
-GraphQL Cascade automatically tracks entity relationships and cascades cache invalidations through your data graph. When you update a user, all related posts, comments, and notifications are automatically invalidated.
+GraphQL Cascade solves this by having **servers include all affected entities in the mutation response**. No manual invalidation, no refetching, no guessing.
+
+```
+User creates post:
+  ↓
+Server mutation executes
+  ↓
+Server discovers what changed:
+  - Post created
+  - User.postCount updated
+  - Notifications created
+  ↓
+Server returns ALL of this in one response
+  ↓
+Client receives everything at once → Cache is complete
+```
 
 ### How It Works
 
-**The Problem:** After a mutation, clients don't know which queries to refetch.
+**Without Cascade:** Mutation returns only the direct result. Client must guess what else changed.
 
 ```graphql
 mutation CreatePost($input: CreatePostInput!) {
   createPost(input: $input) {
-    post { id, title }
-    # Now what? Need to refetch getUserPosts? getNotifications? postCount?
-    # Client has to guess which queries are affected by this mutation
+    post {
+      id
+      title
+      content
+    }
+    # Client has no idea if this affected postCount, notifications, trending posts, etc.
   }
 }
 ```
 
-**The Solution:** Cascade returns ALL affected data directly in the mutation response.
+**With Cascade:** Mutation returns everything that changed, using proper GraphQL unions.
 
 ```graphql
 mutation CreatePost($input: CreatePostInput!) {
   createPost(input: $input) {
-    post { id, title }
+    # The primary mutation result
+    post {
+      id
+      title
+      content
+      authorId
+    }
+
+    # Everything affected by this mutation (in one response!)
     cascade {
       updated {
-        User { id, postCount }           # ← Updated automatically
-        Notification { id, message }     # ← New notifications
+        __typename
+        # Updated aggregates and relationships
+        ... on User {
+          id
+          postCount          # ← This changed
+          lastPostAt         # ← This changed
+        }
+        # New data created
+        ... on Notification {
+          id
+          message
+          recipientId
+          createdAt
+        }
       }
     }
   }
 }
 ```
 
-The client receives everything in one response — no guessing, no refetching required.
+**The Result:** Client receives everything in one GraphQL response. No refetching, no guessing.
 
 ### Before GraphQL Cascade
 ```javascript
-// Client must guess which queries to refetch
+// Client must manually track what to refetch
 const createPost = async (input) => {
-  const result = await mutate(CREATE_POST, input);
+  const result = await client.mutate({
+    mutation: CREATE_POST,
+    variables: input
+  });
 
-  // Did this mutation affect postCount? notifications?
-  // Must manually refetch related queries
-  await refetch(['getUserPosts', 'getNotifications', 'getUser']);
+  // Which queries are affected? Developer must know:
+  // - postCount changed (yes)
+  // - notifications changed (yes)
+  // - user.posts changed (yes)
+  // - trending posts changed (maybe)
+  // - followers' timelines changed (probably)
+
+  // Manual refetching required
+  await client.refetchQueries({
+    include: [getUserPosts, getNotifications, getUser]
+    // Easy to miss affected queries → stale data
+  });
 };
 ```
 
@@ -113,11 +183,26 @@ const createPost = async (input) => {
 ```javascript
 // Server tells client exactly what changed
 const createPost = async (input) => {
-  const result = await mutate(CREATE_POST, input);
+  const result = await client.mutate({
+    mutation: CREATE_POST,
+    variables: input
+  });
 
-  // Cascade data is in the response - no refetching needed
-  cache.updateEntity('User', result.cascade.updated.User);
-  cache.updateEntity('Notification', result.cascade.updated.Notification);
+  // Cascade data is in the response - everything that changed
+  const { cascade } = result.data.createPost;
+
+  // Update cache with all affected entities
+  cascade.updated.forEach(entity => {
+    client.cache.modify({
+      fields: {
+        [entity.__typename.toLowerCase()](existing) {
+          return entity;  // Update with latest data from server
+        }
+      }
+    });
+  });
+
+  // ✅ No refetching, no guessing, no stale data
 };
 ```
 
