@@ -203,8 +203,9 @@ describe("codegenCommand", () => {
 
       await codegenCommand.parseAsync(["node", "test", "codegen"]);
 
+      // Match both Unix (/test/dir) and Windows (\test\dir) path separators
       expect(mockFs.existsSync).toHaveBeenCalledWith(
-        expect.stringContaining("/test/dir"),
+        expect.stringMatching(/[/\\]test[/\\]dir/),
       );
       cwdSpy.mockRestore();
     });
