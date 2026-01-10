@@ -80,7 +80,9 @@ describe("diagnostics", () => {
       const result = await runDiagnostics();
       expect(result.checks).toContain("@graphql-cascade/client is installed");
       expect(result.checks).toContain("@graphql-cascade/apollo is installed");
-      expect(result.checks).toContain("@graphql-cascade/react-query is installed");
+      expect(result.checks).toContain(
+        "@graphql-cascade/react-query is installed",
+      );
     });
   });
 
@@ -93,7 +95,9 @@ describe("diagnostics", () => {
       });
 
       const result = await runDiagnostics();
-      expect(result.errors).toContain("node_modules not found - run npm install first");
+      expect(result.errors).toContain(
+        "node_modules not found - run npm install first",
+      );
     });
 
     it("should handle npm list success", async () => {
@@ -149,7 +153,9 @@ describe("diagnostics", () => {
       });
 
       const result = await runDiagnostics();
-      expect(result.checks).toContain("Configuration file found: cascade.config.ts");
+      expect(result.checks).toContain(
+        "Configuration file found: cascade.config.ts",
+      );
     });
 
     it("should detect cascade.config.js", async () => {
@@ -160,7 +166,9 @@ describe("diagnostics", () => {
       });
 
       const result = await runDiagnostics();
-      expect(result.checks).toContain("Configuration file found: cascade.config.js");
+      expect(result.checks).toContain(
+        "Configuration file found: cascade.config.js",
+      );
     });
 
     it("should detect graphql.config.js", async () => {
@@ -172,7 +180,9 @@ describe("diagnostics", () => {
       });
 
       const result = await runDiagnostics();
-      expect(result.checks).toContain("Configuration file found: graphql.config.js");
+      expect(result.checks).toContain(
+        "Configuration file found: graphql.config.js",
+      );
     });
 
     it("should detect .graphqlrc", async () => {

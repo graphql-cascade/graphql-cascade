@@ -97,11 +97,7 @@ describe("codegenCommand", () => {
 
       expect(mockSpawn).toHaveBeenCalledWith(
         "npx",
-        expect.arrayContaining([
-          "graphql-codegen",
-          "--config",
-          "custom.yml",
-        ]),
+        expect.arrayContaining(["graphql-codegen", "--config", "custom.yml"]),
         expect.any(Object),
       );
     });
