@@ -13,7 +13,7 @@
     },
     "code": {
       "type": "string",
-      "description": "Machine-readable error code",
+      "description": "Machine-readable error category that drives generic client handling",
       "enum": [
         "VALIDATION_ERROR",
         "NOT_FOUND",
@@ -26,6 +26,11 @@
         "RATE_LIMITED",
         "SERVICE_UNAVAILABLE"
       ]
+    },
+    "domainCode": {
+      "type": ["string", "null"],
+      "description": "Application-defined code identifying the specific condition; refines code",
+      "pattern": "^[A-Z][A-Z0-9_]*(\\.[A-Z][A-Z0-9_]*)*$"
     },
     "field": {
       "type": ["string", "null"],
@@ -114,6 +119,17 @@
         "service": "email-provider",
         "retryable": true,
         "retryAfter": 60
+      }
+    },
+    {
+      "message": "Your balance is too low to complete this transfer",
+      "code": "CONFLICT",
+      "domainCode": "INSUFFICIENT_FUNDS",
+      "field": "amount",
+      "path": ["transferFunds", "input", "amount"],
+      "extensions": {
+        "available": "12.50",
+        "requested": "40.00"
       }
     }
   ]

@@ -19,6 +19,9 @@ The **specification** is versioned independently: its version lives in
 - Reconciled specification version stamps to 1.1.0 (previously 0.1, 1.0.0 and v1.1 in different places).
 
 ### Added
+- `@graphql-cascade/server`: `withDomainCode()` refines a standard error with an application-specific `domainCode`; `CascadeErrorInfo.domainCode`.
+- `@graphql-cascade/client`: `CascadeError.domainCode`.
+- `@graphql-cascade/conformance`: the response validator checks that `errors[].code` is a standard code and that `domainCode` is well formed.
 - `node scripts/check-spec.mjs`, run in CI, rejects leaked transcript text and version-stamp drift.
 
 ## [0.3.1] - 2025-12-08

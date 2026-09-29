@@ -1,5 +1,58 @@
 import type { ResponseValidationResult, ValidationError } from "../types";
 
+const STANDARD_ERROR_CODES = new Set([
+  "VALIDATION_ERROR",
+  "NOT_FOUND",
+  "UNAUTHORIZED",
+  "FORBIDDEN",
+  "CONFLICT",
+  "INTERNAL_ERROR",
+  "TRANSACTION_FAILED",
+  "TIMEOUT",
+  "RATE_LIMITED",
+  "SERVICE_UNAVAILABLE",
+]);
+
+const DOMAIN_CODE_PATTERN = /^[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*$/;
+
+function validateErrors(errors: unknown): ValidationError[] {
+  if (errors === undefined || errors === null) return [];
+  if (!Array.isArray(errors)) {
+    return [
+      {
+        code: "INVALID_ERRORS",
+        message: "errors must be an array or null",
+        path: "errors",
+      },
+    ];
+  }
+
+  const problems: ValidationError[] = [];
+  errors.forEach((error: unknown, i: number) => {
+    if (!error || typeof error !== "object") return;
+    const { code, domainCode } = error as Record<string, unknown>;
+    if (typeof code !== "string" || !STANDARD_ERROR_CODES.has(code)) {
+      problems.push({
+        code: "INVALID_ERROR_CODE",
+        message: `code "${String(code)}" is not a standard CascadeErrorCode; use domainCode for application-specific codes`,
+        path: `errors[${i}].code`,
+      });
+    }
+    if (
+      domainCode !== undefined &&
+      domainCode !== null &&
+      (typeof domainCode !== "string" || !DOMAIN_CODE_PATTERN.test(domainCode))
+    ) {
+      problems.push({
+        code: "INVALID_DOMAIN_CODE",
+        message: `domainCode "${String(domainCode)}" must be UPPER_SNAKE_CASE segments separated by "."`,
+        path: `errors[${i}].domainCode`,
+      });
+    }
+  });
+  return problems;
+}
+
 /**
  * Validates a cascade mutation response
  */
@@ -31,6 +84,8 @@ export function validateResponse(
       path: "success",
     });
   }
+
+  errors.push(...validateErrors(r.errors));
 
   // Check cascade field
   if (!r.cascade || typeof r.cascade !== "object") {

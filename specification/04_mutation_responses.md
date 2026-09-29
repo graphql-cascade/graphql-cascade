@@ -200,8 +200,14 @@ type CascadeError {
   """Human-readable error message."""
   message: String!
 
-  """Machine-readable error code."""
+  """Machine-readable error category. Drives generic client handling."""
   code: CascadeErrorCode!
+
+  """
+  Application-defined code identifying the specific condition,
+  e.g. "INSUFFICIENT_FUNDS". Refines `code`; never replaces it.
+  """
+  domainCode: String
 
   """Field that caused the error (if applicable)."""
   field: String
@@ -443,6 +449,59 @@ When selecting an error code, use this decision tree:
 4. **Is it unexpected?**
    - Everything else → `INTERNAL_ERROR`
 
+### Domain-Specific Error Codes
+
+`CascadeErrorCode` is a closed set of **categories** that tell clients how to react generically: retry, re-authenticate, highlight a field, or report a failure. Applications also have **specific conditions** that clients need to recognize, such as insufficient funds, exhausted inventory, or a locked account. These are carried in `domainCode`, alongside the category, never in place of it.
+
+Servers:
+
+- MUST set `code` to the standard category that best describes the error, following the selection guidelines above. `code` MUST NOT carry application-specific values.
+- MAY set `domainCode` to an application-defined string identifying the specific condition.
+- MUST format `domainCode` as one or more `UPPER_SNAKE_CASE` segments separated by `.`, matching `^[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*$`.
+- SHOULD prefix `domainCode` with a namespace they own (for example `BILLING.INSUFFICIENT_FUNDS`) when the code is emitted by a reusable library or a shared service, so codes from different sources cannot collide.
+- MUST treat a published `domainCode` as part of the API contract: its meaning MUST NOT change, and removing it is a breaking API change.
+
+Clients:
+
+- MUST base generic handling (retry, authentication, field display) on `code` alone.
+- MAY branch on `domainCode` for condition-specific behavior, such as showing a dedicated dialog.
+- MUST tolerate `domainCode` values they do not recognize, falling back to handling based on `code`.
+
+| Condition | `code` | `domainCode` |
+|-----------|--------|--------------|
+| Business rule rejects the input | `VALIDATION_ERROR` | `ORDER_BELOW_MINIMUM` |
+| Balance too low for the operation | `CONFLICT` | `INSUFFICIENT_FUNDS` |
+| Stock exhausted during checkout | `CONFLICT` | `INVENTORY_EXHAUSTED` |
+| Account locked after failed logins | `FORBIDDEN` | `ACCOUNT_LOCKED` |
+| Identity verification not completed | `FORBIDDEN` | `KYC_INCOMPLETE` |
+| Plan quota used up until next billing cycle | `FORBIDDEN` | `QUOTA_EXCEEDED` |
+| Coupon already redeemed (code from a shared promotions service) | `CONFLICT` | `PROMOTIONS.COUPON_ALREADY_REDEEMED` |
+
+`QUOTA_EXCEEDED` maps to `FORBIDDEN` rather than `RATE_LIMITED`: waiting briefly will not help, so the client must not retry automatically.
+
+**Example:**
+```json
+{
+  "message": "Your balance is too low to complete this transfer",
+  "code": "CONFLICT",
+  "domainCode": "INSUFFICIENT_FUNDS",
+  "field": "amount",
+  "path": ["input", "amount"],
+  "extensions": {
+    "available": "12.50",
+    "requested": "40.00"
+  }
+}
+```
+
+Implementations that previously placed domain codes in `extensions` SHOULD move them to `domainCode`.
+
+> **Design note (non-normative).** Two alternatives were rejected. Letting servers add values to `CascadeErrorCode` does not work in GraphQL: enums are closed in the schema, so extra values would require changing `code` to `String`, which breaks every typed client. A structured `"CLASS.SUBCLASS"` code would break clients that compare `code` for equality. Keeping the category and the specific condition in separate fields is additive and keeps generic handling type-safe. The same split appears in gRPC (`Status` plus `ErrorInfo.reason`).
+
+### Forward Compatibility
+
+Later minor versions of this specification MAY add values to `CascadeErrorCode`. Clients MUST handle a `code` value they do not recognize as `INTERNAL_ERROR`: not retryable, not an authentication error, and shown as a generic failure. Clients that generate code from the schema SHOULD make sure an unknown enum value is not a runtime error.
+
 ### Error Examples
 ```json
 {
@@ -622,7 +681,9 @@ Mutations accepted for async processing SHOULD return:
 - `success: true` - Operation was accepted successfully
 - `data: null` or partial result object with job/operation ID
 - `errors: []` - No immediate errors
-- `cascade: { updated: [], deleted: [], invalidations: [] }` - Empty until completion
+- `cascade` - Only the changes committed when the mutation returns
+
+The cascade MUST NOT describe effects that have not been committed yet. If the accepted work is represented by a persisted entity (for example a job record), that entity is the primary result and appears in `cascade.updated` with operation `CREATED`, like any other created entity. Changes made later by the background work are delivered as described in [Cascade Updates After Completion](#cascade-updates-after-completion).
 
 ### Example: Async Job Acceptance
 
@@ -659,13 +720,24 @@ mutation ProcessLargeDataset($input: ProcessDatasetInput!) {
         "estimatedCompletionTime": "2023-11-11T10:05:00Z"
       },
       "cascade": {
-        "updated": [],
+        "updated": [
+          {
+            "__typename": "DatasetJob",
+            "id": "job-123",
+            "operation": "CREATED",
+            "entity": {
+              "id": "job-123",
+              "status": "pending",
+              "estimatedCompletionTime": "2023-11-11T10:05:00Z"
+            }
+          }
+        ],
         "deleted": [],
         "invalidations": [],
         "metadata": {
           "timestamp": "2023-11-11T10:00:00Z",
           "depth": 0,
-          "affectedCount": 0
+          "affectedCount": 1
         }
       }
     }
@@ -791,14 +863,7 @@ If an async operation fails during processing:
 - Async operations are **optional** - not all mutations need async support
 - This pattern is a **recommendation**, not a requirement
 - Implementations MAY use different patterns suited to their architecture
-- Consider adding a `status` enum to differentiate sync vs async responses:
-  ```graphql
-  enum MutationStatus {
-    COMPLETED  # Synchronous operation completed
-    PENDING    # Asynchronous operation accepted
-    FAILED     # Operation failed
-  }
-  ```
+- Represent progress on the job entity itself (for example a `status` field), not on the Cascade response
 
 ## Comprehensive Error Examples
 

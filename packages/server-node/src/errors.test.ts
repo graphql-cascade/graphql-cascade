@@ -10,6 +10,7 @@ import {
   unauthorizedError,
   forbiddenError,
   conflictError,
+  withDomainCode,
 } from "./errors";
 
 describe("CascadeErrorCode", () => {
@@ -325,4 +326,36 @@ describe("formatErrorMessage helper", () => {
     const formatted = formatErrorMessage("Test error");
     expect(formatted).toBe("Test error");
   });
+});
+
+describe("withDomainCode", () => {
+  it("refines a standard error with an application-specific code", () => {
+    const error = withDomainCode(
+      conflictError("Insufficient funds", "amount"),
+      "BILLING.INSUFFICIENT_FUNDS",
+    );
+    expect(error).toEqual({
+      message: "Insufficient funds",
+      code: CascadeErrorCode.CONFLICT,
+      domainCode: "BILLING.INSUFFICIENT_FUNDS",
+      field: "amount",
+      path: undefined,
+      extensions: undefined,
+    });
+  });
+
+  it("does not mutate the original error", () => {
+    const original = forbiddenError("Account locked");
+    withDomainCode(original, "ACCOUNT_LOCKED");
+    expect(original).not.toHaveProperty("domainCode");
+  });
+
+  it.each(["account_locked", "ACCOUNT..LOCKED", "1LOCKED", ".LOCKED", ""])(
+    "rejects malformed domain code %p",
+    (domainCode) => {
+      expect(() =>
+        withDomainCode(forbiddenError("Account locked"), domainCode),
+      ).toThrow(/UPPER_SNAKE_CASE/);
+    },
+  );
 });
