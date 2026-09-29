@@ -2,18 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
-## Version Numbering Clarification
+## Version Numbering
 
-This project uses **semantic versioning** for package versions:
-- Package versions: 0.x.y (pre-1.0), 1.x.y (stable)
-- Specification versions: Referenced as "spec vX.Y" in docs
-- Feature names: Descriptive (e.g., "error-codes-enhancement")
+This changelog tracks **package versions** (`@graphql-cascade/*`, semver 0.x).
+The **specification** is versioned independently: its version lives in
+[`specification/VERSION`](specification/VERSION) and its history in
+[`specification/VERSIONING.md`](specification/VERSIONING.md).
 
-### Historical Notes
-- **v1.1.0 tag**: Early tag that doesn't follow our semver convention.
-  Ignore this tag - actual package versions are 0.2.0.
-- **"v1.1 error codes"**: Refers to specification v1.1, not package version.
-  These are included in package version 0.2.0.
+- The early `v1.1.0` git tag refers to specification 1.1.0, not to a package release.
+- "Spec v1.1 error codes" shipped in package version 0.2.0.
+
+## [Unreleased]
+
+### Fixed
+- Removed leaked tool-call transcript text from the tail of 18 files; `compliance-tests/cli.py` and `scripts/publish.py` failed to parse because of it.
+- Reconciled specification version stamps to 1.1.0 (previously 0.1, 1.0.0 and v1.1 in different places).
+
+### Added
+- `node scripts/check-spec.mjs`, run in CI, rejects leaked transcript text and version-stamp drift.
 
 ## [0.3.1] - 2025-12-08
 

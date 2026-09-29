@@ -867,5 +867,4 @@ function UserProfile({ userId }: { userId: string }) {
     </button>
   );
 }
-```</content>
-</xai:function_call">The file has been written successfully.
+```

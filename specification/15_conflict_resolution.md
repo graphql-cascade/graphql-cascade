@@ -913,5 +913,4 @@ function TaskItem({ task }: { task: Task }) {
     </div>
   );
 }
-```</content>
-</xai:function_call">The file has been written successfully.
+```

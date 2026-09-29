@@ -168,5 +168,4 @@ Developer tools for working with GraphQL Cascade, including schema generators, c
 The ecosystem of developers, libraries, and tools built around GraphQL Cascade.
 
 ### Cascade Specification
-This document - the formal definition of GraphQL Cascade protocols, interfaces, and compliance requirements.</content>
-</xai:function_call">The file has been written successfully.
+This document - the formal definition of GraphQL Cascade protocols, interfaces, and compliance requirements.

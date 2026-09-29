@@ -177,5 +177,4 @@ GraphQL Cascade transforms GraphQL development by eliminating the complexity and
 
 ---
 
-*GraphQL Cascade: One mutation. Automatic cache updates. Zero boilerplate.*</content>
-</xai:function_call">The file has been written successfully.
+*GraphQL Cascade: One mutation. Automatic cache updates. Zero boilerplate.*

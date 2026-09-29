@@ -328,6 +328,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - [GraphQL Cascade Specification](https://graphql-cascade.dev)
 - [Documentation](https://graphql-cascade.dev/docs/compliance)
-- [GitHub Repository](https://github.com/graphql-cascade/graphql-cascade)</content>
-</xai:function_call name="run">
-<parameter name="command">mkdir -p compliance-tests/server compliance-tests/client compliance-tests/integration
+- [GitHub Repository](https://github.com/graphql-cascade/graphql-cascade)

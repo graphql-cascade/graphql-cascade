@@ -266,5 +266,4 @@ python scripts/test_docs_coverage.py
 
 ---
 
-*Automation scripts ensure GraphQL Cascade maintains high quality and consistency.*</content>
-</xai:function_call">Scripts/README.md
+*Automation scripts ensure GraphQL Cascade maintains high quality and consistency.*

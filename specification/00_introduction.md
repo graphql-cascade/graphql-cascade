@@ -1,4 +1,4 @@
-# GraphQL Cascade Specification v0.1
+# GraphQL Cascade Specification
 
 ## Introduction
 

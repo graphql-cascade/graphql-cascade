@@ -218,6 +218,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - [GraphQL Cascade Specification](https://graphql-cascade.dev)
 - [Documentation](https://graphql-cascade.dev/docs)
 - [GitHub Repository](https://github.com/graphql-cascade/graphql-cascade)
-- [Issue Tracker](https://github.com/graphql-cascade/graphql-cascade/issues)</content>
-</xai:function_call name="write">
-<parameter name="filePath">reference/server-python/LICENSE
+- [Issue Tracker](https://github.com/graphql-cascade/graphql-cascade/issues)
