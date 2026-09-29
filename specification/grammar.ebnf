@@ -55,6 +55,7 @@ CascadeMetadata ::= '{'
 CascadeError ::= '{'
     '"message"' ':' String ','
     '"code"' ':' CascadeErrorCode ','
+    ( '"domainCode"' ':' ( DomainCode | 'null' ) ',' )?
     '"field"' ':' ( String | 'null' ) ','
     '"path"' ':' StringArray ','
     '"extensions"' ':' ( JSON | 'null' )
@@ -74,6 +75,13 @@ CascadeErrorCode ::= '"VALIDATION_ERROR"'
                    | '"CONFLICT"'
                    | '"INTERNAL_ERROR"'
                    | '"TRANSACTION_FAILED"'
+                   | '"TIMEOUT"'
+                   | '"RATE_LIMITED"'
+                   | '"SERVICE_UNAVAILABLE"'
+
+# Application-defined code: UPPER_SNAKE_CASE segments separated by '.'
+DomainCode ::= '"' DomainCodeSegment ( '.' DomainCodeSegment )* '"'
+DomainCodeSegment ::= UpperLetter ( UpperLetter | Digit | '_' )*
 
 # Array types
 UpdatedEntityArray ::= '[' UpdatedEntityList ']'
@@ -116,6 +124,8 @@ EscapeSequence ::= '\\' ( '"' | '\\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' | 'u' H
 HexDigit ::= Digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 SourceCharacter ::= # Any valid Unicode character
 Digit ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+UpperLetter ::= 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M'
+              | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' | 'Y' | 'Z'
 
 # Abstract types (defined by schema, not grammar)
 MutationPayload ::= JSON  # Schema-defined mutation result

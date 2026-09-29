@@ -321,6 +321,9 @@ CascadeErrorCode ::= '"VALIDATION_ERROR"'
                    | '"CONFLICT"'
                    | '"INTERNAL_ERROR"'
                    | '"TRANSACTION_FAILED"'
+                   | '"TIMEOUT"'
+                   | '"RATE_LIMITED"'
+                   | '"SERVICE_UNAVAILABLE"'
 ```
 
 ## Error Handling
@@ -333,10 +336,14 @@ Structured error information.
 CascadeError ::= '{'
     '"message"' ':' String ','
     '"code"' ':' CascadeErrorCode ','
+    ( '"domainCode"' ':' ( DomainCode | 'null' ) ',' )?
     '"field"' ':' ( String | 'null' ) ','
     '"path"' ':' StringArray ','
     '"extensions"' ':' ( JSON | 'null' )
 '}'
+
+DomainCode ::= '"' DomainCodeSegment ( '.' DomainCodeSegment )* '"'
+DomainCodeSegment ::= UpperLetter ( UpperLetter | Digit | '_' )*
 ```
 
 **Text-based Railroad Diagram:**
@@ -344,7 +351,8 @@ CascadeError ::= '{'
 ┌─────────────────────────────────────────────────────────────┐
 │                      CascadeError                           │
 ├─────────────────────────────────────────────────────────────┤
-│  { "message": String, "code": ErrorCode, "field": String|null, │
+│  { "message": String, "code": ErrorCode,                   │
+│    "domainCode"?: DomainCode|null, "field": String|null,   │
 │    "path": [...], "extensions": JSON|null }                 │
 └─────────────────────────────────────────────────────────────┘
 ```
