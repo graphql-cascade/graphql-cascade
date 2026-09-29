@@ -235,9 +235,13 @@ export const exampleUsage = () => {
               strategy
               scope
             }
+            typeInvalidations {
+              typename
+            }
             metadata {
               timestamp
               affectedCount
+              truncated
             }
           }
         }
