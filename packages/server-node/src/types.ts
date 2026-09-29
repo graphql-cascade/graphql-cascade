@@ -146,6 +146,11 @@ export interface CascadeErrorInfo {
   message: string;
   /** Machine-readable error code */
   code: CascadeErrorCode | string;
+  /**
+   * Application-defined code refining `code`, e.g. "INSUFFICIENT_FUNDS".
+   * UPPER_SNAKE_CASE segments, optionally namespaced with ".".
+   */
+  domainCode?: string;
   /** Field that caused the error (if applicable) */
   field?: string;
   /** Path to the error in the input */

@@ -319,8 +319,14 @@ type CascadeError {
   """Human-readable error message."""
   message: String!
 
-  """Machine-readable error code."""
+  """Machine-readable error category. Drives generic client handling."""
   code: CascadeErrorCode!
+
+  """
+  Application-defined code identifying the specific condition,
+  e.g. "INSUFFICIENT_FUNDS". Refines `code`; never replaces it.
+  """
+  domainCode: String
 
   """Field that caused the error (if applicable)."""
   field: String

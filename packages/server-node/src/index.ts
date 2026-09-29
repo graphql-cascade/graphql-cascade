@@ -20,6 +20,7 @@ export {
   unauthorizedError,
   forbiddenError,
   conflictError,
+  withDomainCode,
 } from "./errors";
 
 // Logging

@@ -321,6 +321,20 @@ const response = buildStreamingSuccessResponse(
 ): CascadeResponse;
 ```
 
+### withDomainCode
+
+Refine a standard error with an application-specific code. `code` still drives generic client handling; `domainCode` identifies the specific condition. Throws if the code is not `UPPER_SNAKE_CASE` segments separated by `.`.
+
+```typescript
+import { conflictError, withDomainCode } from '@graphql-cascade/server';
+
+const error = withDomainCode(
+  conflictError('Your balance is too low', 'amount'),
+  'INSUFFICIENT_FUNDS'
+);
+// { message, code: 'CONFLICT', domainCode: 'INSUFFICIENT_FUNDS', field: 'amount' }
+```
+
 ### trackCascade
 
 Creates a cascade transaction context manager.
@@ -445,8 +459,10 @@ interface CascadeMetadata {
 interface CascadeError {
   /** Error message */
   message: string;
-  /** Error code */
+  /** Standard error category (CascadeErrorCode) */
   code: string;
+  /** Application-defined code refining `code`, e.g. "INSUFFICIENT_FUNDS" */
+  domainCode?: string;
   /** Field that caused the error */
   field?: string;
   /** Path to the error */

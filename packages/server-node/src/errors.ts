@@ -227,3 +227,28 @@ export function conflictError(
     extensions,
   };
 }
+
+const DOMAIN_CODE_PATTERN = /^[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*$/;
+
+/**
+ * Refine a standard cascade error with an application-specific domain code.
+ *
+ * `code` keeps driving generic client handling (retry, auth, field errors);
+ * `domainCode` lets clients react to the specific business condition.
+ *
+ * @example
+ * withDomainCode(conflictError("Insufficient funds"), "INSUFFICIENT_FUNDS")
+ */
+export function withDomainCode(
+  error: CascadeErrorInfo,
+  domainCode: string,
+): CascadeErrorInfo {
+  if (!DOMAIN_CODE_PATTERN.test(domainCode)) {
+    throw new CascadeError(
+      `Invalid domain code "${domainCode}": expected UPPER_SNAKE_CASE segments separated by "."`,
+      "INVALID_DOMAIN_CODE",
+      'For example "INSUFFICIENT_FUNDS" or "BILLING.INSUFFICIENT_FUNDS".',
+    );
+  }
+  return { ...error, domainCode };
+}

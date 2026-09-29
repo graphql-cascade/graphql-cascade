@@ -187,4 +187,70 @@ describe("validateResponse", () => {
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
   });
+
+  describe("errors", () => {
+    const withErrors = (errors: unknown) => ({
+      success: false,
+      errors,
+      cascade: {
+        updated: [],
+        deleted: [],
+        invalidations: [],
+        metadata: { timestamp: Date.now() },
+      },
+    });
+
+    it("accepts a standard code with a well-formed domainCode", () => {
+      const result = validateResponse(
+        withErrors([
+          {
+            message: "Insufficient funds",
+            code: "CONFLICT",
+            domainCode: "BILLING.INSUFFICIENT_FUNDS",
+          },
+        ]),
+      );
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("accepts null errors", () => {
+      expect(validateResponse(withErrors(null)).valid).toBe(true);
+    });
+
+    it("rejects errors that are not an array", () => {
+      expect(validateResponse(withErrors({})).errors).toContainEqual({
+        code: "INVALID_ERRORS",
+        message: "errors must be an array or null",
+        path: "errors",
+      });
+    });
+
+    it("rejects codes outside the standard CascadeErrorCode set", () => {
+      expect(
+        validateResponse(
+          withErrors([{ message: "No funds", code: "INSUFFICIENT_FUNDS" }]),
+        ).errors,
+      ).toContainEqual({
+        code: "INVALID_ERROR_CODE",
+        message:
+          'code "INSUFFICIENT_FUNDS" is not a standard CascadeErrorCode; use domainCode for application-specific codes',
+        path: "errors[0].code",
+      });
+    });
+
+    it.each(["insufficient_funds", "BILLING..FUNDS", "1FUNDS", ""])(
+      "rejects malformed domainCode %p",
+      (domainCode) => {
+        expect(
+          validateResponse(
+            withErrors([{ message: "x", code: "CONFLICT", domainCode }]),
+          ).errors,
+        ).toContainEqual({
+          code: "INVALID_DOMAIN_CODE",
+          message: `domainCode "${domainCode}" must be UPPER_SNAKE_CASE segments separated by "."`,
+          path: "errors[0].domainCode",
+        });
+      },
+    );
+  });
 });

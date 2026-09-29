@@ -10,7 +10,7 @@ import {
   calculateRetryDelay,
   shouldRetry,
 } from "./errors";
-import { CascadeErrorCode } from "./types";
+import { CascadeError, CascadeErrorCode } from "./types";
 
 describe("Error Classification", () => {
   describe("isRetryableError", () => {
@@ -234,5 +234,17 @@ describe("Retry Logic", () => {
       expect(shouldRetry(error, 2)).toBe(true);
       expect(shouldRetry(error, 3)).toBe(false);
     });
+  });
+});
+
+describe("domain codes", () => {
+  it("do not change generic handling, which is driven by code", () => {
+    const error: CascadeError = {
+      message: "Account locked",
+      code: CascadeErrorCode.FORBIDDEN,
+      domainCode: "ACCOUNT_LOCKED",
+    };
+    expect(isAuthError(error)).toBe(true);
+    expect(isRetryableError(error)).toBe(false);
   });
 });

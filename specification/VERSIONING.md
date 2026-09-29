@@ -276,6 +276,16 @@ All specification changes MUST be documented in CHANGELOG.md following this form
 
 ## Appendix: Version History
 
+### Unreleased (1.2.0)
+
+#### Changes
+- Added optional `CascadeError.domainCode` for application-specific error conditions; `code` stays a closed set of categories
+- Clients MUST treat unrecognized `code` values as `INTERNAL_ERROR`, so later minor versions can add codes
+- Asynchronous mutations: the cascade describes only committed changes, and a persisted job entity appears in `cascade.updated`
+
+#### Backward Compatibility
+Fully backward compatible. All changes are additive.
+
 ### v1.1.0 (2025-12-04)
 
 #### Changes

@@ -65,7 +65,14 @@ export enum CascadeOperation {
  */
 export interface CascadeError {
   message: string;
+  /**
+   * Standard category driving generic handling (retry, auth, field errors).
+   * Treat values not in CascadeErrorCode as INTERNAL_ERROR: later
+   * specification versions may add codes.
+   */
   code: CascadeErrorCode;
+  /** Application-defined code refining `code`, e.g. "INSUFFICIENT_FUNDS". */
+  domainCode?: string;
   field?: string;
   path?: string[];
   extensions?: Record<string, unknown>;

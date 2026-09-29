@@ -230,42 +230,7 @@ type QueryInvalidation {
 
 ## Error Handling
 
-### CascadeError
-Structured error information:
-
-```graphql
-type CascadeError {
-  """Human-readable error message."""
-  message: String!
-
-  """Machine-readable error code."""
-  code: CascadeErrorCode!
-
-  """Field that caused the error (if applicable)."""
-  field: String
-
-  """Path to the error in the input."""
-  path: [String!]
-
-  """Additional error metadata."""
-  extensions: JSON
-}
-```
-
-### Error Codes
-Standard error codes for consistent error handling:
-
-```graphql
-enum CascadeErrorCode {
-  VALIDATION_ERROR
-  NOT_FOUND
-  UNAUTHORIZED
-  FORBIDDEN
-  CONFLICT
-  INTERNAL_ERROR
-  TRANSACTION_FAILED
-}
-```
+Errors are reported as `CascadeError` objects. Each error carries a `code` from the closed `CascadeErrorCode` set, which drives generic client handling, and an optional application-defined `domainCode` for the specific condition. The normative definitions, error code selection guidelines and forward-compatibility rules are in [Mutation Responses](04_mutation_responses.md#error-handling).
 
 ## Cascade Depth Control
 
