@@ -1,5 +1,33 @@
 import { DocumentNode } from "graphql";
-import { CascadeCache, CascadeResponse, InvalidationStrategy } from "./types";
+import {
+  CascadeCache,
+  CascadeResponse,
+  InvalidationScope,
+  InvalidationStrategy,
+  TypeInvalidation,
+} from "./types";
+
+/**
+ * Apply type invalidations to a cache. Uses the cache's `invalidateType`
+ * when available; otherwise invalidates every query once, which is always
+ * correct, only less precise.
+ */
+export function applyTypeInvalidations(
+  cache: CascadeCache,
+  typeInvalidations: TypeInvalidation[] = [],
+): void {
+  if (typeInvalidations.length === 0) return;
+  if (cache.invalidateType) {
+    for (const { typename } of typeInvalidations) {
+      cache.invalidateType(typename);
+    }
+    return;
+  }
+  cache.invalidate({
+    strategy: InvalidationStrategy.INVALIDATE,
+    scope: InvalidationScope.ALL,
+  });
+}
 
 /**
  * Generic GraphQL Cascade client.
@@ -52,6 +80,9 @@ export class CascadeClient {
           break;
       }
     });
+
+    // 5. Invalidate types whose entities were not listed individually
+    applyTypeInvalidations(this.cache, cascade.typeInvalidations);
   }
 
   /**

@@ -22,12 +22,12 @@ Cascade operations MUST be memory-efficient:
 
 ### Response Size Constraints
 
-Cascade responses MUST be bounded to prevent network issues:
+Cascade responses MUST be bounded to prevent network issues. Limits are configurable; RECOMMENDED defaults:
 
 - **Maximum Updated Entities**: 500 entities per cascade
 - **Maximum Deleted Entities**: 100 entities per cascade
 - **Maximum Response Size**: 5MB total JSON payload
-- **Automatic Truncation**: Reduce depth or paginate when limits exceeded
+- **Truncation**: Move whole types into `typeInvalidations` and set `metadata.truncated` (see [Cascade Size Limits and Truncation](04_mutation_responses.md#cascade-size-limits-and-truncation))
 
 ## Performance Benchmarks
 
@@ -256,48 +256,9 @@ class CompressedCascadeResponse:
         }
 ```
 
-#### Pagination for Large Cascades
-```python
-class PaginatedCascadeBuilder:
-    def __init__(self, max_entities_per_page=100):
-        self.max_entities_per_page = max_entities_per_page
+#### Large Cascades
 
-    def build_paginated_response(self, cascade_data):
-        """Build paginated cascade response for large datasets."""
-
-        updated_pages = self._paginate_entities(
-            cascade_data['updated'],
-            'updated'
-        )
-
-        deleted_pages = self._paginate_entities(
-            cascade_data['deleted'],
-            'deleted'
-        )
-
-        return {
-            'pages': updated_pages + deleted_pages,
-            'total_pages': len(updated_pages) + len(deleted_pages),
-            'has_next_page': len(updated_pages) + len(deleted_pages) > 1,
-            'invalidations': cascade_data['invalidations'],
-            'metadata': cascade_data['metadata']
-        }
-
-    def _paginate_entities(self, entities, entity_type):
-        """Paginate a list of entities."""
-        pages = []
-
-        for i in range(0, len(entities), self.max_entities_per_page):
-            page_entities = entities[i:i + self.max_entities_per_page]
-            pages.append({
-                'type': entity_type,
-                'entities': page_entities,
-                'page': len(pages) + 1,
-                'has_next_page': i + self.max_entities_per_page < len(entities)
-            })
-
-        return pages
-```
+Cascades are not paginated: a paginated cascade could leave the client's cache inconsistent between pages. A cascade that exceeds its limits is truncated into type invalidations instead (see [Cascade Size Limits and Truncation](04_mutation_responses.md#cascade-size-limits-and-truncation)). Servers whose read model is maintained by the database can compute the exact fan-out before building the response and decide cheaply (see [Appendix G](appendices/G_database_derived_tracking.md)).
 
 ## Monitoring and Alerting
 

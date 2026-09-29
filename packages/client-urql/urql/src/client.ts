@@ -14,6 +14,7 @@ import {
   CascadeOperation,
   InvalidationStrategy,
 } from "./types";
+import { applyTypeInvalidations } from "@graphql-cascade/client";
 import { extractCascadeData } from "./exchange";
 
 /**
@@ -207,6 +208,14 @@ export class URQLCascadeClient {
           break;
       }
     }
+
+    // Invalidate types whose entities were not listed individually
+    applyTypeInvalidations(
+      this.cache,
+      cascade.typeInvalidations?.filter(
+        ({ typename }) => !this.config.excludeTypes.includes(typename),
+      ),
+    );
   }
 
   /**

@@ -603,9 +603,9 @@ describe("CascadeTracker", () => {
       limitedTracker.trackUpdate(entities[0]);
 
       const result = limitedTracker.endTransaction();
-      // Should only track up to the limit
+      // Tracks up to the limit and records the type of what it had to drop
       expect(result.updated).toHaveLength(5);
-      expect(result.metadata.truncatedUpdated).toBe(true);
+      expect(result.overflow).toEqual({ MockEntity: 1 });
     });
 
     it("should handle concurrent tracking operations", async () => {

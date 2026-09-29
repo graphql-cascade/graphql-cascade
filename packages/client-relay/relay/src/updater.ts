@@ -17,6 +17,7 @@ import { CascadeStoreUpdater } from "./types";
  * - Updated entities: writes new data to the store
  * - Deleted entities: removes records from the store
  * - Invalidations: marks records as stale via invalidateRecord()
+ * - Type invalidations: marks the whole store stale via invalidateStore()
  */
 export function createCascadeUpdater(
   cascade: CascadeUpdates,
@@ -38,6 +39,12 @@ export function createCascadeUpdater(
     cascade.invalidations.forEach((invalidation) => {
       applyInvalidation(store, invalidation);
     });
+
+    // Relay cannot enumerate records by type, so a type invalidation marks
+    // every query stale; each refetches on its next read.
+    if (cascade.typeInvalidations?.length) {
+      store.invalidateStore();
+    }
   };
 }
 

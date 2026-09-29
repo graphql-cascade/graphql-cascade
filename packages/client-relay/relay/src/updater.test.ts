@@ -16,7 +16,37 @@ describe("createCascadeUpdater", () => {
       get: jest.fn().mockReturnValue(null), // Default to null, will be overridden in specific tests
       create: jest.fn(() => mockRecord),
       delete: jest.fn(),
+      invalidateStore: jest.fn(),
     };
+  });
+
+  describe("type invalidations", () => {
+    const cascadeWith = (
+      typeInvalidations?: CascadeUpdates["typeInvalidations"],
+    ): CascadeUpdates => ({
+      updated: [],
+      deleted: [],
+      invalidations: [],
+      typeInvalidations,
+      metadata: {
+        timestamp: "2024-01-01T00:00:00Z",
+        depth: 0,
+        affectedCount: 0,
+      },
+    });
+
+    it("invalidates the whole store, since Relay cannot target records by type", () => {
+      createCascadeUpdater(cascadeWith([{ typename: "Post" }]))(mockStoreProxy);
+
+      expect(mockStoreProxy.invalidateStore).toHaveBeenCalledTimes(1);
+    });
+
+    it("leaves the store alone when there are none", () => {
+      createCascadeUpdater(cascadeWith(undefined))(mockStoreProxy);
+      createCascadeUpdater(cascadeWith([]))(mockStoreProxy);
+
+      expect(mockStoreProxy.invalidateStore).not.toHaveBeenCalled();
+    });
   });
 
   describe("entity updates", () => {

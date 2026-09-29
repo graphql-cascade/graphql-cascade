@@ -22,8 +22,12 @@
     },
     "affectedCount": {
       "type": "integer",
-      "description": "Total number of entities affected",
+      "description": "Total number of entities affected, including those covered by type invalidations",
       "minimum": 0
+    },
+    "truncated": {
+      "type": "boolean",
+      "description": "Whether limits forced entities or invalidation hints out of the response; everything omitted is covered by typeInvalidations. Added in specification 1.2."
     }
   },
   "examples": [

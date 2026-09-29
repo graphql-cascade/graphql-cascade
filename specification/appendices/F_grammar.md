@@ -63,6 +63,7 @@ CascadeUpdates ::= '{'
     '"updated"' ':' UpdatedEntityArray ','
     '"deleted"' ':' DeletedEntityArray ','
     '"invalidations"' ':' QueryInvalidationArray ','
+    '"typeInvalidations"' ':' TypeInvalidationArray ','
     '"metadata"' ':' CascadeMetadata
 '}'
 ```
@@ -72,7 +73,8 @@ CascadeUpdates ::= '{'
 ┌─────────────────────────────────────────────────────────────┐
 │                     CascadeUpdates                          │
 ├─────────────────────────────────────────────────────────────┤
-│  { "updated": [...], "deleted": [...], "invalidations": [...], "metadata": ... } │
+│  { "updated": [...], "deleted": [...], "invalidations": [...], │
+│    "typeInvalidations": [...], "metadata": ... }            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -198,7 +200,8 @@ CascadeMetadata ::= '{'
     '"timestamp"' ':' DateTime ','
     '"transactionId"' ':' ( ID | 'null' ) ','
     '"depth"' ':' Int ','
-    '"affectedCount"' ':' Int
+    '"affectedCount"' ':' Int ','
+    '"truncated"' ':' Boolean
 '}'
 ```
 
@@ -208,7 +211,7 @@ CascadeMetadata ::= '{'
 │                     CascadeMetadata                         │
 ├─────────────────────────────────────────────────────────────┤
 │  { "timestamp": DateTime, "transactionId": ID|null,        │
-│    "depth": Int, "affectedCount": Int }                    │
+│    "depth": Int, "affectedCount": Int, "truncated": Bool } │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -218,7 +221,27 @@ CascadeMetadata ::= '{'
   "timestamp": "2024-01-15T10:30:00Z",
   "transactionId": "txn_abc123",
   "depth": 2,
-  "affectedCount": 5
+  "affectedCount": 5,
+  "truncated": false
+}
+```
+
+### TypeInvalidation
+
+Marks every cached entity of a type, and every cached query that may contain one, as stale.
+
+```
+TypeInvalidation ::= '{'
+    '"typename"' ':' String ','
+    '"affectedCount"' ':' ( Int | 'null' )
+'}'
+```
+
+**Example:**
+```json
+{
+  "typename": "Post",
+  "affectedCount": 800
 }
 ```
 

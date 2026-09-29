@@ -90,6 +90,13 @@ type CascadeUpdates {
   """Query invalidation hints for cache management."""
   invalidations: [QueryInvalidation!]!
 
+  """
+  Types whose affected entities are not listed individually.
+  Clients treat every cached entity of each type, and every cached
+  query that may contain one, as stale.
+  """
+  typeInvalidations: [TypeInvalidation!]!
+
   """Metadata about the cascade."""
   metadata: CascadeMetadata!
 }
@@ -155,8 +162,17 @@ type CascadeMetadata {
   """Maximum relationship depth traversed."""
   depth: Int!
 
-  """Total number of entities affected."""
+  """
+  Total number of entities affected, including those covered by
+  type invalidations.
+  """
   affectedCount: Int!
+
+  """
+  Whether limits forced entities or invalidation hints out of this
+  response. Everything omitted is covered by typeInvalidations.
+  """
+  truncated: Boolean!
 }
 ```
 
@@ -261,16 +277,14 @@ cascade:
 - No dirty reads or inconsistent state
 
 ### Consistency
-- Cascade includes all entities affected by the transaction
-- No entities are missing from the cascade
+- Every affected entity is either listed in the cascade or covered by a type invalidation ([Cascade Completeness](04_mutation_responses.md#cascade-completeness))
+- No entities are silently omitted
 - Related entities reflect the state after the mutation
 
 ## Performance Considerations
 
 ### Response Size Limits
-- Maximum 500 updated entities per cascade
-- Maximum 5MB total response size
-- Servers MAY truncate cascades that exceed limits
+Servers enforce configurable limits on cascade size (RECOMMENDED defaults: 500 updated entities, 100 deleted entities, 5 MB). When a cascade exceeds a limit, whole types move from the entity lists into `typeInvalidations` and `metadata.truncated` is set, so nothing is lost. See [Cascade Size Limits and Truncation](04_mutation_responses.md#cascade-size-limits-and-truncation).
 
 ### Memory Efficiency
 - Stream entity processing rather than loading all in memory

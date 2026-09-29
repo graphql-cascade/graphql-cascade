@@ -34,6 +34,7 @@ const createCascadeUpdates = (
   updated: options.updated ?? [],
   deleted: options.deleted ?? [],
   invalidations: options.invalidations ?? [],
+  typeInvalidations: options.typeInvalidations,
   metadata: options.metadata ?? {
     timestamp: new Date().toISOString(),
     depth: 1,
@@ -229,6 +230,33 @@ describe("URQLCascadeClient", () => {
 
       expect(result.error).toBe(validationError);
       expect(result.data).toBeNull();
+    });
+  });
+
+  describe("applyCascade", () => {
+    it("marks cached queries stale for type invalidations", () => {
+      cache.storeQuery("listPosts", undefined, [
+        { __typename: "Post", id: "1" },
+      ]);
+
+      client.applyCascade(
+        createCascadeUpdates({ typeInvalidations: [{ typename: "Post" }] }),
+      );
+
+      expect(cache.getQuery("listPosts")?.isStale).toBe(true);
+    });
+
+    it("ignores type invalidations for excluded types", () => {
+      const excluding = new URQLCascadeClient(mockClient, cache, {
+        excludeTypes: ["AuditLog"],
+      });
+      cache.storeQuery("listPosts", undefined, []);
+
+      excluding.applyCascade(
+        createCascadeUpdates({ typeInvalidations: [{ typename: "AuditLog" }] }),
+      );
+
+      expect(cache.getQuery("listPosts")?.isStale).toBe(false);
     });
   });
 

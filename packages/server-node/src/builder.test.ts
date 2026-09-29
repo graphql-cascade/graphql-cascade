@@ -142,171 +142,193 @@ describe("CascadeBuilder", () => {
     });
   });
 
-  describe("Size Limits and Truncation", () => {
-    it("should truncate updated entities when exceeding maxUpdatedEntities", () => {
-      const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
-        maxUpdatedEntities: 2,
-      });
-
-      tracker.startTransaction();
-      for (let i = 1; i <= 5; i++) {
-        tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
+  describe("Size limits collapse into type invalidations", () => {
+    const track = (
+      entries: Array<[typename: string, count: number]>,
+      operation: "update" | "delete" = "update",
+    ) => {
+      for (const [typename, count] of entries) {
+        for (let i = 1; i <= count; i++) {
+          if (operation === "update") {
+            tracker.trackUpdate(
+              new MockEntity(i, `${typename} ${i}`, typename),
+            );
+          } else {
+            tracker.trackDelete(typename, i);
+          }
+        }
       }
+    };
+
+    it("reports no truncation when every entity fits", () => {
+      tracker.startTransaction();
+      track([["Post", 2]]);
+
+      const response = builder.buildResponse();
+
+      expect(response.cascade.typeInvalidations).toEqual([]);
+      expect(response.cascade.metadata.truncated).toBe(false);
+    });
+
+    it("collapses the largest type when updated entities exceed the limit", () => {
+      const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
+        maxUpdatedEntities: 3,
+      });
+      tracker.startTransaction();
+      track([
+        ["Post", 5],
+        ["Author", 1],
+      ]);
 
       const response = limitedBuilder.buildResponse();
 
-      expect(response.cascade.updated).toHaveLength(2);
-      expect(response.cascade.metadata.truncatedUpdated).toBe(true);
+      expect(response.cascade.updated.map((e) => e.__typename)).toEqual([
+        "Author",
+      ]);
+      expect(response.cascade.typeInvalidations).toEqual([
+        { typename: "Post", affectedCount: 5 },
+      ]);
+      expect(response.cascade.metadata.truncated).toBe(true);
     });
 
-    it("should truncate deleted entities when exceeding maxDeletedEntities", () => {
+    it("collapses deleted entities by type, breaking ties by name", () => {
       const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
         maxDeletedEntities: 1,
       });
-
       tracker.startTransaction();
-      tracker.trackDelete("Type1", 1);
-      tracker.trackDelete("Type2", 2);
-      tracker.trackDelete("Type3", 3);
+      track(
+        [
+          ["Type3", 1],
+          ["Type1", 1],
+          ["Type2", 1],
+        ],
+        "delete",
+      );
 
       const response = limitedBuilder.buildResponse();
 
-      expect(response.cascade.deleted).toHaveLength(1);
-      expect(response.cascade.metadata.truncatedDeleted).toBe(true);
+      expect(response.cascade.deleted.map((e) => e.__typename)).toEqual([
+        "Type3",
+      ]);
+      expect(response.cascade.typeInvalidations).toEqual([
+        { typename: "Type1", affectedCount: 1 },
+        { typename: "Type2", affectedCount: 1 },
+      ]);
     });
 
-    it("should truncate invalidations when exceeding maxInvalidations", () => {
-      const mockInvalidatorWithMany = {
-        computeInvalidations: () =>
-          Array(10).fill({
-            __typename: "Invalidation",
-            reason: "test",
-          }),
-      };
-
-      const limitedBuilder = new CascadeBuilder(
-        tracker,
-        mockInvalidatorWithMany,
-        {
-          maxInvalidations: 3,
-        },
-      );
-
+    it("removes every entity of a collapsed type from both lists", () => {
+      const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
+        maxUpdatedEntities: 2,
+      });
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, "Test"));
+      track([["Post", 3]]);
+      tracker.trackDelete("Post", 99);
+      track([["Author", 1]]);
+
+      const response = limitedBuilder.buildResponse();
+
+      expect(response.cascade.updated.map((e) => e.__typename)).toEqual([
+        "Author",
+      ]);
+      expect(response.cascade.deleted).toEqual([]);
+      expect(response.cascade.typeInvalidations).toEqual([
+        { typename: "Post", affectedCount: 4 },
+      ]);
+    });
+
+    it("collapses types until the estimated size fits", () => {
+      const sizeLimitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
+        maxResponseSizeMb: 0.1, // ~100 entities at the 1KB estimate
+      });
+      tracker.startTransaction();
+      track([
+        ["Post", 200],
+        ["Author", 10],
+      ]);
+
+      const response = sizeLimitedBuilder.buildResponse();
+
+      expect(response.cascade.updated).toHaveLength(10);
+      expect(response.cascade.typeInvalidations).toEqual([
+        { typename: "Post", affectedCount: 200 },
+      ]);
+      expect(response.cascade.metadata.truncated).toBe(true);
+    });
+
+    it("applies the default limit of 500 updated entities", () => {
+      const defaultBuilder = new CascadeBuilder(tracker, mockInvalidator, {
+        maxResponseSizeMb: 10,
+      });
+      tracker.startTransaction();
+      track([
+        ["Post", 600],
+        ["Author", 1],
+      ]);
+
+      const response = defaultBuilder.buildResponse();
+
+      expect(response.cascade.updated).toHaveLength(1);
+      expect(response.cascade.typeInvalidations).toEqual([
+        { typename: "Post", affectedCount: 600 },
+      ]);
+    });
+
+    it("covers dropped invalidation hints with invalidations of every changed type", () => {
+      const manyHints = {
+        computeInvalidations: () =>
+          Array.from({ length: 10 }, (_, i) => ({
+            __typename: "Post",
+            id: String(i),
+            reason: "updated",
+          })),
+      };
+      const limitedBuilder = new CascadeBuilder(tracker, manyHints, {
+        maxInvalidations: 3,
+      });
+      tracker.startTransaction();
+      track([
+        ["Post", 2],
+        ["Author", 1],
+      ]);
 
       const response = limitedBuilder.buildResponse();
 
       expect(response.cascade.invalidations).toHaveLength(3);
-      // Invalidations are sliced in buildResponse, not truncated in applySizeLimits
-      expect(response.cascade.metadata.truncatedInvalidations).toBeUndefined();
+      expect(response.cascade.typeInvalidations).toEqual([
+        { typename: "Author", affectedCount: 1 },
+        { typename: "Post", affectedCount: 2 },
+      ]);
+      expect(response.cascade.metadata.truncated).toBe(true);
     });
 
-    it("should truncate response when exceeding size limit", () => {
-      // Create a very large response by setting low size limit
-      const sizeLimitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
-        maxResponseSizeMb: 0.001, // Very small limit
+    it("turns entities dropped by the tracker limit into type invalidations", () => {
+      const smallTracker = new CascadeTracker({
+        maxEntities: 2,
+        enableRelationshipTracking: false,
       });
+      smallTracker.startTransaction();
+      smallTracker.trackUpdate(new MockEntity(1, "Author 1", "Author"));
+      smallTracker.trackUpdate(new MockEntity(1, "Post 1", "Post"));
+      smallTracker.trackUpdate(new MockEntity(2, "Post 2", "Post"));
+      smallTracker.trackUpdate(new MockEntity(3, "Post 3", "Post"));
 
-      tracker.startTransaction();
-      // Add many entities to exceed size (need > 100 total entities for truncation)
-      for (let i = 1; i <= 60; i++) {
-        tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
-      }
-      for (let i = 1; i <= 60; i++) {
-        tracker.trackDelete("DeletedType", i);
-      }
+      const response = new CascadeBuilder(smallTracker).buildResponse();
 
-      const response = sizeLimitedBuilder.buildResponse();
-
-      expect(response.cascade.updated.length).toBeLessThanOrEqual(50);
-      expect(response.cascade.deleted.length).toBeLessThanOrEqual(50);
-      expect(response.cascade.metadata.truncatedSize).toBe(true);
+      expect(response.cascade.updated.map((e) => e.__typename)).toEqual([
+        "Author",
+      ]);
+      expect(response.cascade.typeInvalidations).toEqual([
+        { typename: "Post", affectedCount: 3 },
+      ]);
+      expect(response.cascade.metadata.truncated).toBe(true);
+      expect(response.cascade.metadata.affectedCount).toBe(4);
     });
 
-    it("should apply size limits correctly when both entity and size limits are hit", () => {
-      const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
-        maxUpdatedEntities: 200, // High limit so size limit is hit first
-        maxResponseSizeMb: 0.001,
-      });
+    it("never reports truncation on error responses", () => {
+      const response = builder.buildErrorResponse([]);
 
-      tracker.startTransaction();
-      // Add enough entities to trigger size truncation (> 100 total)
-      for (let i = 1; i <= 60; i++) {
-        tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
-      }
-      for (let i = 1; i <= 60; i++) {
-        tracker.trackDelete("DeletedType", i);
-      }
-
-      const response = limitedBuilder.buildResponse();
-
-      // Should be truncated to 50 of each due to size limit
-      expect(response.cascade.updated.length).toBe(50);
-      expect(response.cascade.deleted.length).toBe(50);
-      expect(response.cascade.metadata.truncatedSize).toBe(true);
-    });
-
-    it("should truncate at default 500 entities limit", () => {
-      // Use default builder (500 entities limit)
-      const defaultBuilder = new CascadeBuilder(tracker, mockInvalidator);
-
-      tracker.startTransaction();
-      // Add 600 entities to exceed default limit
-      for (let i = 1; i <= 600; i++) {
-        tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
-      }
-
-      const response = defaultBuilder.buildResponse();
-
-      // Should be truncated to 500 entities
-      expect(response.cascade.updated.length).toBe(500);
-      expect(response.cascade.metadata.truncatedUpdated).toBe(true);
-    });
-
-    it("should truncate at default 5MB size limit", () => {
-      // Use builder with lower size limit to trigger truncation
-      const sizeLimitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
-        maxResponseSizeMb: 0.1, // 100KB limit
-      });
-
-      tracker.startTransaction();
-      // Add many entities to exceed size limit
-      // With 1KB per entity estimate, 200 entities = 200KB > 100KB
-      for (let i = 1; i <= 200; i++) {
-        tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
-      }
-
-      const response = sizeLimitedBuilder.buildResponse();
-
-      // Should be truncated due to size limit
-      expect(response.cascade.updated.length).toBeLessThanOrEqual(50);
-      expect(response.cascade.metadata.truncatedSize).toBe(true);
-    });
-
-    it("should include truncation metadata in response", () => {
-      const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
-        maxUpdatedEntities: 1000, // High limit so size limit triggers first
-        maxDeletedEntities: 1000,
-        maxInvalidations: 1,
-        maxResponseSizeMb: 0.001, // 1KB limit
-      });
-
-      tracker.startTransaction();
-      // Add entities to trigger size truncation
-      for (let i = 1; i <= 60; i++) {
-        tracker.trackUpdate(new MockEntity(i, `Entity ${i}`));
-      }
-      for (let i = 1; i <= 60; i++) {
-        tracker.trackDelete("DeletedType", i);
-      }
-
-      const response = limitedBuilder.buildResponse();
-
-      // Check truncation metadata - size truncation should happen
-      expect(response.cascade.metadata.truncatedSize).toBe(true);
-      // Note: entity truncation flags won't be set since limits are high
-      // Note: invalidations truncation is not flagged in metadata currently
+      expect(response.cascade.typeInvalidations).toEqual([]);
+      expect(response.cascade.metadata.truncated).toBe(false);
     });
   });
 
@@ -366,7 +388,7 @@ describe("CascadeBuilder", () => {
       expect(response.cascade.metadata.affectedCount).toBe(2);
     });
 
-    it("should truncate streaming response when exceeding limits", () => {
+    it("collapses overflowing types when streaming updated entities", () => {
       const limitedStreamingBuilder = new StreamingCascadeBuilder(
         tracker,
         mockInvalidator,
@@ -376,13 +398,19 @@ describe("CascadeBuilder", () => {
       );
 
       tracker.startTransaction();
-      tracker.trackUpdate(new MockEntity(1, "Entity 1"));
-      tracker.trackUpdate(new MockEntity(2, "Entity 2"));
+      tracker.trackUpdate(new MockEntity(1, "Author 1", "Author"));
+      tracker.trackUpdate(new MockEntity(1, "Post 1", "Post"));
+      tracker.trackUpdate(new MockEntity(2, "Post 2", "Post"));
 
       const response = limitedStreamingBuilder.buildStreamingResponse();
 
-      expect(response.cascade.updated).toHaveLength(1);
-      expect(response.cascade.metadata.truncatedUpdated).toBe(true);
+      expect(response.cascade.updated.map((e) => e.__typename)).toEqual([
+        "Author",
+      ]);
+      expect(response.cascade.typeInvalidations).toEqual([
+        { typename: "Post", affectedCount: 2 },
+      ]);
+      expect(response.cascade.metadata.truncated).toBe(true);
     });
 
     it("should handle serialization errors in streaming mode", () => {
@@ -546,7 +574,7 @@ describe("CascadeBuilder", () => {
       expect(response.cascade.metadata.constructionTime).toBeLessThan(10);
     });
 
-    it("should include truncation flags in metadata when limits are hit", () => {
+    it("should flag truncation in metadata when limits are hit", () => {
       const limitedBuilder = new CascadeBuilder(tracker, mockInvalidator, {
         maxUpdatedEntities: 0,
       });
@@ -556,7 +584,8 @@ describe("CascadeBuilder", () => {
 
       const response = limitedBuilder.buildResponse();
 
-      expect(response.cascade.metadata.truncatedUpdated).toBe(true);
+      expect(response.cascade.updated).toEqual([]);
+      expect(response.cascade.metadata.truncated).toBe(true);
     });
   });
 
@@ -888,8 +917,13 @@ describe("CascadeBuilder", () => {
 
       const response = limitedStreamingBuilder.buildStreamingResponse();
 
-      expect(response.cascade.deleted).toHaveLength(1);
-      expect(response.cascade.metadata.truncatedDeleted).toBe(true);
+      expect(response.cascade.deleted.map((e) => e.__typename)).toEqual([
+        "Type1",
+      ]);
+      expect(response.cascade.typeInvalidations).toEqual([
+        { typename: "Type2", affectedCount: 1 },
+      ]);
+      expect(response.cascade.metadata.truncated).toBe(true);
     });
 
     it("should filter timing metadata when disabled", () => {

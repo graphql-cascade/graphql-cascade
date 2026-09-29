@@ -100,6 +100,8 @@ export class CascadeTracker implements EntityChangeIterator {
   public currentDepth: number = 0;
   private maxDepthReached: number = 0;
   private entityLimitReached: boolean = false;
+  private overflowKeys: Set<string> = new Set();
+  private overflowByType: Map<string, number> = new Map();
   private serializationErrorCount: number = 0;
 
   // Performance tracking
@@ -142,6 +144,8 @@ export class CascadeTracker implements EntityChangeIterator {
     this.currentDepth = 0;
     this.maxDepthReached = 0;
     this.entityLimitReached = false;
+    this.overflowKeys.clear();
+    this.overflowByType.clear();
     this.serializationErrorCount = 0;
   }
 
@@ -241,15 +245,16 @@ export class CascadeTracker implements EntityChangeIterator {
       transactionId: this.transactionId,
       timestamp: new Date().toISOString(),
       depth: this.maxDepthReached,
-      affectedCount: this.updatedEntities.size + this.deletedEntities.size,
+      affectedCount: this.affectedCount(),
       trackingTime,
-      truncatedUpdated: wasLimitReached,
+      truncated: this.overflowByType.size > 0,
       serializationErrors: errorCount > 0 ? errorCount : undefined,
     };
 
     const cascadeData = {
       updated: updatedEntities,
       deleted: deletedEntities,
+      overflow: Object.fromEntries(this.overflowByType),
       metadata,
     };
 
@@ -258,7 +263,7 @@ export class CascadeTracker implements EntityChangeIterator {
     this.metrics?.histogram("trackingTimeMs", trackingTime);
     this.metrics?.histogram("cascadeSize", cascadeSize);
     if (wasLimitReached) {
-      this.metrics?.increment("entitiesTruncated");
+      this.metrics?.increment("entitiesTruncated", this.droppedCount());
     }
     this.activeTransactionCount = Math.max(0, this.activeTransactionCount - 1);
     this.metrics?.gauge("activeTransactions", this.activeTransactionCount);
@@ -305,15 +310,16 @@ export class CascadeTracker implements EntityChangeIterator {
       transactionId: this.transactionId,
       timestamp: new Date().toISOString(),
       depth: this.maxDepthReached,
-      affectedCount: this.updatedEntities.size + this.deletedEntities.size,
+      affectedCount: this.affectedCount(),
       trackingTime,
-      truncatedUpdated: wasLimitReached,
+      truncated: this.overflowByType.size > 0,
       serializationErrors: errorCount > 0 ? errorCount : undefined,
     };
 
     const cascadeData = {
       updated: updatedEntities,
       deleted: deletedEntities,
+      overflow: Object.fromEntries(this.overflowByType),
       metadata,
     };
 
@@ -322,7 +328,7 @@ export class CascadeTracker implements EntityChangeIterator {
     this.metrics?.histogram("trackingTimeMs", trackingTime);
     this.metrics?.histogram("cascadeSize", cascadeSize);
     if (wasLimitReached) {
-      this.metrics?.increment("entitiesTruncated");
+      this.metrics?.increment("entitiesTruncated", this.droppedCount());
     }
     this.activeTransactionCount = Math.max(0, this.activeTransactionCount - 1);
     this.metrics?.gauge("activeTransactions", this.activeTransactionCount);
@@ -356,9 +362,9 @@ export class CascadeTracker implements EntityChangeIterator {
       transactionId: this.transactionId,
       timestamp: new Date().toISOString(),
       depth: this.maxDepthReached,
-      affectedCount: this.updatedEntities.size + this.deletedEntities.size,
+      affectedCount: this.affectedCount(),
       trackingTime,
-      truncatedUpdated: this.entityLimitReached,
+      truncated: this.overflowByType.size > 0,
       serializationErrors:
         this.serializationErrorCount > 0
           ? this.serializationErrorCount
@@ -368,6 +374,7 @@ export class CascadeTracker implements EntityChangeIterator {
     return {
       updated: updatedEntities,
       deleted: deletedEntities,
+      overflow: Object.fromEntries(this.overflowByType),
       metadata,
     };
   }
@@ -389,9 +396,9 @@ export class CascadeTracker implements EntityChangeIterator {
       transactionId: this.transactionId,
       timestamp: new Date().toISOString(),
       depth: this.maxDepthReached,
-      affectedCount: this.updatedEntities.size + this.deletedEntities.size,
+      affectedCount: this.affectedCount(),
       trackingTime,
-      truncatedUpdated: this.entityLimitReached,
+      truncated: this.overflowByType.size > 0,
       serializationErrors:
         this.serializationErrorCount > 0
           ? this.serializationErrorCount
@@ -401,8 +408,16 @@ export class CascadeTracker implements EntityChangeIterator {
     return {
       updated: updatedEntities,
       deleted: deletedEntities,
+      overflow: Object.fromEntries(this.overflowByType),
       metadata,
     };
+  }
+
+  /**
+   * Entities dropped by the `maxEntities` limit so far, counted by type name.
+   */
+  getOverflow(): Record<string, number> {
+    return Object.fromEntries(this.overflowByType);
   }
 
   /**
@@ -453,6 +468,9 @@ export class CascadeTracker implements EntityChangeIterator {
 
     // Remove from updated if it was there
     this.updatedEntities.delete(key);
+    if (this.overflowKeys.delete(key)) {
+      this.decrementOverflow(typename);
+    }
   }
 
   /**
@@ -462,20 +480,23 @@ export class CascadeTracker implements EntityChangeIterator {
     entity: TrackedEntity | Record<string, unknown>,
     operation: "CREATED" | "UPDATED" | "DELETED",
   ): void {
-    // Check entity limit to prevent memory exhaustion
-    if (this.updatedEntities.size >= this.maxEntities) {
-      this.entityLimitReached = true;
-      return;
-    }
-
     const typename = this.getEntityType(entity);
-    const entityId = this.getEntityId(entity);
-    const key = `${typename}:${entityId}`;
 
     // Skip excluded types
     if (this.excludeTypes.has(typename)) {
       return;
     }
+
+    // Past the entity limit, only count what is dropped so the response can
+    // cover it with a type invalidation instead of losing it.
+    if (this.updatedEntities.size >= this.maxEntities) {
+      this.entityLimitReached = true;
+      this.recordOverflow(entity, typename);
+      return;
+    }
+
+    const entityId = this.getEntityId(entity);
+    const key = `${typename}:${entityId}`;
 
     // Note: entityFilter is now applied asynchronously in getCascadeData/endTransaction
     // to support async authorization checks. Validation is still done synchronously here.
@@ -515,11 +536,6 @@ export class CascadeTracker implements EntityChangeIterator {
     entity: TrackedEntity | Record<string, unknown>,
     operation: "CREATED" | "UPDATED" | "DELETED",
   ): void {
-    // Stop if entity limit already reached
-    if (this.entityLimitReached) {
-      return;
-    }
-
     this.currentDepth += 1;
     this.maxDepthReached = Math.max(this.maxDepthReached, this.currentDepth);
 
@@ -530,7 +546,7 @@ export class CascadeTracker implements EntityChangeIterator {
       const limitedRelated = relatedEntities.slice(0, this.maxRelatedPerEntity);
 
       for (const relatedEntity of limitedRelated) {
-        if (relatedEntity != null && !this.entityLimitReached) {
+        if (relatedEntity != null) {
           // Related entities are typically UPDATED
           this.trackEntity(relatedEntity, "UPDATED");
         }
@@ -754,6 +770,55 @@ export class CascadeTracker implements EntityChangeIterator {
   /**
    * Build the deleted entities list for cascade response.
    */
+  private recordOverflow(
+    entity: TrackedEntity | Record<string, unknown>,
+    typename: string,
+  ): void {
+    let key: string | undefined;
+    try {
+      key = `${typename}:${this.getEntityId(entity)}`;
+    } catch {
+      key = undefined; // Without an id the entity cannot be deduplicated
+    }
+    if (key !== undefined) {
+      if (
+        this.visitedEntities.has(key) ||
+        this.deletedEntities.has(key) ||
+        this.overflowKeys.has(key)
+      ) {
+        return;
+      }
+      this.overflowKeys.add(key);
+    }
+    this.overflowByType.set(
+      typename,
+      (this.overflowByType.get(typename) ?? 0) + 1,
+    );
+  }
+
+  private decrementOverflow(typename: string): void {
+    const remaining = (this.overflowByType.get(typename) ?? 0) - 1;
+    if (remaining > 0) {
+      this.overflowByType.set(typename, remaining);
+    } else {
+      this.overflowByType.delete(typename);
+    }
+  }
+
+  private droppedCount(): number {
+    let dropped = 0;
+    for (const count of this.overflowByType.values()) dropped += count;
+    return dropped;
+  }
+
+  private affectedCount(): number {
+    return (
+      this.updatedEntities.size +
+      this.deletedEntities.size +
+      this.droppedCount()
+    );
+  }
+
   private buildDeletedEntities(): TrackerCascadeData["deleted"] {
     const deleted: TrackerCascadeData["deleted"] = [];
 

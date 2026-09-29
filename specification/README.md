@@ -91,6 +91,8 @@ Reference materials and additional resources:
 - **[C: Migration Guide](appendices/C_migration_guide.md)** - Migrating existing applications
 - **[D: Glossary](appendices/D_glossary.md)** - Key terms and definitions
 - **[E: Examples](appendices/E_examples.md)** - Code examples and patterns
+- **[F: Formal Grammar](appendices/F_grammar.md)** - EBNF grammar for cascade data structures
+- **[G: Database-Derived Tracking](appendices/G_database_derived_tracking.md)** - Building cascades from database-maintained read models
 
 ## 🔗 Related Resources
 
@@ -118,7 +120,7 @@ Reference materials and additional resources:
 
 ## 📊 Specification Status
 
-- **Version**: 1.1.0
+- **Version**: 1.2.0
 - **Status**: Stable (1.x changes are backward compatible)
 - **Versioning**: See [VERSIONING.md](VERSIONING.md). The canonical version lives in [`VERSION`](VERSION); specification versions are independent of package versions.
 

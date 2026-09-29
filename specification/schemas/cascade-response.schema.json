@@ -70,6 +70,27 @@
           },
           "minItems": 0
         },
+        "typeInvalidations": {
+          "type": "array",
+          "description": "Types whose affected entities are not listed individually; clients treat every cached entity of the type, and every cached query that may contain one, as stale. Added in specification 1.2.",
+          "items": {
+            "type": "object",
+            "required": ["typename"],
+            "properties": {
+              "typename": {
+                "type": "string",
+                "description": "GraphQL type name",
+                "minLength": 1
+              },
+              "affectedCount": {
+                "type": ["integer", "null"],
+                "description": "Number of affected entities of this type, when known",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
         "metadata": {
           "$ref": "metadata.schema.json",
           "description": "Metadata about the cascade"

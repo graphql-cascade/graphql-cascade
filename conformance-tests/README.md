@@ -25,6 +25,7 @@ conformance-tests/
 │   │   ├── relationship-tracking.json
 │   │   └── cycle-detection.json
 │   ├── response-building/  # Response construction tests
+│   │   └── truncation.json    # Limits collapse into type invalidations
 │   └── error-handling/     # Error handling tests
 ├── client/                 # Client-side conformance tests
 │   ├── cache-updates/     # Cache update tests
@@ -33,7 +34,8 @@ conformance-tests/
 │   └── invalidation/      # Cache invalidation tests
 │       ├── exact-match.json
 │       ├── pattern-match.json
-│       └── prefix-match.json
+│       ├── prefix-match.json
+│       └── type-invalidation.json
 └── transport/              # Transport layer tests
     ├── http.json
     └── websocket.json

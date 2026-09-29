@@ -252,9 +252,12 @@ describe("Configuration Limits", () => {
 
     const response = builder.buildResponse();
 
-    // Should only have 2 entities due to limit
-    expect(response.cascade.updated.length).toBeLessThanOrEqual(2);
-    expect(response.cascade.metadata.truncatedUpdated).toBe(true);
+    // The dropped user is covered by a type invalidation, never lost
+    expect(response.cascade.updated).toEqual([]);
+    expect(response.cascade.typeInvalidations).toEqual([
+      { typename: "User", affectedCount: 3 },
+    ]);
+    expect(response.cascade.metadata.truncated).toBe(true);
   });
 
   it("should handle excluded types", () => {
@@ -295,7 +298,10 @@ describe("Builder Limits", () => {
 
     const response = builder.buildResponse();
 
-    expect(response.cascade.updated.length).toBe(1);
-    expect(response.cascade.metadata.truncatedUpdated).toBe(true);
+    expect(response.cascade.updated).toEqual([]);
+    expect(response.cascade.typeInvalidations).toEqual([
+      { typename: "User", affectedCount: 2 },
+    ]);
+    expect(response.cascade.metadata.truncated).toBe(true);
   });
 });

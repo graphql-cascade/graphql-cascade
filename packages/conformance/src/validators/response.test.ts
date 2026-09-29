@@ -253,4 +253,79 @@ describe("validateResponse", () => {
       },
     );
   });
+
+  describe("type invalidations", () => {
+    const withCascade = (
+      extra: Record<string, unknown>,
+      truncated?: unknown,
+    ) => ({
+      success: true,
+      cascade: {
+        updated: [],
+        deleted: [],
+        invalidations: [],
+        metadata: { timestamp: Date.now(), truncated },
+        ...extra,
+      },
+    });
+
+    it("accepts a truncated cascade covered by type invalidations", () => {
+      const result = validateResponse(
+        withCascade(
+          { typeInvalidations: [{ typename: "Post", affectedCount: 800 }] },
+          true,
+        ),
+      );
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("accepts responses from 1.1 servers without the new fields", () => {
+      expect(validateResponse(withCascade({})).valid).toBe(true);
+    });
+
+    it("rejects typeInvalidations that are not an array", () => {
+      expect(
+        validateResponse(withCascade({ typeInvalidations: {} })).errors,
+      ).toContainEqual({
+        code: "INVALID_TYPE_INVALIDATIONS",
+        message: "cascade.typeInvalidations must be an array",
+        path: "cascade.typeInvalidations",
+      });
+    });
+
+    it("requires a typename on every type invalidation", () => {
+      expect(
+        validateResponse(withCascade({ typeInvalidations: [{}] })).errors,
+      ).toContainEqual({
+        code: "MISSING_TYPENAME",
+        message: "TypeInvalidation must have typename",
+        path: "cascade.typeInvalidations[0].typename",
+      });
+    });
+
+    it("rejects a non-boolean truncated flag", () => {
+      expect(validateResponse(withCascade({}, "yes")).errors).toContainEqual({
+        code: "INVALID_TRUNCATED",
+        message: "metadata.truncated must be a boolean",
+        path: "cascade.metadata.truncated",
+      });
+    });
+
+    it("rejects truncation without any typeInvalidations field", () => {
+      expect(validateResponse(withCascade({}, true)).errors).toContainEqual(
+        expect.objectContaining({ code: "UNCOVERED_TRUNCATION" }),
+      );
+    });
+
+    it("rejects truncation that nothing covers", () => {
+      expect(
+        validateResponse(withCascade({ typeInvalidations: [] }, true)).errors,
+      ).toContainEqual({
+        code: "UNCOVERED_TRUNCATION",
+        message:
+          "metadata.truncated is true but cascade.typeInvalidations is empty; omitted entities must be covered by type invalidations",
+        path: "cascade.typeInvalidations",
+      });
+    });
+  });
 });

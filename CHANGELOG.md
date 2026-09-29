@@ -18,10 +18,17 @@ The **specification** is versioned independently: its version lives in
 - Removed leaked tool-call transcript text from the tail of 18 files; `compliance-tests/cli.py` and `scripts/publish.py` failed to parse because of it.
 - Reconciled specification version stamps to 1.1.0 (previously 0.1, 1.0.0 and v1.1 in different places).
 
+### Changed
+- **Breaking** (`@graphql-cascade/server`): cascades that exceed size limits no longer lose entities. Whole types move into `cascade.typeInvalidations` and `metadata.truncated` is set. `metadata.truncatedUpdated`, `truncatedDeleted`, `truncatedInvalidations` and `truncatedSize` are replaced by `truncated`; tracker results carry an `overflow` map.
+
 ### Added
+- Specification 1.2.0: type-level invalidation, `domainCode`, and Appendix G (database-derived tracking). See [release notes](releases/spec-v1.2.0.md).
+- `@graphql-cascade/client`: `applyTypeInvalidations()`, applied by `CascadeClient`; optional `CascadeCache.invalidateType()`.
+- `@graphql-cascade/apollo`: `ApolloCascadeCache.invalidateType()`.
+- `@graphql-cascade/urql`, `@graphql-cascade/relay`: apply type invalidations.
 - `@graphql-cascade/server`: `withDomainCode()` refines a standard error with an application-specific `domainCode`; `CascadeErrorInfo.domainCode`.
 - `@graphql-cascade/client`: `CascadeError.domainCode`.
-- `@graphql-cascade/conformance`: the response validator checks that `errors[].code` is a standard code and that `domainCode` is well formed.
+- `@graphql-cascade/conformance`: the response validator checks that `errors[].code` is a standard code, that `domainCode` is well formed, and that truncation is covered by `typeInvalidations`.
 - `node scripts/check-spec.mjs`, run in CI, rejects leaked transcript text and version-stamp drift.
 
 ## [0.3.1] - 2025-12-08

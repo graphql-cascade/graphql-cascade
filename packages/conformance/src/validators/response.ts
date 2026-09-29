@@ -15,6 +15,63 @@ const STANDARD_ERROR_CODES = new Set([
 
 const DOMAIN_CODE_PATTERN = /^[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*$/;
 
+/**
+ * Type invalidations and the truncation flag were added in specification
+ * 1.2; responses without them are valid.
+ */
+function validateTypeInvalidations(
+  cascade: Record<string, unknown>,
+): ValidationError[] {
+  const { typeInvalidations } = cascade;
+  const metadata = (cascade.metadata ?? {}) as Record<string, unknown>;
+  const problems: ValidationError[] = [];
+
+  if (
+    metadata.truncated !== undefined &&
+    typeof metadata.truncated !== "boolean"
+  ) {
+    problems.push({
+      code: "INVALID_TRUNCATED",
+      message: "metadata.truncated must be a boolean",
+      path: "cascade.metadata.truncated",
+    });
+  }
+
+  const covered =
+    Array.isArray(typeInvalidations) && typeInvalidations.length > 0;
+  if (metadata.truncated === true && !covered) {
+    problems.push({
+      code: "UNCOVERED_TRUNCATION",
+      message:
+        "metadata.truncated is true but cascade.typeInvalidations is empty; omitted entities must be covered by type invalidations",
+      path: "cascade.typeInvalidations",
+    });
+  }
+
+  if (typeInvalidations === undefined) return problems;
+  if (!Array.isArray(typeInvalidations)) {
+    problems.push({
+      code: "INVALID_TYPE_INVALIDATIONS",
+      message: "cascade.typeInvalidations must be an array",
+      path: "cascade.typeInvalidations",
+    });
+    return problems;
+  }
+
+  typeInvalidations.forEach((inv: unknown, i: number) => {
+    const typename = (inv as Record<string, unknown> | null)?.typename;
+    if (typeof typename !== "string" || typename === "") {
+      problems.push({
+        code: "MISSING_TYPENAME",
+        message: "TypeInvalidation must have typename",
+        path: `cascade.typeInvalidations[${i}].typename`,
+      });
+    }
+  });
+
+  return problems;
+}
+
 function validateErrors(errors: unknown): ValidationError[] {
   if (errors === undefined || errors === null) return [];
   if (!Array.isArray(errors)) {
@@ -180,6 +237,8 @@ export function validateResponse(
         }
       });
     }
+
+    errors.push(...validateTypeInvalidations(cascade));
 
     // Validate metadata
     if (!cascade.metadata || typeof cascade.metadata !== "object") {

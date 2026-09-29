@@ -181,32 +181,41 @@ class RateLimitedInvalidator:
 
 ### Cascade Size Limits
 
-Servers MUST limit cascade response size to prevent DoS attacks:
+Servers MUST limit cascade response size to prevent DoS attacks. Truncation moves whole types into type invalidations, so the limit never costs correctness (see [Cascade Size Limits and Truncation](04_mutation_responses.md#cascade-size-limits-and-truncation)):
 
 ```python
+from collections import Counter
+
 class SizeLimitedCascadeBuilder:
-    MAX_ENTITIES = 500
-    MAX_RESPONSE_SIZE_MB = 5
+    MAX_UPDATED = 500
+    MAX_DELETED = 100
 
     def build(self, primary_result, success=True, errors=None):
-        # ... build cascade ...
+        cascade = ...  # build cascade from the tracker
+        collapsed = Counter()
 
-        # Check size limits
-        total_entities = len(cascade['updated']) + len(cascade['deleted'])
-        if total_entities > self.MAX_ENTITIES:
-            # Truncate cascade and add warning
-            cascade['updated'] = cascade['updated'][:self.MAX_ENTITIES//2]
-            cascade['deleted'] = cascade['deleted'][:self.MAX_ENTITIES//2]
-            cascade['metadata']['truncated'] = True
-            cascade['metadata']['original_count'] = total_entities
+        def collapse(entries):
+            # Largest type first, ties by name, for deterministic output
+            counts = Counter(e['__typename'] for e in entries)
+            typename = min(counts, key=lambda t: (-counts[t], t))
+            for key in ('updated', 'deleted'):
+                kept = [e for e in cascade[key] if e['__typename'] != typename]
+                collapsed[typename] += len(cascade[key]) - len(kept)
+                cascade[key] = kept
 
-        # Check response size
-        response_size = self.calculate_response_size(cascade)
-        if response_size > self.MAX_RESPONSE_SIZE_MB * 1024 * 1024:
-            raise CascadeTooLargeError(f"Response too large: {response_size} bytes")
+        while len(cascade['updated']) > self.MAX_UPDATED:
+            collapse(cascade['updated'])
+        while len(cascade['deleted']) > self.MAX_DELETED:
+            collapse(cascade['deleted'])
 
+        cascade['typeInvalidations'] = [
+            {'typename': t, 'affectedCount': n} for t, n in sorted(collapsed.items())
+        ]
+        cascade['metadata']['truncated'] = bool(collapsed)
         return cascade
 ```
+
+Type invalidations follow the same authorization rules as entities: a server MUST NOT emit a type invalidation for entities the requesting client could not see, since the type name and `affectedCount` would disclose that they exist.
 
 ### Depth Limiting
 

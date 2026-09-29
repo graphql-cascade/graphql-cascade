@@ -12,8 +12,9 @@ exports[`Cascade Response Snapshots Create Response should match create response
       "timestamp": "NORMALIZED_TIMESTAMP",
       "trackingTime": 0,
       "transactionId": "NORMALIZED_TRANSACTION_ID",
-      "truncatedUpdated": false,
+      "truncated": false,
     },
+    "typeInvalidations": [],
     "updated": [
       {
         "__typename": "User",
@@ -48,8 +49,9 @@ exports[`Cascade Response Snapshots Create Response should match multiple create
       "timestamp": "NORMALIZED_TIMESTAMP",
       "trackingTime": 0,
       "transactionId": "NORMALIZED_TRANSACTION_ID",
-      "truncatedUpdated": false,
+      "truncated": false,
     },
+    "typeInvalidations": [],
     "updated": [
       {
         "__typename": "User",
@@ -106,8 +108,9 @@ exports[`Cascade Response Snapshots Delete Response should match delete response
       "timestamp": "NORMALIZED_TIMESTAMP",
       "trackingTime": 0,
       "transactionId": "NORMALIZED_TRANSACTION_ID",
-      "truncatedUpdated": false,
+      "truncated": false,
     },
+    "typeInvalidations": [],
     "updated": [],
   },
   "data": {
@@ -146,8 +149,9 @@ exports[`Cascade Response Snapshots Delete Response should match multiple delete
       "timestamp": "NORMALIZED_TIMESTAMP",
       "trackingTime": 0,
       "transactionId": "NORMALIZED_TRANSACTION_ID",
-      "truncatedUpdated": false,
+      "truncated": false,
     },
+    "typeInvalidations": [],
     "updated": [],
   },
   "data": {
@@ -170,8 +174,9 @@ exports[`Cascade Response Snapshots Empty Response should match empty cascade re
       "timestamp": "NORMALIZED_TIMESTAMP",
       "trackingTime": 0,
       "transactionId": "NORMALIZED_TRANSACTION_ID",
-      "truncatedUpdated": false,
+      "truncated": false,
     },
+    "typeInvalidations": [],
     "updated": [],
   },
   "data": null,
@@ -184,6 +189,7 @@ exports[`Cascade Response Snapshots Error Response should match error response s
 {
   "cascade": {
     "deleted": [],
+    "invalidations": [],
     "metadata": {
       "affectedCount": 0,
       "constructionTime": 0,
@@ -191,7 +197,9 @@ exports[`Cascade Response Snapshots Error Response should match error response s
       "timestamp": "NORMALIZED_TIMESTAMP",
       "trackingTime": 0,
       "transactionId": "NORMALIZED_TRANSACTION_ID",
+      "truncated": false,
     },
+    "typeInvalidations": [],
     "updated": [],
   },
   "data": null,
@@ -210,6 +218,7 @@ exports[`Cascade Response Snapshots Error Response should match multiple errors 
 {
   "cascade": {
     "deleted": [],
+    "invalidations": [],
     "metadata": {
       "affectedCount": 0,
       "constructionTime": 0,
@@ -217,7 +226,9 @@ exports[`Cascade Response Snapshots Error Response should match multiple errors 
       "timestamp": "NORMALIZED_TIMESTAMP",
       "trackingTime": 0,
       "transactionId": "NORMALIZED_TRANSACTION_ID",
+      "truncated": false,
     },
+    "typeInvalidations": [],
     "updated": [],
   },
   "data": null,
@@ -255,8 +266,9 @@ exports[`Cascade Response Snapshots Mixed Operations Response should match mixed
       "timestamp": "NORMALIZED_TIMESTAMP",
       "trackingTime": 0,
       "transactionId": "NORMALIZED_TRANSACTION_ID",
-      "truncatedUpdated": false,
+      "truncated": false,
     },
+    "typeInvalidations": [],
     "updated": [
       {
         "__typename": "User",
@@ -297,7 +309,9 @@ exports[`Cascade Response Snapshots Streaming Response should match streaming re
       "timestamp": "NORMALIZED_TIMESTAMP",
       "trackingTime": 0,
       "transactionId": "NORMALIZED_TRANSACTION_ID",
+      "truncated": false,
     },
+    "typeInvalidations": [],
     "updated": [
       {
         "__typename": "User",
@@ -333,43 +347,21 @@ exports[`Cascade Response Snapshots Truncated Response should match truncated re
     "deleted": [],
     "invalidations": [],
     "metadata": {
-      "affectedCount": 3,
+      "affectedCount": 10,
       "constructionTime": 0,
       "depth": 0,
       "timestamp": "NORMALIZED_TIMESTAMP",
       "trackingTime": 0,
       "transactionId": "NORMALIZED_TRANSACTION_ID",
-      "truncatedUpdated": true,
+      "truncated": true,
     },
-    "updated": [
+    "typeInvalidations": [
       {
-        "__typename": "User",
-        "entity": {
-          "id": "0",
-          "name": "User 0",
-        },
-        "id": "0",
-        "operation": "CREATED",
-      },
-      {
-        "__typename": "User",
-        "entity": {
-          "id": "1",
-          "name": "User 1",
-        },
-        "id": "1",
-        "operation": "CREATED",
-      },
-      {
-        "__typename": "User",
-        "entity": {
-          "id": "2",
-          "name": "User 2",
-        },
-        "id": "2",
-        "operation": "CREATED",
+        "affectedCount": 10,
+        "typename": "User",
       },
     ],
+    "updated": [],
   },
   "data": null,
   "errors": [],
@@ -389,8 +381,9 @@ exports[`Cascade Response Snapshots Update Response should match update response
       "timestamp": "NORMALIZED_TIMESTAMP",
       "trackingTime": 0,
       "transactionId": "NORMALIZED_TRANSACTION_ID",
-      "truncatedUpdated": false,
+      "truncated": false,
     },
+    "typeInvalidations": [],
     "updated": [
       {
         "__typename": "User",
