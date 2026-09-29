@@ -173,6 +173,8 @@ Stale has the same meaning as the `INVALIDATE` strategy: data is refetched on it
 
 A client that cannot tell which cached results may contain a type MUST fall back to invalidating every cached query. The fallback is always correct, only less precise, and truncation is rare.
 
+Type invalidations only reach the client if the mutation selects them. Against servers implementing specification 1.2 or later, cascade selection sets SHOULD include `typeInvalidations { typename }`, and tools that generate selection sets SHOULD add it.
+
 | Cache | Precise behavior |
 |-------|------------------|
 | Normalized (Apollo, urql Graphcache) | Evict entity records of the type, plus fields that reference them or hold empty lists |
