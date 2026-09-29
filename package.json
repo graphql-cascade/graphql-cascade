@@ -20,6 +20,7 @@
     "test": "pnpm -r --if-present test",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck",
+    "check:spec": "node --test scripts/check-spec.test.mjs && node scripts/check-spec.mjs",
     "clean": "rm -rf packages/*/dist packages/**/node_modules node_modules",
     "diagrams": "mmdc -p puppeteer-config.json -i docs/diagrams/manual-cache-management.mmd -o docs/diagrams/manual-cache-management.png && mmdc -p puppeteer-config.json -i docs/diagrams/automatic-cache-management.mmd -o docs/diagrams/automatic-cache-management.png && mmdc -p puppeteer-config.json -i docs/diagrams/how-it-works.mmd -o docs/diagrams/how-it-works.png && mmdc -p puppeteer-config.json -i docs/diagrams/cascade-flow.mmd -o docs/diagrams/cascade-flow.png && mmdc -p puppeteer-config.json -i docs/diagrams/entity-relationships.mmd -o docs/diagrams/entity-relationships.png",
     "version": "changeset version",

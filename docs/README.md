@@ -28,7 +28,7 @@ GraphQL Cascade provides automatic, intelligent cache invalidation that cascades
 - **Server**: Server-side implementation guides
 - **Clients**: Client library documentation (Apollo, React Query, Relay, urQL)
 - **CLI**: Command-line tools documentation
-- **Specification**: Technical specification v1.1
+- **Specification**: Technical specification (version in `specification/VERSION`)
 
 ## Contributing
 

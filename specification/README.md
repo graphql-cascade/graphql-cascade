@@ -118,9 +118,9 @@ Reference materials and additional resources:
 
 ## 📊 Specification Status
 
-- **Version**: 0.1 (Draft)
-- **Status**: Active Development
-- **Last Updated**: November 2025
+- **Version**: 1.1.0
+- **Status**: Stable (1.x changes are backward compatible)
+- **Versioning**: See [VERSIONING.md](VERSIONING.md). The canonical version lives in [`VERSION`](VERSION); specification versions are independent of package versions.
 
 ## 🤝 Contributing
 

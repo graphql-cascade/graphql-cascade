@@ -589,5 +589,4 @@ class SecureApolloCascadeClient extends ApolloCascadeClient {
     }
   }
 }
-```</content>
-</xai:function_call">The file has been written successfully.
+```

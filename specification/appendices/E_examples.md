@@ -1021,5 +1021,4 @@ function ProductList() {
 }
 ```
 
-These examples demonstrate GraphQL Cascade's versatility across different GraphQL clients, mutation types, and application patterns. The core principle remains the same: automatic, server-driven cache updates that eliminate manual cache management code.</content>
-</xai:function_call">The file has been written successfully.
+These examples demonstrate GraphQL Cascade's versatility across different GraphQL clients, mutation types, and application patterns. The core principle remains the same: automatic, server-driven cache updates that eliminate manual cache management code.

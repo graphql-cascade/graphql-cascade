@@ -890,5 +890,4 @@ const customClient = new CascadeClient(
   new CustomCascadeCache(myCustomCache),
   myGraphQLExecutor
 );
-```</content>
-</xai:function_call">The file has been written successfully.
+```

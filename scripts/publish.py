@@ -121,6 +121,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())</content>
-</xai:function_call name="run">
-<parameter name="command">chmod +x scripts/publish.py
+    sys.exit(main())

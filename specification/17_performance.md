@@ -791,5 +791,4 @@ class HighPerformanceCascadeClient extends CascadeClient {
     }
   }
 }
-```</content>
-</xai:function_call">The file has been written successfully.
+```

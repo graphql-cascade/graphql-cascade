@@ -1,4 +1,4 @@
-# GraphQL Cascade v1.1.0 Release Notes
+# GraphQL Cascade Specification v1.1.0 Release Notes
 
 **Release Date**: 2025-12-04
 **Type**: Minor version (backward compatible)
@@ -40,7 +40,6 @@ Three new error codes for production scenarios:
 - Adopt new codes incrementally as needed
 - Mixed v1.0/v1.1 usage supported
 
-See [Migration Guide](../docs/migration/v1.0-to-v1.1.md) for details.
 
 ## Use Cases
 
@@ -109,9 +108,8 @@ Community implementations can adopt v1.1 incrementally:
 ## Resources
 
 - [Specification](../specification/04_mutation_responses.md)
-- [Migration Guide](../docs/migration/v1.0-to-v1.1.md)
 - [GitHub Issue #1](https://github.com/graphql-cascade/graphql-cascade/issues/1)
-- [Conformance Tests](../conformance-tests/error-codes-v1.1.test.ts)
+- [Conformance Tests](../conformance-tests/)
 
 ## Contributors
 

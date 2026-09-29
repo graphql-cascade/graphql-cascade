@@ -24,6 +24,15 @@ MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]
 2. **Experimental Features**: Features marked as experimental MAY be changed or removed in any version
 3. **Extension Versions**: Extensions follow independent versioning from the core specification
 
+### Specification and Package Versions
+
+The specification and the reference packages are versioned independently:
+
+- The **specification version** is recorded in [`VERSION`](VERSION) and is the only version an implementation claims conformance to (for example, "conforms to GraphQL Cascade 1.1.0").
+- **Package versions** (`@graphql-cascade/*`) follow their own semver line and document which specification version they implement in their changelogs.
+
+Every other specification version stamp (the specification README, the conformance manifest, the root README badge, and the history below) MUST match `VERSION`. CI enforces this with `node scripts/check-spec.mjs`.
+
 ## Breaking vs Non-Breaking Changes
 
 ### Breaking Changes (MAJOR version bump required)
@@ -281,7 +290,7 @@ Fully backward compatible. All changes are additive.
 #### Migration
 No migration required. New error codes are optional.
 
-### v1.0 (Stable)
+### v1.0.0
 - First stable release
 - Core cascade functionality
 - Basic invalidation support

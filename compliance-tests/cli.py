@@ -310,6 +310,4 @@ Examples:
 
 
 if __name__ == '__main__':
-    sys.exit(main())</content>
-</xai:function_call name="write">
-<parameter name="filePath">compliance-tests/setup.py
+    sys.exit(main())

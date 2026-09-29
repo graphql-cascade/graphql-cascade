@@ -44,6 +44,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Check specification integrity
+        run: pnpm run check:spec
+
       - name: Run ESLint
         run: pnpm -r --if-present lint
 
