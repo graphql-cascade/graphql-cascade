@@ -72,8 +72,21 @@
             "variables": {
               "type": "object",
               "description": "GraphQL variables"
+            },
+            "limits": {
+              "type": "object",
+              "description": "Server cascade limits in effect for the test",
+              "properties": {
+                "maxUpdatedEntities": { "type": "integer", "minimum": 0 },
+                "maxDeletedEntities": { "type": "integer", "minimum": 0 },
+                "maxResponseSizeMb": { "type": "number", "exclusiveMinimum": 0 }
+              }
             }
           }
+        },
+        "cascade": {
+          "$ref": "#/definitions/CascadeResponse",
+          "description": "Cascade received by the client (client tests)"
         },
         "clientState": {
           "type": "object",
@@ -169,14 +182,30 @@
           "type": "array",
           "items": { "$ref": "#/definitions/Entity" }
         },
+        "deleted": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Entity" }
+        },
         "invalidations": {
           "type": "array",
           "items": { "$ref": "#/definitions/InvalidationHint" }
+        },
+        "typeInvalidations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["typename"],
+            "properties": {
+              "typename": { "type": "string", "minLength": 1 },
+              "affectedCount": { "type": "integer", "minimum": 0 }
+            }
+          }
         },
         "metadata": {
           "type": "object",
           "properties": {
             "affectedCount": { "type": "integer" },
+            "truncated": { "type": "boolean" },
             "operationType": { "type": "string", "enum": ["CREATE", "UPDATE", "DELETE"] },
             "timestamp": { "type": "string", "format": "date-time" }
           }

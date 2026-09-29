@@ -5,6 +5,7 @@ declare module "relay-runtime" {
     getRoot(): any;
     create(dataID: string, typeName: string): any;
     delete(dataID: string): void;
+    invalidateStore(): void;
   }
 
   export interface MutationConfig {

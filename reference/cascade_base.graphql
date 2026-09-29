@@ -84,6 +84,13 @@ type CascadeUpdates {
   """Query invalidation hints for cache management."""
   invalidations: [QueryInvalidation!]!
 
+  """
+  Types whose affected entities are not listed individually.
+  Clients treat every cached entity of each type, and every cached
+  query that may contain one, as stale.
+  """
+  typeInvalidations: [TypeInvalidation!]!
+
   """Metadata about the cascade."""
   metadata: CascadeMetadata!
 }
@@ -101,8 +108,29 @@ type CascadeMetadata {
   """Maximum relationship depth traversed."""
   depth: Int!
 
-  """Total number of entities affected."""
+  """
+  Total number of entities affected, including those covered by
+  type invalidations.
+  """
   affectedCount: Int!
+
+  """
+  Whether limits forced entities or invalidation hints out of this
+  response. Everything omitted is covered by typeInvalidations.
+  """
+  truncated: Boolean!
+}
+
+"""
+Every cached entity of this type, and every cached query that may
+contain one, is stale.
+"""
+type TypeInvalidation {
+  """GraphQL type name, e.g. "Post"."""
+  typename: String!
+
+  """Number of affected entities of this type, when known."""
+  affectedCount: Int
 }
 
 """

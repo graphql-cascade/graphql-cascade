@@ -70,14 +70,11 @@ export interface CascadeMetadata {
   trackingTime: number;
   /** Time spent building the response */
   constructionTime?: number;
-  /** Whether the response was truncated due to size limits */
-  truncatedUpdated?: boolean;
-  /** Whether deleted entities were truncated */
-  truncatedDeleted?: boolean;
-  /** Whether invalidations were truncated */
-  truncatedInvalidations?: boolean;
-  /** Whether response was truncated due to size limits */
-  truncatedSize?: boolean;
+  /**
+   * Whether limits forced entities or invalidation hints out of the response.
+   * Anything omitted is covered by `typeInvalidations`.
+   */
+  truncated: boolean;
   /** Whether streaming was used */
   streaming?: boolean;
   /** Number of entities that failed serialization */
@@ -125,6 +122,17 @@ export interface CascadeInvalidation {
 }
 
 /**
+ * Instruction to treat every cached entity of a type, and every cached query
+ * that may contain one, as stale.
+ */
+export interface CascadeTypeInvalidation {
+  /** GraphQL type name */
+  typename: string;
+  /** Number of affected entities of this type, when known */
+  affectedCount?: number;
+}
+
+/**
  * The cascade data section of a response.
  */
 export interface CascadeData {
@@ -134,6 +142,8 @@ export interface CascadeData {
   deleted: CascadeDeletedEntity[];
   /** List of cache invalidations */
   invalidations: CascadeInvalidation[];
+  /** Types whose affected entities are not listed individually */
+  typeInvalidations: CascadeTypeInvalidation[];
   /** Metadata about the cascade operation */
   metadata: CascadeMetadata;
 }
@@ -192,6 +202,8 @@ export interface TrackerCascadeData {
     id: string;
     deletedAt: string;
   }>;
+  /** Entities dropped by the `maxEntities` limit, counted by type name */
+  overflow: Record<string, number>;
   /** Metadata about the cascade operation */
   metadata: CascadeMetadata;
 }

@@ -276,15 +276,23 @@ All specification changes MUST be documented in CHANGELOG.md following this form
 
 ## Appendix: Version History
 
-### Unreleased (1.2.0)
+### v1.2.0 (2026-09-30)
 
 #### Changes
 - Added optional `CascadeError.domainCode` for application-specific error conditions; `code` stays a closed set of categories
 - Clients MUST treat unrecognized `code` values as `INTERNAL_ERROR`, so later minor versions can add codes
 - Asynchronous mutations: the cascade describes only committed changes, and a persisted job entity appears in `cascade.updated`
+- Cascade completeness: servers MUST NOT silently omit affected entities
+- Added `CascadeUpdates.typeInvalidations` and `CascadeMetadata.truncated`; truncation moves whole types into type invalidations instead of cutting lists
+- Size limits are configurable, with 500 / 100 / 5 MB as RECOMMENDED defaults; cascade pagination is no longer suggested
+- Added Appendix G: Database-Derived Tracking (non-normative)
 
 #### Backward Compatibility
-Fully backward compatible. All changes are additive.
+Backward compatible for clients: `typeInvalidations` and `truncated` are new fields, and a client that ignores them keeps 1.1 behavior. Servers adopting 1.2 add both fields and replace list-cutting truncation with type invalidations.
+
+#### Migration
+- Servers: add `typeInvalidations` (empty unless truncating) and `metadata.truncated` to every cascade.
+- Clients: apply `typeInvalidations` after the other cascade parts; without type-level support, invalidate every query.
 
 ### v1.1.0 (2025-12-04)
 

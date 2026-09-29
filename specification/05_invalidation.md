@@ -153,6 +153,32 @@ Invalidate all queries in the cache.
 
 **Use sparingly** - only for major data changes or cache resets.
 
+## Type Invalidation
+
+`cascade.typeInvalidations` lists types whose affected entities are not all listed individually, typically because the server [truncated the cascade](04_mutation_responses.md#cascade-size-limits-and-truncation). Each entry names a type:
+
+```json
+{
+  "typeInvalidations": [{ "typename": "Post", "affectedCount": 800 }],
+  "metadata": { "truncated": true }
+}
+```
+
+Clients MUST process type invalidations after applying `updated`, `deleted` and `invalidations`. For each entry, clients MUST treat as stale:
+
+- every cached entity of that type, and
+- every cached query result that contains, or may contain, an entity of that type. A cached empty list may be missing newly created entities, so it counts as "may contain" unless the client knows the list's element type.
+
+Stale has the same meaning as the `INVALIDATE` strategy: data is refetched on its next read. Clients SHOULD NOT eagerly refetch every affected query.
+
+A client that cannot tell which cached results may contain a type MUST fall back to invalidating every cached query. The fallback is always correct, only less precise, and truncation is rare.
+
+| Cache | Precise behavior |
+|-------|------------------|
+| Normalized (Apollo, urql Graphcache) | Evict entity records of the type, plus fields that reference them or hold empty lists |
+| Normalized without type enumeration (Relay) | Invalidate the whole store |
+| Document (React Query, SWR) | Invalidate every query |
+
 ## Invalidation Rules
 
 ### Automatic Invalidation
@@ -255,6 +281,7 @@ interface CascadeCache {
   invalidate(invalidation: QueryInvalidation): void;
   refetch(invalidation: QueryInvalidation): Promise<void>;
   remove(invalidation: QueryInvalidation): void;
+  invalidateType?(typename: string): void;
 }
 ```
 

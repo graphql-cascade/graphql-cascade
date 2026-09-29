@@ -15,6 +15,7 @@ CascadeUpdates ::= '{'
     '"updated"' ':' UpdatedEntityArray ','
     '"deleted"' ':' DeletedEntityArray ','
     '"invalidations"' ':' QueryInvalidationArray ','
+    '"typeInvalidations"' ':' TypeInvalidationArray ','
     '"metadata"' ':' CascadeMetadata
 '}'
 
@@ -43,12 +44,19 @@ QueryInvalidation ::= '{'
     '"scope"' ':' InvalidationScope
 '}'
 
+# Type invalidation: every cached entity of the type is stale
+TypeInvalidation ::= '{'
+    '"typename"' ':' String ','
+    '"affectedCount"' ':' ( Int | 'null' )
+'}'
+
 # Cascade operation metadata
 CascadeMetadata ::= '{'
     '"timestamp"' ':' DateTime ','
     '"transactionId"' ':' ( ID | 'null' ) ','
     '"depth"' ':' Int ','
-    '"affectedCount"' ':' Int
+    '"affectedCount"' ':' Int ','
+    '"truncated"' ':' Boolean
 '}'
 
 # Error structure
@@ -92,6 +100,9 @@ DeletedEntityList ::= | DeletedEntity ( ',' DeletedEntity )*
 
 QueryInvalidationArray ::= '[' QueryInvalidationList ']'
 QueryInvalidationList ::= | QueryInvalidation ( ',' QueryInvalidation )*
+
+TypeInvalidationArray ::= '[' TypeInvalidationList ']'
+TypeInvalidationList ::= | TypeInvalidation ( ',' TypeInvalidation )*
 
 CascadeErrorArray ::= '[' CascadeErrorList ']'
 CascadeErrorList ::= | CascadeError ( ',' CascadeError )*

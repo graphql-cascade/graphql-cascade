@@ -40,6 +40,7 @@ For successful mutations:
     "updated": [ /* entities that were updated */ ],
     "deleted": [ /* entities that were deleted */ ],
     "invalidations": [ /* cache invalidation hints */ ],
+    "typeInvalidations": [ /* types invalidated wholesale, usually empty */ ],
     "metadata": { /* cascade metadata */ }
   }
 }
@@ -64,10 +65,12 @@ For failed mutations:
     "updated": [],
     "deleted": [],
     "invalidations": [],
+    "typeInvalidations": [],
     "metadata": {
       "timestamp": "2023-11-11T10:00:00Z",
       "depth": 0,
-      "affectedCount": 0
+      "affectedCount": 0,
+      "truncated": false
     }
   }
 }
@@ -156,6 +159,13 @@ type CascadeUpdates {
   """Query invalidation hints for cache management."""
   invalidations: [QueryInvalidation!]!
 
+  """
+  Types whose affected entities are not listed individually.
+  Clients treat every cached entity of each type, and every cached
+  query that may contain one, as stale.
+  """
+  typeInvalidations: [TypeInvalidation!]!
+
   """Metadata about the cascade."""
   metadata: CascadeMetadata!
 }
@@ -191,6 +201,19 @@ type DeletedEntity {
   deletedAt: DateTime!
 }
 ```
+
+### TypeInvalidation Details
+```graphql
+type TypeInvalidation {
+  """GraphQL type name, e.g. "Post"."""
+  typename: String!
+
+  """Number of affected entities of this type, when known."""
+  affectedCount: Int
+}
+```
+
+A type invalidation states that entities of `typename` were affected but are not all listed in `updated` or `deleted`. Servers emit type invalidations when [limits force entities out of the response](#cascade-size-limits-and-truncation). They MAY also emit them when they know a type was affected but cannot enumerate the entities, for example after a bulk `UPDATE` statement. Clients process them as described in [Type Invalidation](05_invalidation.md#type-invalidation).
 
 ## Error Handling
 
@@ -541,10 +564,55 @@ type CascadeMetadata {
   """Maximum relationship depth traversed."""
   depth: Int!
 
-  """Total number of entities affected."""
+  """
+  Total number of entities affected, including those covered by
+  type invalidations.
+  """
   affectedCount: Int!
+
+  """
+  Whether limits forced entities or invalidation hints out of this
+  response. Everything omitted is covered by typeInvalidations.
+  """
+  truncated: Boolean!
 }
 ```
+
+## Cascade Completeness
+
+Every entity the server identified as affected by the mutation MUST appear in the response in one of two ways:
+
+- listed individually in `updated` or `deleted`, or
+- covered by a `typeInvalidations` entry for its type.
+
+Servers MUST NOT silently omit affected entities. A client that applies a cascade can therefore rely on it: anything not listed is covered by a type invalidation, so nothing stale survives in its cache. Entities of a type listed in `typeInvalidations` MAY still appear in `updated` or `deleted`; clients apply them first and then invalidate the type.
+
+The completeness rule is relative to what the server's tracker identifies. A tracker that walks relationships to a fixed depth only finds entities within that depth (see [Entity Tracking Algorithm](10_tracking_algorithm.md)). A tracker driven by the database's own dependency graph finds every affected entity (see [Appendix G: Database-Derived Tracking](appendices/G_database_derived_tracking.md)).
+
+## Cascade Size Limits and Truncation
+
+Servers MUST enforce limits on cascade size to bound response size and server memory. Limits MUST be configurable. The RECOMMENDED defaults are:
+
+| Limit | Default |
+|-------|---------|
+| Updated entities | 500 |
+| Deleted entities | 100 |
+| Serialized cascade size | 5 MB |
+
+When a cascade exceeds a limit, the server MUST truncate it as follows:
+
+1. Choose a type whose entities are listed. Servers SHOULD choose the type with the most entries in the list that exceeds its limit, breaking ties by type name so the output is deterministic.
+2. Remove every entity of that type from `updated` and `deleted`, and add a `typeInvalidations` entry for the type. `affectedCount` SHOULD be the number of entities of the type that were affected.
+3. Repeat until every limit is met.
+4. Set `metadata.truncated` to `true`.
+
+Removing whole types instead of cutting lists at an arbitrary position keeps every remaining entry precise, and each removed entity stays covered.
+
+If invalidation hints in `invalidations` exceed a limit, servers MUST NOT drop hints without covering them. They either replace the omitted hints with broader ones (`PREFIX`, `PATTERN` or `ALL` scope), or add a `typeInvalidations` entry for every type in the cascade and set `metadata.truncated` to `true`.
+
+`metadata.truncated` is `true` exactly when the server removed entities or hints and covered them with type invalidations, so `typeInvalidations` MUST NOT be empty when it is `true`. It MUST be `false` otherwise.
+
+Type invalidations are subject to the same authorization rules as entities (see [Security](16_security.md)): servers MUST NOT emit a type invalidation for entities the client could not have seen.
 
 ## Example Mutation Response
 
@@ -1096,7 +1164,7 @@ Clients MUST process cascade responses in this order:
 
 1. **Check success status**
 2. **Handle errors** (MAY be warnings even on success)
-3. **Apply cascade updates** to cache
+3. **Apply cascade updates** to cache: `updated`, then `deleted`, then `invalidations`, then `typeInvalidations`
 4. **Return primary data** to application code
 
 ### TypeScript Client Example

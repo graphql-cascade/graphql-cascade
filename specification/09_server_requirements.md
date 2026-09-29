@@ -234,12 +234,12 @@ Cascade tracking works with standard database isolation:
 
 ### Response Size Limits
 
-Servers MUST limit cascade response size:
+Servers MUST enforce configurable limits on cascade size. RECOMMENDED defaults:
 
 - **Maximum Updates**: 500 updated entities per mutation
 - **Maximum Deletions**: 100 deleted entities per mutation
 - **Maximum Response Size**: 5MB total response payload
-- **Automatic Truncation**: Reduce depth or paginate when limits exceeded
+- **Truncation**: Move whole types into `typeInvalidations` and set `metadata.truncated`; never drop entities silently (see [Cascade Size Limits and Truncation](04_mutation_responses.md#cascade-size-limits-and-truncation))
 
 ### Execution Overhead
 

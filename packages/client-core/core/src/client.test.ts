@@ -1,4 +1,4 @@
-import { CascadeClient } from "./client";
+import { CascadeClient, applyTypeInvalidations } from "./client";
 import {
   CascadeCache,
   CascadeResponse,
@@ -214,6 +214,88 @@ describe("CascadeClient", () => {
       client.applyCascade(response);
 
       expect(cache.removed).toHaveLength(1);
+    });
+  });
+
+  describe("type invalidations", () => {
+    const truncatedResponse = (typenames: string[]): CascadeResponse => ({
+      success: true,
+      data: null,
+      cascade: {
+        updated: [
+          {
+            __typename: "Author",
+            id: "1",
+            operation: CascadeOperation.UPDATED,
+            entity: { id: "1" },
+          },
+        ],
+        deleted: [],
+        invalidations: [],
+        typeInvalidations: typenames.map((typename) => ({ typename })),
+        metadata: {
+          timestamp: "2024-01-01",
+          depth: 1,
+          affectedCount: 500,
+          truncated: true,
+        },
+      },
+    });
+
+    class TypeAwareCache extends MockCache {
+      public events: string[] = [];
+      write(typename: string, id: string, data: any): void {
+        this.events.push(`write:${typename}`);
+        super.write(typename, id, data);
+      }
+      invalidateType(typename: string): void {
+        this.events.push(`invalidateType:${typename}`);
+      }
+    }
+
+    it("invalidates each type after applying entity updates", () => {
+      const typeAware = new TypeAwareCache();
+      new CascadeClient(typeAware, mockExecutor).applyCascade(
+        truncatedResponse(["Post", "Comment"]),
+      );
+
+      expect(typeAware.events).toEqual([
+        "write:Author",
+        "invalidateType:Post",
+        "invalidateType:Comment",
+      ]);
+    });
+
+    it("falls back to one invalidation of every query when the cache cannot target types", () => {
+      client.applyCascade(truncatedResponse(["Post", "Comment"]));
+
+      expect(cache.invalidated).toEqual([
+        {
+          strategy: InvalidationStrategy.INVALIDATE,
+          scope: InvalidationScope.ALL,
+        },
+      ]);
+    });
+
+    it("does nothing for responses from servers without type invalidations", () => {
+      client.applyCascade({
+        success: true,
+        data: null,
+        cascade: {
+          updated: [],
+          deleted: [],
+          invalidations: [],
+          metadata: { timestamp: "2024-01-01", depth: 0, affectedCount: 0 },
+        },
+      });
+
+      expect(cache.invalidated).toEqual([]);
+    });
+
+    it("is exported for integrations that apply cascades themselves", () => {
+      applyTypeInvalidations(cache, [{ typename: "Post" }]);
+
+      expect(cache.invalidated).toHaveLength(1);
     });
   });
 

@@ -1,0 +1,44 @@
+{
+  "id": "TC-C-004",
+  "name": "Type Invalidation",
+  "description": "Clients MUST treat every cached entity of an invalidated type, and every cached query that contains or may contain one, as stale. Queries that cannot contain the type MAY stay fresh (Cache Invalidation Protocol, Type Invalidation)",
+  "category": "client",
+  "subcategory": "invalidation",
+  "requirement": "REQ-104",
+  "priority": "critical",
+  "input": {
+    "clientState": {
+      "cache": {
+        "Post:post_1": {
+          "__typename": "Post",
+          "id": "post_1",
+          "title": "Hello"
+        },
+        "User:user_1": { "__typename": "User", "id": "user_1", "name": "Ada" },
+        "query:ListPosts:{}": { "posts": [{ "__ref": "Post:post_1" }] },
+        "query:Drafts:{}": { "drafts": [] },
+        "query:Me:{}": { "me": { "__ref": "User:user_1" } }
+      }
+    },
+    "cascade": {
+      "updated": [],
+      "deleted": [],
+      "invalidations": [],
+      "typeInvalidations": [{ "typename": "Post", "affectedCount": 800 }],
+      "metadata": {
+        "timestamp": "2026-01-01T00:00:00Z",
+        "affectedCount": 800,
+        "truncated": true
+      }
+    }
+  },
+  "expected": {
+    "clientState": {
+      "cache": {
+        "Post:post_1": null
+      },
+      "invalidatedQueries": ["query:ListPosts:{}", "query:Drafts:{}"]
+    }
+  },
+  "tags": ["type-invalidation", "truncation", "client"]
+}

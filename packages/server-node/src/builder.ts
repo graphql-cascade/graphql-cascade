@@ -12,9 +12,55 @@ import {
   CascadeUpdatedEntity,
   CascadeDeletedEntity,
   CascadeInvalidation,
+  CascadeTypeInvalidation,
   Invalidator,
 } from "./types";
 import type { MetricsCollector } from "./metrics";
+
+type TypedEntry = { __typename: string };
+
+/**
+ * Remove every entry of `typename` from both lists, adding the number removed
+ * to `counts`. The type is then covered by a type invalidation instead.
+ */
+function collapseType(
+  typename: string,
+  updated: TypedEntry[],
+  deleted: TypedEntry[],
+  counts: Map<string, number>,
+): void {
+  let removed = 0;
+  for (const list of [updated, deleted]) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i].__typename === typename) {
+        list.splice(i, 1);
+        removed++;
+      }
+    }
+  }
+  counts.set(typename, (counts.get(typename) ?? 0) + removed);
+}
+
+/**
+ * The type with the most entries, ties broken by name for stable output.
+ */
+function largestType(entries: TypedEntry[]): string {
+  const counts = new Map<string, number>();
+  for (const { __typename } of entries) {
+    counts.set(__typename, (counts.get(__typename) ?? 0) + 1);
+  }
+  return [...counts].sort(
+    ([a, countA], [b, countB]) => countB - countA || a.localeCompare(b),
+  )[0][0];
+}
+
+function toTypeInvalidations(
+  counts: Map<string, number>,
+): CascadeTypeInvalidation[] {
+  return [...counts]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([typename, affectedCount]) => ({ typename, affectedCount }));
+}
 
 /**
  * Builds GraphQL Cascade responses from tracked changes.
@@ -70,26 +116,32 @@ export class CascadeBuilder {
       cascadeData = {
         updated: [],
         deleted: [],
-        invalidations: [],
+        overflow: {},
         metadata: {
           timestamp: new Date().toISOString(),
           depth: 0,
           affectedCount: 0,
           trackingTime: 0,
+          truncated: false,
         },
       };
     }
 
     // Compute invalidations if invalidator provided
+    let hintsTruncated = false;
     if (this.invalidator && success) {
       try {
-        const invalidations = this.invalidator.computeInvalidations(
-          cascadeData.updated,
-          cascadeData.deleted,
-          primaryResult,
+        const invalidations =
+          this.invalidator.computeInvalidations(
+            cascadeData.updated,
+            cascadeData.deleted,
+            primaryResult,
+          ) ?? [];
+        hintsTruncated = invalidations.length > this.maxInvalidations;
+        cascadeData.invalidations = invalidations.slice(
+          0,
+          this.maxInvalidations,
         );
-        cascadeData.invalidations =
-          invalidations?.slice(0, this.maxInvalidations) ?? [];
       } catch (e) {
         if (this.onInvalidationError) {
           this.onInvalidationError(e as Error);
@@ -101,7 +153,10 @@ export class CascadeBuilder {
     }
 
     // Apply size limits
-    const processedCascadeData = this.applySizeLimits(cascadeData);
+    const processedCascadeData = this.applySizeLimits(
+      cascadeData,
+      hintsTruncated,
+    );
 
     // Build response
     const response: CascadeResponse = {
@@ -148,6 +203,7 @@ export class CascadeBuilder {
       updated: [],
       deleted: [],
       invalidations: [],
+      typeInvalidations: [],
       metadata: {},
     };
 
@@ -165,8 +221,12 @@ export class CascadeBuilder {
       timestamp: new Date().toISOString(),
       depth: 0,
       affectedCount: 0,
+      truncated: false,
       constructionTime,
     };
+    cascadeData.invalidations = [];
+    cascadeData.typeInvalidations = [];
+    delete cascadeData.overflow;
 
     // Apply metadata filtering based on configuration
     if (!this.includeTimingMetadata) {
@@ -189,60 +249,61 @@ export class CascadeBuilder {
   }
 
   /**
-   * Apply size limits to cascade data.
+   * Enforce size limits without losing information: whole types are moved
+   * from the entity lists into type invalidations, largest first, until the
+   * response fits. Types dropped by the tracker are covered the same way.
    */
-  private applySizeLimits(cascadeData: any): any {
-    const updated = cascadeData.updated || [];
-    const deleted = cascadeData.deleted || [];
-    const invalidations = cascadeData.invalidations || [];
-
-    // Apply entity limits
-    let truncatedUpdated = false;
-    let truncatedDeleted = false;
-    let truncatedInvalidations = false;
-
-    if (updated.length > this.maxUpdatedEntities) {
-      updated.splice(this.maxUpdatedEntities);
-      truncatedUpdated = true;
-    }
-
-    if (deleted.length > this.maxDeletedEntities) {
-      deleted.splice(this.maxDeletedEntities);
-      truncatedDeleted = true;
-    }
-
-    if (invalidations.length > this.maxInvalidations) {
-      invalidations.splice(this.maxInvalidations);
-      truncatedInvalidations = true;
-    }
-
-    // Check response size
-    const responseSize = this.estimateResponseSize(
-      updated,
-      deleted,
-      invalidations,
+  private applySizeLimits(cascadeData: any, hintsTruncated: boolean): any {
+    const updated: TypedEntry[] = cascadeData.updated ?? [];
+    const deleted: TypedEntry[] = cascadeData.deleted ?? [];
+    const invalidations = cascadeData.invalidations ?? [];
+    const counts = new Map<string, number>(
+      Object.entries(cascadeData.overflow ?? {}),
     );
 
-    if (responseSize > this.maxResponseSizeMb * 1024 * 1024) {
-      // Truncate further if needed
-      const totalEntities = updated.length + deleted.length;
-      if (totalEntities > 100) {
-        // Keep only first 50 of each type
-        updated.splice(50);
-        deleted.splice(50);
-        cascadeData.metadata.truncatedSize = true;
+    for (const typename of [...counts.keys()]) {
+      collapseType(typename, updated, deleted, counts);
+    }
+
+    const maxSizeBytes = this.maxResponseSizeMb * 1024 * 1024;
+    const listedBeforeLimits = updated.length + deleted.length;
+    for (;;) {
+      let offending: TypedEntry[];
+      if (updated.length > this.maxUpdatedEntities) {
+        offending = updated;
+      } else if (deleted.length > this.maxDeletedEntities) {
+        offending = deleted;
+      } else if (
+        updated.length + deleted.length > 0 &&
+        this.estimateResponseSize(updated, deleted, invalidations) >
+          maxSizeBytes
+      ) {
+        offending = [...updated, ...deleted];
+      } else {
+        break;
+      }
+      collapseType(largestType(offending), updated, deleted, counts);
+    }
+
+    const collapsedByLimits =
+      listedBeforeLimits - updated.length - deleted.length;
+    if (collapsedByLimits > 0) {
+      this.metrics?.increment("entitiesTruncated", collapsedByLimits);
+    }
+
+    // Dropped query hints: invalidating every changed type covers them.
+    if (hintsTruncated) {
+      for (const { __typename } of [...updated, ...deleted]) {
+        counts.set(__typename, (counts.get(__typename) ?? 0) + 1);
       }
     }
 
+    delete cascadeData.overflow;
     cascadeData.updated = updated;
     cascadeData.deleted = deleted;
     cascadeData.invalidations = invalidations;
-
-    // Update metadata
-    if (truncatedUpdated) cascadeData.metadata.truncatedUpdated = true;
-    if (truncatedDeleted) cascadeData.metadata.truncatedDeleted = true;
-    if (truncatedInvalidations)
-      cascadeData.metadata.truncatedInvalidations = true;
+    cascadeData.typeInvalidations = toTypeInvalidations(counts);
+    cascadeData.metadata.truncated = counts.size > 0;
 
     return cascadeData;
   }
@@ -288,27 +349,43 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
         depth: this.tracker.currentDepth,
         affectedCount: 0,
         trackingTime: 0,
+        truncated: false,
         streaming: true,
       },
     };
 
-    // Stream updated entities
-    let updatedCount = 0;
-    for (const [entity, operation] of this.tracker.getUpdatedStream()) {
-      if (updatedCount >= this.maxUpdatedEntities) {
-        cascadeData.metadata.truncatedUpdated = true;
-        break;
+    // Types already covered by a type invalidation, with their entity counts.
+    // Once a list is full, each further type is collapsed as it arrives.
+    const counts = new Map<string, number>(
+      Object.entries(this.tracker.getOverflow()),
+    );
+    const cover = (typename: string, list: TypedEntry[], max: number) => {
+      if (!counts.has(typename) && list.length < max) return false;
+      if (!counts.has(typename)) {
+        collapseType(
+          typename,
+          cascadeData.updated,
+          cascadeData.deleted,
+          counts,
+        );
       }
+      counts.set(typename, (counts.get(typename) ?? 0) + 1);
+      return true;
+    };
 
+    // Stream updated entities
+    for (const [entity, operation] of this.tracker.getUpdatedStream()) {
       try {
-        const entityDict = this.entityToDict(entity);
+        const typename = this.getEntityType(entity);
+        if (cover(typename, cascadeData.updated, this.maxUpdatedEntities)) {
+          continue;
+        }
         cascadeData.updated.push({
-          __typename: this.getEntityType(entity),
+          __typename: typename,
           id: this.getEntityId(entity),
           operation,
-          entity: entityDict,
+          entity: this.entityToDict(entity),
         });
-        updatedCount++;
       } catch (e) {
         // Skip problematic entities
         continue;
@@ -316,33 +393,43 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
     }
 
     // Stream deleted entities
-    let deletedCount = 0;
     for (const [typename, entityId] of this.tracker.getDeletedStream()) {
-      if (deletedCount >= this.maxDeletedEntities) {
-        cascadeData.metadata.truncatedDeleted = true;
-        break;
+      if (cover(typename, cascadeData.deleted, this.maxDeletedEntities)) {
+        continue;
       }
-
       cascadeData.deleted.push({
         __typename: typename,
         id: entityId,
         deletedAt: new Date().toISOString(),
       });
-      deletedCount++;
     }
 
-    cascadeData.metadata.affectedCount = updatedCount + deletedCount;
+    const covered = [...counts.values()].reduce((a, b) => a + b, 0);
+    cascadeData.metadata.affectedCount =
+      cascadeData.updated.length + cascadeData.deleted.length + covered;
 
     // Compute invalidations
     if (this.invalidator && success) {
-      const invalidations = this.invalidator.computeInvalidations(
-        cascadeData.updated,
-        cascadeData.deleted,
-        primaryResult,
-      );
-      cascadeData.invalidations =
-        invalidations?.slice(0, this.maxInvalidations) ?? [];
+      const invalidations =
+        this.invalidator.computeInvalidations(
+          cascadeData.updated,
+          cascadeData.deleted,
+          primaryResult,
+        ) ?? [];
+      cascadeData.invalidations = invalidations.slice(0, this.maxInvalidations);
+      // Dropped query hints: invalidating every changed type covers them.
+      if (invalidations.length > this.maxInvalidations) {
+        for (const { __typename } of [
+          ...cascadeData.updated,
+          ...cascadeData.deleted,
+        ]) {
+          counts.set(__typename, (counts.get(__typename) ?? 0) + 1);
+        }
+      }
     }
+
+    cascadeData.typeInvalidations = toTypeInvalidations(counts);
+    cascadeData.metadata.truncated = counts.size > 0;
 
     // Add construction time to metadata
     const constructionTime = Date.now() - startTime;

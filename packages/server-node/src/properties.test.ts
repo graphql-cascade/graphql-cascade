@@ -475,8 +475,12 @@ describe("Property-based tests for server", () => {
 
             const data = tracker.getCascadeData();
 
-            // Should indicate truncation occurred
-            return data.metadata.truncatedUpdated === true;
+            // Dropped entities are counted by type, never silently lost
+            const dropped = Object.values(data.overflow).reduce(
+              (sum, count) => sum + count,
+              0,
+            );
+            return data.updated.length + dropped === uniqueEntities.length;
           },
         ),
         { numRuns: 50 },
@@ -550,8 +554,17 @@ describe("Property-based tests for server", () => {
             });
             const response = builder.buildResponse(null, true);
 
-            // Should indicate truncation
-            return response.cascade.metadata.truncatedUpdated === true;
+            // Every entity is either listed or covered by a type invalidation
+            const covered = response.cascade.typeInvalidations.reduce(
+              (sum, { affectedCount }) => sum + (affectedCount ?? 0),
+              0,
+            );
+            return (
+              response.cascade.metadata.truncated === true &&
+              response.cascade.updated.length <= 10 &&
+              response.cascade.updated.length + covered ===
+                uniqueEntities.length
+            );
           },
         ),
         { numRuns: 50 },

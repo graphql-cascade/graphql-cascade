@@ -29,6 +29,38 @@ describe("ReactQueryCascadeClient", () => {
     });
   });
 
+  describe("type invalidations", () => {
+    it("invalidate every cached query, since documents are not normalized by type", () => {
+      queryClient.setQueryData(
+        ["listPosts"],
+        [{ __typename: "Post", id: "1" }],
+      );
+      queryClient.setQueryData(["drafts"], []);
+
+      client.applyCascade({
+        success: true,
+        data: null,
+        cascade: {
+          updated: [],
+          deleted: [],
+          invalidations: [],
+          typeInvalidations: [{ typename: "Post" }],
+          metadata: {
+            timestamp: "2024-01-01T00:00:00Z",
+            depth: 0,
+            affectedCount: 800,
+            truncated: true,
+          },
+        },
+      });
+
+      expect(queryClient.getQueryState(["listPosts"])?.isInvalidated).toBe(
+        true,
+      );
+      expect(queryClient.getQueryState(["drafts"])?.isInvalidated).toBe(true);
+    });
+  });
+
   describe("mutate", () => {
     it("should execute mutation through executor", async () => {
       const mockResult = {

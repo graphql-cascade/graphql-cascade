@@ -236,11 +236,17 @@ class ManualTracker(CascadeTracker):
     # tracker.track_delete('Order', order_id)
 ```
 
+### Database-Derived Tracking Strategy
+
+When the read model is materialized inside the database, for example by incremental view maintenance, the materialization engine already computes the exact set of read-model rows each transaction rewrites, following the real dependency graph. That set is the cascade: no relationship walk, depth limit or deduplication pass is needed, and entities the application code never touched are still found. See [Appendix G: Database-Derived Tracking](appendices/G_database_derived_tracking.md).
+
 ## Relationship Traversal
+
+The traversal rules below apply to trackers that discover affected entities by walking relationships in application code (ORM hooks, triggers on base tables, manual tracking). Database-derived trackers do not walk relationships.
 
 ### Traversal Rules
 
-1. **Depth Limiting**: Stop at configured maximum depth
+1. **Depth Limiting**: Stop at configured maximum depth. Entities beyond the depth are not identified as affected, so the cascade is only as complete as the depth allows
 2. **Cycle Prevention**: Don't revisit entities in same cascade
 3. **Type Exclusion**: Skip excluded entity types
 4. **Operation Propagation**: Related entities typically UPDATED

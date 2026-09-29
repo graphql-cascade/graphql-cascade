@@ -1,4 +1,4 @@
-import { InMemoryCache } from "@apollo/client";
+import { InMemoryCache, gql } from "@apollo/client";
 import { ApolloCascadeCache } from "./cache";
 import {
   QueryInvalidation,
@@ -114,6 +114,73 @@ describe("ApolloCascadeCache", () => {
       cache.invalidate(invalidation);
 
       expect(gcSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe("invalidateType", () => {
+    const post = { __typename: "Post", id: "1", title: "Hello" };
+
+    beforeEach(() => {
+      apolloCache.writeQuery({
+        query: gql`
+          query {
+            listPosts {
+              id
+              title
+            }
+            author(id: "1") {
+              id
+              name
+              posts {
+                id
+                title
+              }
+            }
+            drafts {
+              id
+            }
+            settings {
+              theme
+            }
+          }
+        `,
+        data: {
+          listPosts: [post],
+          author: {
+            __typename: "Author",
+            id: "1",
+            name: "Ada",
+            posts: [post],
+          },
+          drafts: [],
+          settings: { __typename: "Settings", theme: "dark" },
+        },
+      });
+      cache.invalidateType("Post");
+    });
+
+    it("evicts every entity of the type", () => {
+      expect(apolloCache.extract()).not.toHaveProperty(["Post:1"]);
+    });
+
+    it("evicts fields that reference the type, wherever they live", () => {
+      const store = apolloCache.extract() as Record<string, any>;
+      expect(store.ROOT_QUERY).not.toHaveProperty("listPosts");
+      expect(store["Author:1"]).not.toHaveProperty("posts");
+    });
+
+    it("evicts empty lists, which may be missing entities of the type", () => {
+      const store = apolloCache.extract() as Record<string, any>;
+      expect(store.ROOT_QUERY).not.toHaveProperty("drafts");
+    });
+
+    it("keeps data that cannot contain the type", () => {
+      const store = apolloCache.extract() as Record<string, any>;
+      expect(store["Author:1"].name).toBe("Ada");
+      expect(store.ROOT_QUERY.settings).toEqual({
+        __typename: "Settings",
+        theme: "dark",
+      });
     });
   });
 

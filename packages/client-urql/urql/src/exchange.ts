@@ -8,6 +8,7 @@
 import { pipe, tap } from "wonka";
 import type { Exchange, Operation } from "@urql/core";
 import {
+  applyTypeInvalidations,
   createScopedLogger,
   RetryOptions,
   CascadeError,
@@ -174,6 +175,18 @@ function applyCascadeUpdates(
       if (options.debug) {
         logger.error("Error applying invalidation:", error);
       }
+    }
+  }
+
+  // Invalidate types whose entities were not listed individually
+  try {
+    applyTypeInvalidations(cacheAdapter, cascade.typeInvalidations);
+  } catch (error) {
+    result.errors.push(
+      error instanceof Error ? error : new Error(String(error)),
+    );
+    if (options.debug) {
+      logger.error("Error applying type invalidations:", error);
     }
   }
 

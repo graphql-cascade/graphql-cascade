@@ -1,4 +1,6 @@
 import { ApolloCache, gql } from "@apollo/client";
+import { fieldNameFromStoreName } from "@apollo/client/cache";
+import { isReference } from "@apollo/client/utilities";
 import {
   CascadeCache,
   QueryInvalidation,
@@ -89,6 +91,47 @@ export class ApolloCascadeCache implements CascadeCache {
         this.cache.gc();
         break;
     }
+  }
+
+  /**
+   * Evict every entity of `typename`, plus every field that references one or
+   * holds an empty list (which may be missing new entities of the type).
+   * Queries reading an evicted field refetch on their next read.
+   */
+  invalidateType(typename: string): void {
+    const store: Record<string, Record<string, unknown>> = this.cache.extract();
+
+    const mayContainType = (value: unknown): boolean => {
+      if (Array.isArray(value)) {
+        return value.length === 0 || value.some(mayContainType);
+      }
+      if (isReference(value)) {
+        return store[value.__ref]?.__typename === typename;
+      }
+      if (value !== null && typeof value === "object") {
+        return (
+          (value as { __typename?: unknown }).__typename === typename ||
+          Object.values(value).some(mayContainType)
+        );
+      }
+      return false;
+    };
+
+    for (const [id, object] of Object.entries(store)) {
+      if (object.__typename === typename) {
+        this.cache.evict({ id });
+        continue;
+      }
+      for (const [storeFieldName, value] of Object.entries(object)) {
+        if (storeFieldName !== "__typename" && mayContainType(value)) {
+          this.cache.evict({
+            id,
+            fieldName: fieldNameFromStoreName(storeFieldName),
+          });
+        }
+      }
+    }
+    this.cache.gc();
   }
 
   async refetch(_invalidation: QueryInvalidation): Promise<void> {

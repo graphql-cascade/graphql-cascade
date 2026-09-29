@@ -1,12 +1,18 @@
 {
   "specification": {
     "name": "GraphQL Cascade",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "status": "stable",
-    "supportedVersions": ["1.0.0", "1.1.0"]
+    "supportedVersions": [
+      "1.0.0",
+      "1.1.0",
+      "1.2.0"
+    ]
   },
   "compatibility": {
-    "graphqlVersions": ["2021-10"],
+    "graphqlVersions": [
+      "2021-10"
+    ],
     "breakingChanges": [],
     "deprecated": []
   }

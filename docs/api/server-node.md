@@ -204,11 +204,13 @@ const builder = new CascadeBuilder(
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `maxResponseSizeMb` | `number` | `5.0` | Maximum response size in MB before truncation |
+| `maxResponseSizeMb` | `number` | `5.0` | Maximum estimated response size in MB before truncation |
 | `maxUpdatedEntities` | `number` | `500` | Maximum updated entities in response |
 | `maxDeletedEntities` | `number` | `100` | Maximum deleted entities in response |
 | `maxInvalidations` | `number` | `50` | Maximum invalidation entries in response |
 | `onInvalidationError` | `(error: Error) =&gt; void` | `undefined` | Handler for invalidation computation errors |
+
+When a limit is exceeded, the builder never drops entities silently. It moves whole types, largest first, from `updated`/`deleted` into `typeInvalidations` and sets `metadata.truncated`. Entities dropped by the tracker's `maxEntities` limit are covered the same way. When invalidation hints exceed `maxInvalidations`, every type in the cascade gets a type invalidation.
 
 ```typescript
 const builder = new CascadeBuilder(tracker, invalidator, {
@@ -374,8 +376,21 @@ interface CascadeData {
   deleted: CascadeDeletedEntity[];
   /** List of cache invalidations */
   invalidations: CascadeInvalidation[];
+  /** Types whose affected entities are not listed individually */
+  typeInvalidations: CascadeTypeInvalidation[];
   /** Metadata about the cascade operation */
   metadata: CascadeMetadata;
+}
+```
+
+### CascadeTypeInvalidation
+
+```typescript
+interface CascadeTypeInvalidation {
+  /** GraphQL type name */
+  typename: string;
+  /** Number of affected entities of this type, when known */
+  affectedCount?: number;
 }
 ```
 
@@ -432,20 +447,14 @@ interface CascadeMetadata {
   timestamp: string;
   /** Depth of relationship traversal */
   depth: number;
-  /** Total number of affected entities */
+  /** Total number of affected entities, including those covered by typeInvalidations */
   affectedCount: number;
+  /** Whether limits moved entities or hints into typeInvalidations */
+  truncated: boolean;
   /** Time spent tracking changes (ms) */
   trackingTime: number;
   /** Time spent building response (ms) */
   constructionTime?: number;
-  /** Whether updated entities were truncated */
-  truncatedUpdated?: boolean;
-  /** Whether deleted entities were truncated */
-  truncatedDeleted?: boolean;
-  /** Whether invalidations were truncated */
-  truncatedInvalidations?: boolean;
-  /** Whether response was size-truncated */
-  truncatedSize?: boolean;
   /** Whether streaming was used */
   streaming?: boolean;
   /** Number of serialization errors */

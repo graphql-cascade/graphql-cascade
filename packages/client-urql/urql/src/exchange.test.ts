@@ -319,6 +319,44 @@ describe("cascadeExchange", () => {
     });
   });
 
+  it("applies type invalidations after entity updates", () => {
+    const exchange = cascadeExchange({ cacheAdapter: mockCacheAdapter });
+    const mockOperation = { kind: "mutation", key: 1 } as any;
+    const mockResult = {
+      operation: mockOperation,
+      data: {},
+      extensions: {
+        cascade: {
+          updated: [],
+          deleted: [],
+          invalidations: [],
+          typeInvalidations: [{ typename: "Post", affectedCount: 800 }],
+          metadata: {
+            timestamp: "2024-01-01T00:00:00Z",
+            depth: 1,
+            affectedCount: 800,
+            truncated: true,
+          },
+        } as CascadeUpdates,
+      },
+      stale: false,
+      hasNext: false,
+    };
+
+    toArray(
+      exchange({
+        forward: jest.fn(() => fromValue(mockResult)),
+        client: {} as any,
+        dispatchDebug: jest.fn(),
+      } as any)(fromValue(mockOperation)),
+    );
+
+    expect(mockCacheAdapter.invalidate).toHaveBeenCalledWith({
+      strategy: InvalidationStrategy.INVALIDATE,
+      scope: InvalidationScope.ALL,
+    });
+  });
+
   it("should handle missing cascade data gracefully", () => {
     const exchange = cascadeExchange({ cacheAdapter: mockCacheAdapter });
 

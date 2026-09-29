@@ -77,6 +77,10 @@ Cascade-compliant servers MUST:
    - Cascade data reflects committed transaction state
    - No phantom entities in cascade response
 
+4. **Keep Cascades Complete Under Limits**
+   - Enforce configurable size limits
+   - Never omit an affected entity silently: cover it with a `typeInvalidations` entry and set `metadata.truncated` ([Cascade Size Limits and Truncation](04_mutation_responses.md#cascade-size-limits-and-truncation))
+
 ## Client Conformance Requirements
 
 ### Generic Client Requirements
@@ -93,6 +97,8 @@ Cascade-compliant clients MUST:
      refetch(invalidation: QueryInvalidation): Promise<void>;
      remove(invalidation: QueryInvalidation): void;
      identify(entity: any): string;
+     // Optional: without it, type invalidations invalidate every query
+     invalidateType?(typename: string): void;
    }
    ```
 
@@ -100,6 +106,8 @@ Cascade-compliant clients MUST:
    - Process all `updated` entities
    - Process all `deleted` entities
    - Apply all `invalidations`
+   - Apply all `typeInvalidations` last ([Type Invalidation](05_invalidation.md#type-invalidation))
+   - Treat unrecognized error `code` values as `INTERNAL_ERROR`
 
 3. **Handle Errors Gracefully**
    - Continue processing cascade even if individual operations fail

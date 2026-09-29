@@ -90,6 +90,13 @@ export interface CascadeCache {
    * Identify an entity (get cache key).
    */
   identify(entity: any): string;
+
+  /**
+   * Optional. Mark every cached entity of a type, and every cached query that
+   * may contain one, as stale. Without it, type invalidations invalidate
+   * every query.
+   */
+  invalidateType?(typename: string): void;
 }
 ```
 
@@ -215,6 +222,17 @@ export class CascadeClient {
           break;
       }
     });
+
+    // 5. Invalidate types whose entities were not listed individually
+    const typeInvalidations = cascade.typeInvalidations ?? [];
+    if (typeInvalidations.length > 0) {
+      if (this.cache.invalidateType) {
+        typeInvalidations.forEach(({ typename }) => this.cache.invalidateType!(typename));
+      } else {
+        // Always correct, only less precise
+        this.cache.invalidate({ strategy: InvalidationStrategy.INVALIDATE, scope: InvalidationScope.ALL });
+      }
+    }
   }
 
   /**

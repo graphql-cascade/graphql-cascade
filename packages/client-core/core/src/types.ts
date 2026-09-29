@@ -19,7 +19,22 @@ export interface CascadeUpdates {
   updated: UpdatedEntity[];
   deleted: DeletedEntity[];
   invalidations: QueryInvalidation[];
+  /**
+   * Types whose affected entities are not listed individually. Absent in
+   * responses from servers implementing specification 1.1 or earlier.
+   */
+  typeInvalidations?: TypeInvalidation[];
   metadata: CascadeMetadata;
+}
+
+/**
+ * Instruction to treat every cached entity of a type, and every cached query
+ * that may contain one, as stale.
+ */
+export interface TypeInvalidation {
+  typename: string;
+  /** Number of affected entities of this type, when known. */
+  affectedCount?: number;
 }
 
 /**
@@ -30,6 +45,8 @@ export interface CascadeMetadata {
   transactionId?: string;
   depth: number;
   affectedCount: number;
+  /** Whether limits forced entities out of the response (see typeInvalidations). */
+  truncated?: boolean;
 }
 
 /**
@@ -159,6 +176,13 @@ export interface CascadeCache<T = Record<string, unknown>> {
    * Remove queries from cache.
    */
   remove(invalidation: QueryInvalidation): void;
+
+  /**
+   * Mark every cached entity of `typename`, and every cached query that may
+   * contain one, as stale. Caches without this method get a conservative
+   * fallback that invalidates all queries.
+   */
+  invalidateType?(typename: string): void;
 
   /**
    * Identify an entity (get cache key).
