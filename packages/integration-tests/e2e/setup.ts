@@ -1,9 +1,8 @@
-import { CascadeTracker, CascadeBuilder } from "@graphql-cascade/server";
 import {
+  CascadeTracker,
+  CascadeBuilder,
   CascadeResponse,
-  CascadeOperation,
-  InvalidationStrategy,
-} from "@graphql-cascade/client";
+} from "@graphql-cascade/server";
 
 /**
  * Test setup utilities for GraphQL Cascade E2E tests
@@ -12,16 +11,16 @@ import {
 /**
  * Sample entity types for testing
  */
-export interface User {
+export type User = {
   __typename: "User";
   id: string;
   name: string;
   email: string;
   createdAt: string;
   updatedAt: string;
-}
+};
 
-export interface Post {
+export type Post = {
   __typename: "Post";
   id: string;
   title: string;
@@ -30,9 +29,9 @@ export interface Post {
   author?: User;
   createdAt: string;
   updatedAt: string;
-}
+};
 
-export interface Comment {
+export type Comment = {
   __typename: "Comment";
   id: string;
   content: string;
@@ -42,7 +41,7 @@ export interface Comment {
   author?: User;
   createdAt: string;
   updatedAt: string;
-}
+};
 
 /**
  * Create a configured CascadeTracker for testing
@@ -52,13 +51,14 @@ export function createTestTracker(
     maxDepth: number;
     enableRelationshipTracking: boolean;
     maxEntities: number;
+    excludeTypes: string[];
   }> = {},
 ): CascadeTracker {
   return new CascadeTracker({
     maxDepth: config.maxDepth ?? 2,
     enableRelationshipTracking: config.enableRelationshipTracking ?? true,
     maxEntities: config.maxEntities ?? 100,
-    excludeTypes: [],
+    excludeTypes: config.excludeTypes ?? [],
     maxRelatedPerEntity: 10,
   });
 }

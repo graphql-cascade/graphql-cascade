@@ -7,5 +7,6 @@ packages:
   - 'packages/cli'
   - 'packages/codegen'
   - 'packages/conformance'
+  - 'packages/integration-tests'
   - 'packages/server-node'
   - 'docs'

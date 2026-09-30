@@ -4,12 +4,12 @@
   "description": "End-to-end integration tests for GraphQL Cascade",
   "private": true,
   "scripts": {
-    "test": "jest --maxWorkers=50% --coverage",
-    "test:watch": "jest --watch"
+    "test": "jest --maxWorkers=50%",
+    "test:watch": "jest --watch",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@graphql-cascade/server": "workspace:*",
-    "@graphql-cascade/client": "workspace:*"
+    "@graphql-cascade/server": "workspace:*"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

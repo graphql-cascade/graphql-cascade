@@ -864,8 +864,8 @@ export class CascadeTracker implements EntityChangeIterator {
       const result: Record<string, unknown> = {};
       const typename = this.getEntityType(entity);
       for (const [key, value] of Object.entries(entity)) {
-        if (!key.startsWith("_")) {
-          // Skip private properties
+        // Skip private properties, but keep GraphQL's __typename
+        if (key === "__typename" || !key.startsWith("_")) {
           // Apply field filter if configured
           if (this.fieldFilter && !this.fieldFilter(typename, key, value)) {
             continue;
