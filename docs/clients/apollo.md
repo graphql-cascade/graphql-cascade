@@ -115,7 +115,7 @@ const todo = await cascade.mutate(TOGGLE_TODO, { id: "1" });
 |---------|--------------|
 | `updated` | `writeFragment` of the entity's fields, keyed by `cache.identify({ __typename, id })` |
 | `deleted` | `evict` the entity, then `gc` |
-| `INVALIDATE` and `REMOVE` hints | Evict the `ROOT_QUERY` fields whose names match the hint's `queryName` (`EXACT`), prefix (`PREFIX`) or glob `queryPattern` (`PATTERN`), with all their arguments |
+| `INVALIDATE` and `REMOVE` hints | Evict the `ROOT_QUERY` fields the hint's scope selects: by name, and by `arguments` when an `EXACT` hint has them |
 | `REFETCH` hints | Evict the matching fields as above inside `refetchQueries`, so the active queries reading them refetch at once |
 | `typeInvalidations` | Evict every entity of the type, and every field that references one or holds an empty list |
 

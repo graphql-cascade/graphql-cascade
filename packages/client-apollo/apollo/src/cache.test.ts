@@ -237,6 +237,52 @@ describe("ApolloCascadeCache", () => {
     });
   });
 
+  describe("EXACT hints", () => {
+    beforeEach(() => {
+      const GET_USER = gql`
+        query ($id: ID!) {
+          getUser(id: $id) {
+            id
+          }
+        }
+      `;
+      for (const id of ["1", "2"]) {
+        apolloCache.writeQuery({
+          query: GET_USER,
+          variables: { id },
+          data: { getUser: { __typename: "User", id } },
+        });
+      }
+    });
+
+    const rootFields = () =>
+      Object.keys((apolloCache.extract() as Record<string, any>).ROOT_QUERY);
+
+    it("evict only the field with the hint's arguments", () => {
+      cache.invalidate({
+        queryName: "getUser",
+        arguments: { id: "1" },
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.EXACT,
+      });
+
+      expect(rootFields()).toEqual(
+        expect.arrayContaining(['getUser({"id":"2"})']),
+      );
+      expect(rootFields()).not.toContain('getUser({"id":"1"})');
+    });
+
+    it("evict the field for every argument set without arguments", () => {
+      cache.invalidate({
+        queryName: "getUser",
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.EXACT,
+      });
+
+      expect(rootFields().filter((f) => f.startsWith("getUser"))).toEqual([]);
+    });
+  });
+
   describe("refetch", () => {
     it("evicts the hinted fields when it has no client", async () => {
       apolloCache.writeQuery({

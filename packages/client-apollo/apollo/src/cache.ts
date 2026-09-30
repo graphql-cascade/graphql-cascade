@@ -4,7 +4,7 @@ import { isReference } from "@apollo/client/utilities";
 import {
   CascadeCache,
   QueryInvalidation,
-  InvalidationScope,
+  invalidationMatches,
 } from "@graphql-cascade/client";
 
 // Counter for generating unique fragment names
@@ -15,33 +15,6 @@ let fragmentCounter = 0;
  */
 function getUniqueFragmentName(typename: string): string {
   return `${typename}_CascadeFrag_${++fragmentCounter}`;
-}
-
-/**
- * Match `text` against a glob where `*` matches any run of characters and `?`
- * matches one, in O(pattern × text) time whatever the pattern.
- */
-function matchesGlob(pattern: string, text: string): boolean {
-  let p = 0;
-  let t = 0;
-  let starP = -1;
-  let starT = 0;
-  while (t < text.length) {
-    if (p < pattern.length && (pattern[p] === "?" || pattern[p] === text[t])) {
-      p++;
-      t++;
-    } else if (p < pattern.length && pattern[p] === "*") {
-      starP = p++;
-      starT = t;
-    } else if (starP !== -1) {
-      p = starP + 1;
-      t = ++starT;
-    } else {
-      return false;
-    }
-  }
-  while (pattern[p] === "*") p++;
-  return p === pattern.length;
 }
 
 /**
@@ -175,42 +148,65 @@ export class ApolloCascadeCache implements CascadeCache {
 }
 
 /**
- * Evict the root query fields the invalidation's scope selects, with all
- * their arguments. Queries reading an evicted field refetch on their next read.
+ * Evict the root query fields the invalidation's scope selects. Queries
+ * reading an evicted field refetch on their next read.
  */
 function evictQueries(
   cache: ApolloCache<any>,
   invalidation: QueryInvalidation,
 ): void {
-  const { queryName, queryPattern } = invalidation;
-  let matches: (fieldName: string) => boolean;
-  switch (invalidation.scope) {
-    case InvalidationScope.EXACT:
-      matches = (fieldName) => fieldName === queryName;
-      break;
-    case InvalidationScope.PREFIX:
-      matches = (fieldName) =>
-        queryName !== undefined && fieldName.startsWith(queryName);
-      break;
-    case InvalidationScope.PATTERN:
-      matches = (fieldName) =>
-        queryPattern !== undefined && matchesGlob(queryPattern, fieldName);
-      break;
-    case InvalidationScope.ALL:
-      matches = () => true;
-      break;
-  }
-
-  const rootQuery: Record<string, unknown> = cache.extract().ROOT_QUERY ?? {};
-  const fieldNames = new Set(
-    Object.keys(rootQuery)
-      .filter((storeFieldName) => storeFieldName !== "__typename")
-      .map(fieldNameFromStoreName),
-  );
-  for (const fieldName of fieldNames) {
-    if (matches(fieldName)) {
-      cache.evict({ id: "ROOT_QUERY", fieldName });
-    }
-  }
+  cache.modify({
+    id: "ROOT_QUERY",
+    fields: (value, { fieldName, storeFieldName, DELETE }) =>
+      fieldName !== "__typename" &&
+      selectsField(invalidation, fieldName, storeFieldName)
+        ? DELETE
+        : value,
+  });
   cache.gc();
+}
+
+/**
+ * Whether the hint selects a root field stored as `storeFieldName`, such as
+ * `getUser({"id":"1"})`. A field whose arguments cannot be read is selected
+ * by name alone: invalidating too much is safe, too little is not.
+ */
+function selectsField(
+  invalidation: QueryInvalidation,
+  fieldName: string,
+  storeFieldName: string,
+): boolean {
+  const args = storeFieldArguments(fieldName, storeFieldName);
+  return args === undefined
+    ? invalidationMatches({ ...invalidation, arguments: undefined }, fieldName)
+    : invalidationMatches(invalidation, fieldName, args);
+}
+
+/**
+ * The arguments encoded in a store field name, `{}` for a field without
+ * any, or undefined when a custom key hides them.
+ */
+function storeFieldArguments(
+  fieldName: string,
+  storeFieldName: string,
+): Record<string, unknown> | undefined {
+  const suffix = storeFieldName.slice(fieldName.length);
+  if (suffix === "") return {};
+  const json =
+    suffix.startsWith("(") && suffix.endsWith(")")
+      ? suffix.slice(1, -1)
+      : suffix.startsWith(":")
+        ? suffix.slice(1)
+        : undefined;
+  if (json === undefined) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(json);
+    return parsed !== null &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
