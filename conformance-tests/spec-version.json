@@ -1,7 +1,7 @@
 {
   "specification": {
     "name": "GraphQL Cascade",
-    "version": "1.9.0",
+    "version": "1.9.1",
     "status": "stable",
     "supportedVersions": [
       "1.0.0",
@@ -14,7 +14,8 @@
       "1.7.0",
       "1.7.1",
       "1.8.0",
-      "1.9.0"
+      "1.9.0",
+      "1.9.1"
     ]
   },
   "compatibility": {

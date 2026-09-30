@@ -223,6 +223,17 @@ Breaking changes and deprecations are called out in all three, each with a migra
 
 ## Appendix: Version History
 
+### v1.9.1 (2026-09-30)
+
+#### Changes
+- Chapters 01, 04 and 07 and the reference schema still said every mutation MUST return a `CascadeResponse`, contradicting the result unions added in 1.9.0. They now allow either form.
+
+#### Backward Compatibility
+No normative change beyond 1.9.0.
+
+#### Migration
+- None.
+
 ### v1.9.0 (2026-09-30)
 
 #### Changes

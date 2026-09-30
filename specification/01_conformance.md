@@ -50,7 +50,7 @@ All Cascade-compliant GraphQL schemas MUST:
    Payload types SHOULD also expose the mutation's result as a typed `data` field ([The `data` Field](04_mutation_responses.md#the-data-field)).
 
 2. **Use Standardized Mutation Response Types**
-   - All mutations MUST return types implementing `CascadeResponse`
+   - All mutations MUST return types implementing `CascadeResponse`, or result unions whose success member implements `CascadePayload`
    - Response type names MUST follow pattern: `{Verb}{EntityType}Cascade`
 
 3. **Include Required Types**

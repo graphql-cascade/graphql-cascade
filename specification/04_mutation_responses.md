@@ -6,12 +6,12 @@ The type definitions in this chapter are excerpts of [`reference/cascade_base.gr
 
 ## CascadeResponse Interface
 
-All Cascade-compliant mutations MUST return a type that implements the `CascadeResponse` interface:
+All Cascade-compliant mutations MUST return a type that implements the `CascadeResponse` interface, or a [result union](#result-unions) whose success member implements `CascadePayload`:
 
 ```graphql
 """
 Standard GraphQL Cascade mutation response.
-All Cascade-compliant mutations MUST return this interface.
+Cascade mutations return this interface, or a result union (CascadePayload).
 Payload types SHOULD also expose the mutation's primary result as a `data`
 field of its own type, e.g. `data: User`; the interface leaves `data` out
 because GraphQL cannot express "any result type" as a field type.
