@@ -51,9 +51,9 @@ describe("validate command", () => {
     // Parse command with no arguments
     await validateCommand.parseAsync(["node", "test"]);
 
-    expect(mockSchemaValidator.loadSchema).toHaveBeenCalledWith(
+    expect(mockSchemaValidator.loadSchema).toHaveBeenCalledWith([
       "./schema.graphql",
-    );
+    ]);
   });
 
   it("should use provided schema path", async () => {
@@ -68,12 +68,14 @@ describe("validate command", () => {
     await validateCommand.parseAsync([
       "node",
       "test",
+      "reference.graphql",
       "custom/path/schema.graphql",
     ]);
 
-    expect(mockSchemaValidator.loadSchema).toHaveBeenCalledWith(
+    expect(mockSchemaValidator.loadSchema).toHaveBeenCalledWith([
+      "reference.graphql",
       "custom/path/schema.graphql",
-    );
+    ]);
   });
 
   it("should exit with code 0 when validation passes", async () => {

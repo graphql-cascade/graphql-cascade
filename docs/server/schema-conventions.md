@@ -75,6 +75,8 @@ Payloads report errors as `CascadeError`: a standard `code` that clients act on 
 npx cascade validate schema.graphql
 ```
 
+It reports Cascade types that differ from the reference schema, types with an `id` that don't implement `Node`, and mutations whose results carry no cascade; see [cascade validate](/cli/validate).
+
 ## Next Steps
 
 - **[Entity Identification](/server/entity-identification)**: IDs and `node`

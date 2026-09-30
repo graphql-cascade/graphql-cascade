@@ -4,6 +4,7 @@ import {
   validateCascadeCompatibility,
   ValidationResult,
 } from "./schema-validator";
+import { REFERENCE_SCHEMA } from "./reference-schema";
 import * as fs from "fs";
 
 // Mock fs module
@@ -32,6 +33,23 @@ describe("schema-validator", () => {
 
       const schema = loadSchema("schema.graphql");
       expect(schema).toBeDefined();
+      expect(schema.getType("User")).toBeDefined();
+    });
+
+    it("merges several SDL files into one schema", () => {
+      const files: Record<string, string> = {
+        "reference.graphql": "interface Node { id: ID! }",
+        "schema.graphql":
+          "type Query { node: Node }  type User implements Node { id: ID! }",
+      };
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.readFileSync.mockImplementation(
+        (path) => files[String(path)] as never,
+      );
+
+      const schema = loadSchema(["reference.graphql", "schema.graphql"]);
+
+      expect(schema.getType("Node")).toBeDefined();
       expect(schema.getType("User")).toBeDefined();
     });
 
@@ -68,193 +86,134 @@ describe("schema-validator", () => {
   });
 
   describe("validateCascadeCompatibility", () => {
-    it("should pass validation for fully compatible schema", () => {
-      const schema = buildSchema(`
-        type Query {
-          user(id: ID!): User
-        }
+    const APP = `
+      type Query {
+        todo(id: ID!): Todo
+      }
 
-        type Mutation {
-          createUser(name: String!): User
-        }
+      type Todo implements Node {
+        id: ID!
+        title: String!
+      }
 
-        type User {
-          id: ID!
-          name: String!
-          email: String
-        }
+      type UpdateTodoCascade implements CascadeResponse {
+        success: Boolean!
+        errors: [CascadeError!]
+        data: Todo
+        cascade: CascadeUpdates!
+      }
 
-        type Post {
-          id: ID!
-          title: String!
-          author: User!
-        }
-      `);
+      type Mutation {
+        updateTodo(id: ID!, title: String!): UpdateTodoCascade!
+      }
+    `;
+    const validate = (sdl: string) =>
+      validateCascadeCompatibility(buildSchema(sdl));
 
-      const result = validateCascadeCompatibility(schema);
-      expect(result.errors).toHaveLength(0);
-      expect(result.warnings).toHaveLength(0);
-      expect(result.compatibility).toBe(100);
+    it("accepts a schema with the reference types and cascade payloads", () => {
+      expect(validate(REFERENCE_SCHEMA + APP)).toMatchObject({
+        errors: [],
+        warnings: [],
+        compatibility: 100,
+      });
     });
 
-    it("should error when type is missing id field", () => {
-      const schema = buildSchema(`
-        type Query {
-          user(id: ID!): User
-        }
+    it("accepts result unions", () => {
+      const result = validate(
+        REFERENCE_SCHEMA +
+          APP.replace(
+            "updateTodo(id: ID!, title: String!): UpdateTodoCascade!",
+            "updateTodo(id: ID!, title: String!): UpdateTodoResult!",
+          ) +
+          `
+          type UpdateTodoPayload implements CascadePayload {
+            data: Todo!
+            cascade: CascadeUpdates!
+            warnings: [CascadeError!]!
+          }
+          union UpdateTodoResult = UpdateTodoPayload | CascadeFailure
+        `,
+      );
 
-        type User {
-          name: String!
-        }
-      `);
-
-      const result = validateCascadeCompatibility(schema);
-      expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0]).toContain("User");
-      expect(result.errors[0]).toContain("id");
-      expect(result.compatibility).toBeLessThan(100);
+      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([]);
     });
 
-    it("should pass when type has @cascade directive but no id field", () => {
-      const schema = buildSchema(`
-        directive @cascade(depth: Int) on OBJECT
+    it("ignores descriptions and the order of fields", () => {
+      const reordered = REFERENCE_SCHEMA.replace(
+        '  """Whether the mutation succeeded."""\n  success: Boolean!\n',
+        "",
+      ).replace(
+        '  cascade: CascadeUpdates!\n}\n\n"""\nImplemented by',
+        '  cascade: CascadeUpdates!\n  success: Boolean!\n}\n\n"""\nImplemented by',
+      );
+      expect(reordered).not.toBe(REFERENCE_SCHEMA);
 
-        type Query {
-          config: Config
-        }
-
-        type Config @cascade {
-          apiKey: String!
-          endpoint: String!
-        }
-      `);
-
-      const result = validateCascadeCompatibility(schema);
-      expect(result.errors).toHaveLength(0);
+      expect(validate(reordered + APP).errors).toEqual([]);
     });
 
-    it("should error when mutation returns Boolean instead of entity", () => {
-      const schema = buildSchema(`
-        type Query {
-          user(id: ID!): User
-        }
-
-        type Mutation {
-          deleteUser(id: ID!): Boolean
-        }
-
-        type User {
-          id: ID!
-          name: String!
-        }
+    it("reports a schema without cascade payload types", () => {
+      const result = validate(`
+        type Query { hello: String }
       `);
 
-      const result = validateCascadeCompatibility(schema);
-      expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0]).toContain("deleteUser");
-      expect(result.errors[0]).toContain("Boolean");
+      expect(result.errors).toEqual([
+        expect.stringContaining("CascadeResponse"),
+      ]);
     });
 
-    it("should pass when mutation returns entity type", () => {
-      const schema = buildSchema(`
-        type Query {
-          user(id: ID!): User
-        }
+    it("reports reference types defined differently", () => {
+      const result = validate(
+        REFERENCE_SCHEMA.replace("deletedAt: DateTime!", "deletedAt: String!") +
+          APP,
+      );
 
-        type Mutation {
-          updateUser(id: ID!, name: String!): User
-        }
-
-        type User {
-          id: ID!
-          name: String!
-        }
-      `);
-
-      const result = validateCascadeCompatibility(schema);
-      expect(result.errors).toHaveLength(0);
+      expect(result.errors).toEqual([
+        expect.stringMatching(
+          /^DeletedEntity differs from the reference schema/,
+        ),
+      ]);
     });
 
-    it("should warn about potential circular references without depth limits", () => {
-      const schema = buildSchema(`
-        type Query {
-          user(id: ID!): User
-        }
+    it("reports reference directives defined differently", () => {
+      const result = validate(
+        REFERENCE_SCHEMA.replace(
+          /directive @cascadeInvalidates\([\s\S]*?\) on FIELD_DEFINITION/,
+          "directive @cascadeInvalidates(queries: [String!]!) on FIELD_DEFINITION",
+        ) + APP,
+      );
 
-        type User {
-          id: ID!
-          name: String!
-          friends: [User!]!
-        }
-      `);
-
-      const result = validateCascadeCompatibility(schema);
-      expect(result.warnings.length).toBeGreaterThan(0);
-      expect(result.warnings[0]).toContain("circular");
-      expect(result.warnings[0]).toContain("User");
+      expect(result.errors).toEqual([
+        expect.stringMatching(
+          /^@cascadeInvalidates differs from the reference schema/,
+        ),
+      ]);
     });
 
-    it("should calculate compatibility percentage correctly", () => {
-      const schema = buildSchema(`
-        type Query {
-          user: User
-          post: Post
-        }
+    it("warns about mutations whose results carry no cascade", () => {
+      const result = validate(
+        REFERENCE_SCHEMA +
+          APP.replace(
+            "type Mutation {",
+            "type Mutation {\n  archiveTodo(id: ID!): Boolean!\n  renameTodo(id: ID!): Todo",
+          ),
+      );
 
-        type Mutation {
-          deleteUser: Boolean
-          deletePost: Boolean
-        }
-
-        type User {
-          id: ID!
-          name: String!
-        }
-
-        type Post {
-          title: String!
-        }
-      `);
-
-      const result = validateCascadeCompatibility(schema);
-      // Post missing id (1 error)
-      // 2 mutations returning Boolean (2 errors)
-      expect(result.errors).toHaveLength(3);
-      expect(result.compatibility).toBeGreaterThan(0);
-      expect(result.compatibility).toBeLessThan(100);
+      expect(result.errors).toEqual([]);
+      expect(result.warnings).toEqual([
+        expect.stringMatching(/^Mutation\.archiveTodo returns Boolean/),
+        expect.stringMatching(/^Mutation\.renameTodo returns Todo/),
+      ]);
     });
 
-    it("should ignore built-in GraphQL types", () => {
-      const schema = buildSchema(`
-        type Query {
-          user: User
-        }
+    it("reports types with an id that do not implement Node", () => {
+      const result = validate(
+        REFERENCE_SCHEMA + APP + "type Tag { id: ID!  name: String! }",
+      );
 
-        type User {
-          id: ID!
-          name: String!
-        }
-      `);
-
-      const result = validateCascadeCompatibility(schema);
-      // Should not complain about String, ID, etc. not having id fields
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it("should provide actionable error messages", () => {
-      const schema = buildSchema(`
-        type Query {
-          product: Product
-        }
-
-        type Product {
-          name: String!
-        }
-      `);
-
-      const result = validateCascadeCompatibility(schema);
-      expect(result.errors[0]).toContain("Product");
-      expect(result.errors[0]).toContain("id: ID!");
+      expect(result.errors).toEqual([
+        expect.stringMatching(/^Tag has an id but does not implement Node/),
+      ]);
     });
   });
 
