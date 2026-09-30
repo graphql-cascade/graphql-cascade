@@ -1,4 +1,4 @@
-import { ApolloClient, InMemoryCache, gql, DocumentNode } from "@apollo/client";
+import { ApolloClient, InMemoryCache, DocumentNode } from "@apollo/client";
 import {
   CascadeClient,
   toCascadeResponse,
@@ -21,7 +21,7 @@ export class ApolloCascadeClient extends CascadeClient {
 
   constructor(private apollo: ApolloClient<any>) {
     super(
-      new ApolloCascadeCache(apollo.cache as InMemoryCache),
+      new ApolloCascadeCache(apollo.cache as InMemoryCache, apollo),
       (query, variables) => apollo.query({ query, variables }),
     );
   }
@@ -175,80 +175,9 @@ export class ApolloCascadeClient extends CascadeClient {
   }
 
   /**
-   * Check if tracked query variables match the invalidation arguments.
-   */
-  private variablesMatch(
-    tracked?: any,
-    required?: Record<string, any>,
-  ): boolean {
-    if (!required) return true;
-    if (!tracked) return false;
-    for (const [key, value] of Object.entries(required)) {
-      if (tracked[key] !== value) return false;
-    }
-    return true;
-  }
-
-  /**
    * Get the underlying Apollo Client instance.
    */
   getApolloClient(): ApolloClient<any> {
     return this.apollo;
   }
 }
-
-// Usage example (would be in a separate example file)
-export const exampleUsage = () => {
-  const client = new ApolloClient({
-    uri: "http://localhost:4000/graphql",
-    cache: new InMemoryCache(),
-  });
-
-  const cascade = new ApolloCascadeClient(client);
-
-  // Example mutation
-  const _updatedUser = cascade.mutate(
-    gql`
-      mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
-        updateUser(id: $id, input: $input) {
-          success
-          errors {
-            message
-            code
-          }
-          data {
-            id
-            name
-            email
-          }
-          cascade {
-            updated {
-              typename
-              id
-              operation
-              entity
-            }
-            deleted {
-              typename
-              id
-            }
-            invalidations {
-              queryName
-              strategy
-              scope
-            }
-            typeInvalidations {
-              typename
-            }
-            metadata {
-              timestamp
-              affectedCount
-              truncated
-            }
-          }
-        }
-      }
-    `,
-    { id: "123", input: { name: "New Name" } },
-  );
-};

@@ -116,12 +116,12 @@ const todo = await cascade.mutate(TOGGLE_TODO, { id: "1" });
 | `updated` | `writeFragment` of the entity's fields, keyed by `cache.identify({ __typename, id })` |
 | `deleted` | `evict` the entity, then `gc` |
 | `INVALIDATE` and `REMOVE` hints | Evict the `ROOT_QUERY` fields whose names match the hint's `queryName` (`EXACT`), prefix (`PREFIX`) or glob `queryPattern` (`PATTERN`), with all their arguments |
-| `REFETCH` hints | `ApolloCascadeClient.refetch(hint)` calls `refetchQueries` for queries registered with `trackQuery(name, query, variables)` |
+| `REFETCH` hints | Evict the matching fields as above inside `refetchQueries`, so the active queries reading them refetch at once |
 | `typeInvalidations` | Evict every entity of the type, and every field that references one or holds an empty list |
 
 Queries reading an evicted field refetch the next time they read it. Name hints after root query fields (`todos`, `searchTodos`) so they match Apollo's store.
 
-`ApolloCascadeCache` is the adapter behind this mapping; pass it to `CascadeClient` from `@graphql-cascade/client` to apply cascades with your own executor.
+`ApolloCascadeCache` is the adapter behind this mapping; pass it to `CascadeClient` from `@graphql-cascade/client` to apply cascades with your own executor. Give it your `ApolloClient` as second argument for `REFETCH` hints to refetch; without it they evict like `INVALIDATE`.
 
 ## Retrying Failed Mutations
 
