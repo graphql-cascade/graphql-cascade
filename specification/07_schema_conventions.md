@@ -29,7 +29,7 @@ interface Node {
 ```graphql
 """
 Standard GraphQL Cascade mutation response.
-All Cascade-compliant mutations MUST return this interface.
+Cascade mutations return this interface, or a result union (CascadePayload).
 Payload types SHOULD also expose the mutation's primary result as a `data`
 field of its own type, e.g. `data: User`; the interface leaves `data` out
 because GraphQL cannot express "any result type" as a field type.
@@ -47,7 +47,7 @@ interface CascadeResponse {
 ```
 
 **Requirements:**
-- All mutations MUST return types implementing `CascadeResponse`
+- All mutations MUST return types implementing `CascadeResponse`, or result unions whose success member implements `CascadePayload`
 - `success` indicates overall operation success
 - `errors` contains structured error information
 - `data` contains the primary mutation result
@@ -134,7 +134,7 @@ type UpdateCompanyCascade implements CascadeResponse {
 ```
 
 **Requirements:**
-- All response types MUST implement `CascadeResponse`
+- All response types MUST implement `CascadeResponse`; with a [result union](04_mutation_responses.md#result-unions), the success member implements `CascadePayload` instead
 - The `data` field type SHOULD be the entity being mutated (or appropriate payload type)
 - Response types MUST include all required fields from `CascadeResponse`
 

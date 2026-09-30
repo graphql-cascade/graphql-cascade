@@ -15,6 +15,7 @@ The **specification** is versioned independently: its version lives in
 ## [Unreleased]
 
 ### Fixed
+- Specification 1.9.1: chapters 01, 04, 07 and the reference schema allow result unions consistently with 1.9.0. See [release notes](releases/spec-v1.9.1.md).
 - **Security** (`@graphql-cascade/server`): an async `entityFilter` was silently skipped when building responses synchronously, leaking entities the viewer may not see; synchronous builds now refuse, and `buildResponseAsync()` applies the filter. The Apollo Server plugin sends a complete, limited cascade (with type invalidations and hints) built asynchronously; tracker failures no longer become an empty cascade; Express and NestJS integrations accept an invalidator.
 - Specification 1.7.1: examples select `entity` through fragments (a bare `entity` is invalid GraphQL); `check:spec` validates cascade selections in the specification, READMEs, and subscription examples. See [release notes](releases/spec-v1.7.1.md).
 - `@graphql-cascade/relay`: cascades update the records Relay queries read (by data ID), `createCascadeRelayEnvironment` no longer fails every cascade mutation (it called a Store method that does not exist) or drops subscriptions, deletions remove records, and nested entities are linked. Tests use a real Relay store.
