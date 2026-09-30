@@ -222,9 +222,9 @@ type Company {
 ```python
 changed_entities = set()
 for entity in cascade.updated:
-    changed_entities.add((entity.__typename, entity.id))
+    changed_entities.add((entity.typename, entity.id))
 for entity in cascade.deleted:
-    changed_entities.add((entity.__typename, entity.id))
+    changed_entities.add((entity.typename, entity.id))
 ```
 
 ### Step 2: Generate Base Invalidations
@@ -260,7 +260,7 @@ for typename, entity_id in changed_entities:
 for entity in cascade.updated:
     changed_fields = entity.get_changed_fields()
     for field_name in changed_fields:
-        rules = get_invalidation_rules(entity.__typename, field_name)
+        rules = get_invalidation_rules(entity.typename, field_name)
         for rule in rules:
             invalidations.append({
                 "queryName": rule.query,

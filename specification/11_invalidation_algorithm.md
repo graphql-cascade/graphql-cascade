@@ -96,9 +96,9 @@ class CascadeInvalidator:
 
         # Collect all affected entity types
         for entity in updated:
-            affected_types.add(entity['__typename'])
+            affected_types.add(entity['typename'])
         for entity in deleted:
-            affected_types.add(entity['__typename'])
+            affected_types.add(entity['typename'])
 
         # Generate invalidations for each type
         for entity_type in affected_types:
@@ -131,7 +131,7 @@ class CascadeInvalidator:
         invalidations = []
 
         for entity in updated:
-            entity_type = entity['__typename']
+            entity_type = entity['typename']
             entity_data = entity['entity']
 
             # Get changed fields (simplified - would need entity diffing)
@@ -507,7 +507,7 @@ def safe_compute_invalidations(self, *args, **kwargs):
 def test_automatic_invalidations():
     invalidator = CascadeInvalidator(schema, config)
 
-    updated = [{'__typename': 'User', 'id': '123', 'entity': {}}]
+    updated = [{'typename': 'User', 'id': '123', 'entity': {}}]
     deleted = []
 
     hints = invalidator.compute_invalidations(updated, deleted, None)
@@ -524,7 +524,7 @@ def test_custom_invalidations():
 
     # Entity with changed field that has directive
     updated = [{
-        '__typename': 'Company',
+        'typename': 'Company',
         'id': '456',
         'entity': {'name': 'New Name'}
     }]
@@ -566,7 +566,7 @@ def test_full_invalidation_flow():
 
     # Company name change
     updated = [{
-        '__typename': 'Company',
+        'typename': 'Company',
         'id': '123',
         'entity': {'name': 'New Name'}
     }]

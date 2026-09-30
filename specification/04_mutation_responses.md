@@ -2,6 +2,8 @@
 
 This document defines the structure and requirements for GraphQL Cascade mutation responses.
 
+The type definitions in this chapter are excerpts of [`reference/cascade_base.graphql`](../reference/cascade_base.graphql), the normative schema. If an excerpt anywhere in the specification disagrees with it, the reference schema is authoritative; CI checks that they agree.
+
 ## CascadeResponse Interface
 
 All Cascade-compliant mutations MUST return a type that implements the `CascadeResponse` interface:
@@ -174,8 +176,11 @@ type CascadeUpdates {
 ### UpdatedEntity Details
 ```graphql
 type UpdatedEntity {
-  """Type name of the entity (e.g., "User", "Company")."""
-  __typename: String!
+  """
+  Type name of the entity (e.g., "User", "Company").
+  Replaces the deprecated `__typename` pseudo-field.
+  """
+  typename: String!
 
   """ID of the entity."""
   id: ID!
@@ -186,19 +191,56 @@ type UpdatedEntity {
   """The full entity data."""
   entity: Node!
 }
+
+"""
+Type of cascade operation.
+"""
+enum CascadeOperation {
+  CREATED
+  UPDATED
+  DELETED
+}
 ```
 
 ### DeletedEntity Details
 ```graphql
 type DeletedEntity {
-  """Type name of the deleted entity."""
-  __typename: String!
+  """
+  Type name of the deleted entity.
+  Replaces the deprecated `__typename` pseudo-field.
+  """
+  typename: String!
 
   """ID of the deleted entity."""
   id: ID!
 
   """When the entity was deleted."""
   deletedAt: DateTime!
+}
+```
+
+### Deprecated: `__typename` on UpdatedEntity and DeletedEntity
+
+**Deprecated in**: 1.3.0
+**Removal**: 2.0.0
+
+Specifications before 1.3.0 named the entity's type `__typename`. GraphQL reserves names beginning with `__`, so a schema cannot declare that field, and selecting `__typename` on an `UpdatedEntity` returns `"UpdatedEntity"`, not the entity's type.
+
+- Servers MUST provide `typename`. Until 2.0.0, servers that serialize cascades as JSON outside GraphQL execution (for example in `extensions.cascade`) SHOULD also include `__typename` with the same value, for clients written against earlier versions.
+- Clients MUST read `typename`, and SHOULD fall back to `__typename` when `typename` is absent, to work with servers written against earlier versions.
+
+**Migration**:
+```graphql
+# Before
+fragment CascadeFields on CascadeUpdates {
+  updated { __typename id operation entity { id } }
+  deleted { __typename id }
+}
+
+# After
+fragment CascadeFields on CascadeUpdates {
+  updated { typename id operation entity { id } }
+  deleted { typename id }
 }
 ```
 
@@ -636,7 +678,7 @@ mutation CreateUser($input: CreateUserInput!) {
     }
     cascade {
       updated {
-        __typename
+        typename
         id
         operation
         entity {
@@ -650,7 +692,7 @@ mutation CreateUser($input: CreateUserInput!) {
         }
       }
       deleted {
-        __typename
+        typename
         id
         deletedAt
       }
@@ -686,7 +728,7 @@ mutation CreateUser($input: CreateUserInput!) {
       "cascade": {
         "updated": [
           {
-            "__typename": "User",
+            "typename": "User",
             "id": "123",
             "operation": "CREATED",
             "entity": {
@@ -767,8 +809,8 @@ mutation ProcessLargeDataset($input: ProcessDatasetInput!) {
       estimatedCompletionTime
     }
     cascade {
-      updated { __typename id }
-      deleted { __typename id }
+      updated { typename id }
+      deleted { typename id }
       invalidations { queryName }
     }
   }
@@ -790,7 +832,7 @@ mutation ProcessLargeDataset($input: ProcessDatasetInput!) {
       "cascade": {
         "updated": [
           {
-            "__typename": "DatasetJob",
+            "typename": "DatasetJob",
             "id": "job-123",
             "operation": "CREATED",
             "entity": {
@@ -894,8 +936,8 @@ subscription JobCompleted($id: ID!) {
     id
     status
     cascade {
-      updated { __typename id entity }
-      deleted { __typename id }
+      updated { typename id entity }
+      deleted { typename id }
       invalidations { queryName }
     }
   }
@@ -1129,7 +1171,7 @@ If an async operation fails during processing:
       "cascade": {
         "updated": [
           {
-            "__typename": "User",
+            "typename": "User",
             "id": "123",
             "operation": "CREATED",
             "entity": {

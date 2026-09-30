@@ -1,6 +1,10 @@
 # GraphQL Cascade Base Schema
-# This file contains the core types and interfaces that all Cascade-compliant
-# GraphQL schemas must implement.
+#
+# The normative definition of the core types and interfaces that all
+# Cascade-compliant GraphQL schemas must implement. Specification chapters
+# show excerpts; `node scripts/check-spec.mjs` checks they match this file.
+# Implementers add these types to their own schema, which provides the
+# Query root.
 
 """
 Marks a mutation as Cascade-compliant and configures cascade behavior.
@@ -137,8 +141,11 @@ type TypeInvalidation {
 An entity that was updated in the cascade.
 """
 type UpdatedEntity {
-  """Type name of the entity (e.g., "User", "Company")."""
-  __typename: String!
+  """
+  Type name of the entity (e.g., "User", "Company").
+  Replaces the deprecated `__typename` pseudo-field.
+  """
+  typename: String!
 
   """ID of the entity."""
   id: ID!
@@ -154,8 +161,11 @@ type UpdatedEntity {
 An entity that was deleted in the cascade.
 """
 type DeletedEntity {
-  """Type name of the deleted entity."""
-  __typename: String!
+  """
+  Type name of the deleted entity.
+  Replaces the deprecated `__typename` pseudo-field.
+  """
+  typename: String!
 
   """ID of the deleted entity."""
   id: ID!
@@ -271,13 +281,35 @@ type CascadeError {
 Standard error codes for Cascade mutations.
 """
 enum CascadeErrorCode {
+  """Input validation failed."""
   VALIDATION_ERROR
+
+  """Entity not found."""
   NOT_FOUND
+
+  """User not authenticated."""
   UNAUTHORIZED
+
+  """User lacks permission."""
   FORBIDDEN
+
+  """Version conflict or unique constraint violation."""
   CONFLICT
+
+  """Server error."""
   INTERNAL_ERROR
+
+  """Database transaction failed."""
   TRANSACTION_FAILED
+
+  """Operation timed out."""
+  TIMEOUT
+
+  """Rate limit exceeded."""
+  RATE_LIMITED
+
+  """Service temporarily unavailable."""
+  SERVICE_UNAVAILABLE
 }
 
 """
@@ -425,55 +457,18 @@ input OffsetPaginationArgs {
   limit: Int = 10
 }
 
-# Query Naming Conventions
-"""
-Standard query interface that all Cascade-compliant schemas SHOULD implement.
-Provides consistent query naming and pagination patterns.
-"""
-type Query {
-  """
-  Get a single entity by ID.
-  Convention: get<EntityType>
-  """
-  # Example: getUser(id: ID!): User
-
-  """
-  List entities with pagination.
-  Convention: list<EntityType>s
-  """
-  # Example: listUsers(args: PaginationArgs): UserConnection
-
-  """
-  Search entities.
-  Convention: search<EntityType>s
-  """
-  # Example: searchUsers(query: String!, args: PaginationArgs): UserConnection
-}
-
-# Mutation Naming Conventions
-"""
-Standard mutation interface that all Cascade-compliant schemas SHOULD implement.
-Provides consistent mutation naming and response patterns.
-"""
-type Mutation {
-  """
-  Create a new entity.
-  Convention: create<EntityType>
-  Response: Create<EntityType>Cascade
-  """
-  # Example: createUser(input: CreateUserInput!): CreateUserCascade!
-
-  """
-  Update an existing entity.
-  Convention: update<EntityType>
-  Response: Update<EntityType>Cascade
-  """
-  # Example: updateUser(id: ID!, input: UpdateUserInput!): UpdateUserCascade!
-
-  """
-  Delete an entity.
-  Convention: delete<EntityType>
-  Response: Delete<EntityType>Cascade
-  """
-  # Example: deleteUser(id: ID!): DeleteUserCascade!
-}
+# Query naming conventions (SHOULD):
+#   get<EntityType>(id: ID!): <EntityType>
+#     e.g. getUser(id: ID!): User
+#   list<EntityType>s(args: PaginationArgs): <EntityType>Connection
+#     e.g. listUsers(args: PaginationArgs): UserConnection
+#   search<EntityType>s(query: String!, args: PaginationArgs): <EntityType>Connection
+#     e.g. searchUsers(query: String!, args: PaginationArgs): UserConnection
+#
+# Mutation naming conventions (SHOULD):
+#   create<EntityType>(input: Create<EntityType>Input!): Create<EntityType>Cascade!
+#     e.g. createUser(input: CreateUserInput!): CreateUserCascade!
+#   update<EntityType>(id: ID!, input: Update<EntityType>Input!): Update<EntityType>Cascade!
+#     e.g. updateUser(id: ID!, input: UpdateUserInput!): UpdateUserCascade!
+#   delete<EntityType>(id: ID!): Delete<EntityType>Cascade!
+#     e.g. deleteUser(id: ID!): DeleteUserCascade!

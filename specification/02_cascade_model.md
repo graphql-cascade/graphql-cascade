@@ -35,13 +35,13 @@ graph TD
     E --> I[metadata: CascadeMetadata!]
 
     F --> J[UpdatedEntity]
-    J --> K[__typename: String!]
+    J --> K[typename: String!]
     J --> L[id: ID!]
     J --> M[operation: CascadeOperation!]
     J --> N[entity: Node!]
 
     G --> O[DeletedEntity]
-    O --> P[__typename: String!]
+    O --> P[typename: String!]
     O --> Q[id: ID!]
     O --> R[deletedAt: DateTime!]
 
@@ -57,124 +57,18 @@ graph TD
     W --> AA[affectedCount: Int!]
 ```
 
-### CascadeResponse
-The root interface that all Cascade-compliant mutations must return:
+### Core Types
+The core types are defined normatively in [`reference/cascade_base.graphql`](../reference/cascade_base.graphql) and specified in [Mutation Responses](04_mutation_responses.md):
 
-```graphql
-interface CascadeResponse {
-  """Whether the mutation succeeded."""
-  success: Boolean!
-
-  """List of errors if mutation failed or partially succeeded."""
-  errors: [CascadeError!]
-
-  """The primary result of the mutation."""
-  data: MutationPayload
-
-  """The cascade of updates triggered by this mutation."""
-  cascade: CascadeUpdates!
-}
-```
-
-### CascadeUpdates
-The complete set of changes from a mutation:
-
-```graphql
-type CascadeUpdates {
-  """All entities updated by this mutation (including the primary result)."""
-  updated: [UpdatedEntity!]!
-
-  """All entities deleted by this mutation."""
-  deleted: [DeletedEntity!]!
-
-  """Query invalidation hints for cache management."""
-  invalidations: [QueryInvalidation!]!
-
-  """
-  Types whose affected entities are not listed individually.
-  Clients treat every cached entity of each type, and every cached
-  query that may contain one, as stale.
-  """
-  typeInvalidations: [TypeInvalidation!]!
-
-  """Metadata about the cascade."""
-  metadata: CascadeMetadata!
-}
-```
-
-### UpdatedEntity
-Represents an entity that was created or updated:
-
-```graphql
-type UpdatedEntity {
-  """Type name of the entity (e.g., "User", "Company")."""
-  __typename: String!
-
-  """ID of the entity."""
-  id: ID!
-
-  """The operation performed."""
-  operation: CascadeOperation!
-
-  """The full entity data."""
-  entity: Node!
-}
-```
-
-### DeletedEntity
-Represents an entity that was deleted:
-
-```graphql
-type DeletedEntity {
-  """Type name of the deleted entity."""
-  __typename: String!
-
-  """ID of the deleted entity."""
-  id: ID!
-
-  """When the entity was deleted."""
-  deletedAt: DateTime!
-}
-```
-
-### CascadeOperation
-The type of operation performed on an entity:
-
-```graphql
-enum CascadeOperation {
-  CREATED
-  UPDATED
-  DELETED
-}
-```
-
-### CascadeMetadata
-Information about the cascade operation:
-
-```graphql
-type CascadeMetadata {
-  """Server timestamp when mutation executed."""
-  timestamp: DateTime!
-
-  """Transaction ID for tracking (optional)."""
-  transactionId: ID
-
-  """Maximum relationship depth traversed."""
-  depth: Int!
-
-  """
-  Total number of entities affected, including those covered by
-  type invalidations.
-  """
-  affectedCount: Int!
-
-  """
-  Whether limits forced entities or invalidation hints out of this
-  response. Everything omitted is covered by typeInvalidations.
-  """
-  truncated: Boolean!
-}
-```
+| Type | Role | Definition |
+|------|------|------------|
+| `CascadeResponse` | Interface every Cascade mutation returns: `success`, `errors`, `data`, `cascade` | [CascadeResponse Interface](04_mutation_responses.md#cascaderesponse-interface) |
+| `CascadeUpdates` | The changes from a mutation: `updated`, `deleted`, `invalidations`, `typeInvalidations`, `metadata` | [CascadeUpdates Structure](04_mutation_responses.md#complete-structure) |
+| `UpdatedEntity` | A created or updated entity: `typename`, `id`, `operation`, `entity` | [UpdatedEntity Details](04_mutation_responses.md#updatedentity-details) |
+| `DeletedEntity` | A deleted entity: `typename`, `id`, `deletedAt` | [DeletedEntity Details](04_mutation_responses.md#deletedentity-details) |
+| `CascadeOperation` | `CREATED`, `UPDATED` or `DELETED` | [UpdatedEntity Details](04_mutation_responses.md#updatedentity-details) |
+| `TypeInvalidation` | A type whose affected entities are not listed individually | [TypeInvalidation Details](04_mutation_responses.md#typeinvalidation-details) |
+| `CascadeMetadata` | Timestamp, transaction, depth, affected count, truncation flag | [Cascade Metadata](04_mutation_responses.md#cascade-metadata) |
 
 ## Entity Update Semantics
 
@@ -209,29 +103,7 @@ type Company {
 ## Cache Invalidation
 
 ### QueryInvalidation
-Instructions for invalidating cached queries:
-
-```graphql
-type QueryInvalidation {
-  """Query name to invalidate (e.g., "listUsers", "getCompany")."""
-  queryName: String
-
-  """Hash of the query for exact matching."""
-  queryHash: String
-
-  """Arguments that identify the query to invalidate."""
-  arguments: JSON
-
-  """Pattern to match queries (e.g., "list*", "get*")."""
-  queryPattern: String
-
-  """Strategy for handling the invalidation."""
-  strategy: InvalidationStrategy!
-
-  """Scope of the invalidation."""
-  scope: InvalidationScope!
-}
-```
+Instructions for invalidating cached queries, defined in [QueryInvalidation Structure](05_invalidation.md#queryinvalidation-structure).
 
 ### Invalidation Strategies
 - **INVALIDATE**: Mark query as stale, refetch on next access

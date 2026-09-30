@@ -155,8 +155,8 @@ mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
       }
     }
     cascade {
-      updated { __typename id operation entity }
-      deleted { __typename id }
+      updated { typename id operation entity }
+      deleted { typename id }
       invalidations { queryName strategy scope }
       metadata { timestamp affectedCount }
     }
@@ -279,7 +279,7 @@ cache.modify({
 
 // GraphQL Cascade equivalent: Server tracks all changes
 cascade: {
-  updated: [{ __typename: "User", id: userId, entity: updatedUser }]
+  updated: [{ typename: "User", id: userId, entity: updatedUser }]
 }
 ```
 

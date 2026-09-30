@@ -63,8 +63,8 @@ mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
     success
     data { id name email }
     cascade {
-      updated { __typename id operation entity }
-      deleted { __typename id }
+      updated { typename id operation entity }
+      deleted { typename id }
       invalidations { queryName strategy scope }
       metadata { timestamp affectedCount }
     }

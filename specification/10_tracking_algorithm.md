@@ -116,7 +116,7 @@ class CascadeTracker:
         updated = []
         for (typename, entity_id), (entity, operation) in self.updated_entities.items():
             updated.append({
-                '__typename': typename,
+                'typename': typename,
                 'id': entity_id,
                 'operation': operation.value,
                 'entity': entity.to_dict()
@@ -125,7 +125,7 @@ class CascadeTracker:
         deleted = []
         for typename, entity_id in self.deleted_entities:
             deleted.append({
-                '__typename': typename,
+                'typename': typename,
                 'id': entity_id,
                 'deletedAt': self.transaction_timestamp
             })
@@ -357,13 +357,13 @@ def validate_cascade_data(cascade_data):
     # Check for duplicate entities
     seen = set()
     for entity in cascade_data['updated']:
-        key = (entity['__typename'], entity['id'])
+        key = (entity['typename'], entity['id'])
         if key in seen:
             raise ValueError(f"Duplicate entity in cascade: {key}")
         seen.add(key)
 
     # Check for entities in both updated and deleted
-    deleted_keys = {(e['__typename'], e['id']) for e in cascade_data['deleted']}
+    deleted_keys = {(e['typename'], e['id']) for e in cascade_data['deleted']}
     overlap = seen & deleted_keys
     if overlap:
         raise ValueError(f"Entities in both updated and deleted: {overlap}")

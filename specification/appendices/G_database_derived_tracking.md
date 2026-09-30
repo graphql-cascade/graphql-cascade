@@ -21,7 +21,7 @@ The cascade is therefore the set of read-model rows the engine rewrote:
 
 Each read-model row maps to one GraphQL entity:
 
-- The view identifies the GraphQL type, giving `__typename`.
+- The view identifies the GraphQL type, giving `typename`.
 - The row's key gives `id`.
 - The row's projection (often a JSON column) gives `entity`.
 - Inserted and updated rows go to `updated` with operation `CREATED` or `UPDATED`; removed rows go to `deleted`.

@@ -7,11 +7,16 @@
     "UpdatedEntity": {
       "type": "object",
       "description": "Represents an entity that was created or updated",
-      "required": ["__typename", "id", "operation", "entity"],
+      "required": ["typename", "id", "operation", "entity"],
       "properties": {
-        "__typename": {
+        "typename": {
           "type": "string",
           "description": "Type name of the entity (e.g., 'User', 'Company')",
+          "minLength": 1
+        },
+        "__typename": {
+          "type": "string",
+          "description": "Deprecated since 1.3.0, removed in 2.0.0: same value as typename, for clients written against earlier versions",
           "minLength": 1
         },
         "id": {
@@ -50,7 +55,7 @@
       },
       "examples": [
         {
-          "__typename": "User",
+          "typename": "User",
           "id": "123",
           "operation": "UPDATED",
           "entity": {
@@ -69,11 +74,16 @@
     "DeletedEntity": {
       "type": "object",
       "description": "Represents an entity that was deleted",
-      "required": ["__typename", "id", "deletedAt"],
+      "required": ["typename", "id", "deletedAt"],
       "properties": {
-        "__typename": {
+        "typename": {
           "type": "string",
           "description": "Type name of the deleted entity",
+          "minLength": 1
+        },
+        "__typename": {
+          "type": "string",
+          "description": "Deprecated since 1.3.0, removed in 2.0.0: same value as typename, for clients written against earlier versions",
           "minLength": 1
         },
         "id": {
@@ -89,7 +99,7 @@
       },
       "examples": [
         {
-          "__typename": "User",
+          "typename": "User",
           "id": "123",
           "deletedAt": "2023-11-26T10:30:00Z"
         }

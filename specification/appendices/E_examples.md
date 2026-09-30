@@ -119,8 +119,8 @@ const CREATE_USER = gql`
         updatedAt
       }
       cascade {
-        updated { __typename id operation entity }
-        deleted { __typename id }
+        updated { typename id operation entity }
+        deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }
       }
@@ -142,8 +142,8 @@ const UPDATE_USER = gql`
         version
       }
       cascade {
-        updated { __typename id operation entity }
-        deleted { __typename id }
+        updated { typename id operation entity }
+        deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }
       }
@@ -304,7 +304,7 @@ const UPDATE_COMPANY = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity {
@@ -501,7 +501,7 @@ const ADD_PRODUCT_TO_ORDER = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity {
@@ -614,7 +614,7 @@ const SEND_MESSAGE = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity {
@@ -755,19 +755,8 @@ type Subscription {
   ): CascadeUpdateEvent!
 }
 
-type CascadeUpdateEvent {
-  eventType: CascadeEventType!
-  entity: UpdatedEntity
-  deletedEntity: DeletedEntity
-  timestamp: DateTime!
-  transactionId: ID
-}
-
-enum CascadeEventType {
-  ENTITY_CREATED
-  ENTITY_UPDATED
-  ENTITY_DELETED
-}
+# CascadeUpdateEvent and CascadeEventType come from
+# reference/cascade_base.graphql.
 ```
 
 **Client with Real-time Updates:**
@@ -777,13 +766,13 @@ const CASCADE_SUBSCRIPTION = gql`
     cascadeUpdates(entityTypes: $entityTypes) {
       eventType
       entity {
-        __typename
+        typename
         id
         operation
         entity
       }
       deletedEntity {
-        __typename
+        typename
         id
       }
       timestamp
@@ -908,7 +897,7 @@ const SEND_PASSWORD_RESET = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity {
@@ -989,7 +978,7 @@ function UserProfile({ userId }) {
       updateUser(id: $id, input: $input) {
         success
         data { id name email }
-        cascade { updated { __typename id entity } }
+        cascade { updated { typename id entity } }
       }
     }
   `);

@@ -4,7 +4,7 @@ This document defines the GraphQL schema conventions that servers must implement
 
 ## Base Schema Requirements
 
-All Cascade-compliant GraphQL schemas MUST include the base types and interfaces defined in `cascade_base.graphql`.
+All Cascade-compliant GraphQL schemas MUST include the base types and interfaces defined in [`reference/cascade_base.graphql`](../reference/cascade_base.graphql), the normative schema.
 
 ### Required Interfaces
 
@@ -262,95 +262,20 @@ type Product implements Node {
 
 ## Cascade Updates Structure
 
-### UpdatedEntity Structure
-```graphql
-type UpdatedEntity {
-  """Type name of the entity (e.g., "User", "Company")."""
-  __typename: String!
+`UpdatedEntity`, `DeletedEntity` and `CascadeOperation` are defined in [CascadeUpdates Structure](04_mutation_responses.md#cascadeupdates-structure).
 
-  """ID of the entity."""
-  id: ID!
-
-  """The operation performed."""
-  operation: CascadeOperation!
-
-  """The full entity data."""
-  entity: Node!
-}
-```
-
-**Requirements:**
+### UpdatedEntity Requirements
 - `entity` field MUST contain full entity data (not partial updates)
-- `__typename` enables type discrimination in client code
+- `typename` enables type discrimination in client code
 - `operation` indicates whether entity was CREATED, UPDATED, or DELETED
 
-### DeletedEntity Structure
-```graphql
-type DeletedEntity {
-  """Type name of the deleted entity."""
-  __typename: String!
-
-  """ID of the deleted entity."""
-  id: ID!
-
-  """When the entity was deleted."""
-  deletedAt: DateTime!
-}
-```
-
-**Requirements:**
+### DeletedEntity Requirements
 - Only ID and deletion timestamp are included (entity data is gone)
-- `__typename` enables proper cache eviction
-
-### CascadeOperation Enum
-```graphql
-enum CascadeOperation {
-  CREATED
-  UPDATED
-  DELETED
-}
-```
+- `typename` enables proper cache eviction
 
 ## Error Handling Structure
 
-### CascadeError Structure
-```graphql
-type CascadeError {
-  """Human-readable error message."""
-  message: String!
-
-  """Machine-readable error category. Drives generic client handling."""
-  code: CascadeErrorCode!
-
-  """
-  Application-defined code identifying the specific condition,
-  e.g. "INSUFFICIENT_FUNDS". Refines `code`; never replaces it.
-  """
-  domainCode: String
-
-  """Field that caused the error (if applicable)."""
-  field: String
-
-  """Path to the error in the input."""
-  path: [String!]
-
-  """Additional error metadata."""
-  extensions: JSON
-}
-```
-
-### CascadeErrorCode Enum
-```graphql
-enum CascadeErrorCode {
-  VALIDATION_ERROR     # Input validation failed
-  NOT_FOUND           # Entity not found
-  UNAUTHORIZED        # User not authenticated
-  FORBIDDEN           # User lacks permission
-  CONFLICT            # Version conflict or unique constraint violation
-  INTERNAL_ERROR      # Server error
-  TRANSACTION_FAILED  # Database transaction failed
-}
-```
+`CascadeError` and `CascadeErrorCode` are defined in [Error Handling](04_mutation_responses.md#error-handling).
 
 **Requirements:**
 - Error codes MUST be from the standard enum

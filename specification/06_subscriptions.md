@@ -76,7 +76,7 @@ subscription OnUserUpdates {
   cascadeUpdates(entityTypes: ["User"]) {
     eventType
     entity {
-      __typename
+      typename
       id
       operation
       entity {
@@ -108,7 +108,7 @@ When a mutation runs, it:
     "cascadeUpdates": {
       "eventType": "ENTITY_UPDATED",
       "entity": {
-        "__typename": "User",
+        "typename": "User",
         "id": "123",
         "operation": "UPDATED",
         "entity": {
@@ -144,10 +144,14 @@ Subscribe to specific entity types:
 
 ```graphql
 # Subscribe to User and Company updates
-cascadeUpdates(entityTypes: ["User", "Company"])
+subscription UserAndCompanyUpdates {
+  cascadeUpdates(entityTypes: ["User", "Company"]) { eventType timestamp }
+}
 
 # Subscribe to all entity types
-cascadeUpdates(entityTypes: [])
+subscription AllUpdates {
+  cascadeUpdates(entityTypes: []) { eventType timestamp }
+}
 ```
 
 ### Entity ID Filtering
@@ -155,10 +159,12 @@ Subscribe to specific entities:
 
 ```graphql
 # Subscribe to updates for specific users
-cascadeUpdates(
-  entityTypes: ["User"],
-  entityIds: ["123", "456"]
-)
+subscription SpecificUserUpdates {
+  cascadeUpdates(entityTypes: ["User"], entityIds: ["123", "456"]) {
+    eventType
+    timestamp
+  }
+}
 ```
 
 ### Operation Filtering
@@ -166,13 +172,17 @@ Subscribe to specific operations:
 
 ```graphql
 # Only creation events
-cascadeUpdates(
-  entityTypes: ["User"],
-  operations: [CREATED]
-)
+subscription UserCreations {
+  cascadeUpdates(entityTypes: ["User"], operations: [CREATED]) {
+    eventType
+    timestamp
+  }
+}
 
 # All operations
-cascadeUpdates(entityTypes: ["User"])
+subscription UserUpdates {
+  cascadeUpdates(entityTypes: ["User"]) { eventType timestamp }
+}
 ```
 
 ## Server Implementation
@@ -218,7 +228,7 @@ def resolve_cascade_updates(self, info, entityTypes=None, entityIds=None, operat
     async def event_generator():
         async for event in self.pubsub.subscribe("cascadeUpdates"):
             # Apply filters
-            if entityTypes and event.entity.__typename not in entityTypes:
+            if entityTypes and event.entity.typename not in entityTypes:
                 continue
 
             if entityIds and event.entity.id not in entityIds:
@@ -248,8 +258,8 @@ class RealtimeCascadeClient extends CascadeClient {
         subscription OnCascadeUpdates {
           cascadeUpdates {
             eventType
-            entity { __typename id operation entity }
-            deletedEntity { __typename id deletedAt }
+            entity { typename id operation entity }
+            deletedEntity { typename id deletedAt }
             timestamp
             transactionId
           }
@@ -353,7 +363,7 @@ subscription UserUpdates {
   cascadeUpdates(entityTypes: ["User"]) {
     eventType
     entity {
-      __typename
+      typename
       id
       operation
       entity {
@@ -380,7 +390,7 @@ subscription CompanyUpdates {
   ) {
     eventType
     entity {
-      __typename
+      typename
       id
       operation
       entity {
@@ -402,7 +412,7 @@ subscription DashboardUpdates {
   cascadeUpdates(entityTypes: ["User", "Company", "Order"]) {
     eventType
     entity {
-      __typename
+      typename
       id
       operation
       entity {
@@ -412,7 +422,7 @@ subscription DashboardUpdates {
       }
     }
     deletedEntity {
-      __typename
+      typename
       id
     }
     timestamp
@@ -432,7 +442,7 @@ function useCascadeSubscription() {
       subscription OnCascadeUpdates {
         cascadeUpdates(entityTypes: ["User"]) {
           eventType
-          entity { __typename id operation entity }
+          entity { typename id operation entity }
         }
       }
     `,
@@ -456,7 +466,7 @@ function useCascadeSubscription() {
       subscription OnCascadeUpdates {
         cascadeUpdates(entityTypes: ["User"]) {
           eventType
-          entity { __typename id operation entity }
+          entity { typename id operation entity }
         }
       }
     `,
@@ -482,7 +492,7 @@ describe('Cascade Subscriptions', () => {
     // Check subscription received event
     const event = await subscription.next();
     expect(event.eventType).toBe('ENTITY_CREATED');
-    expect(event.entity.__typename).toBe('User');
+    expect(event.entity.typename).toBe('User');
   });
 
   it('filters by entity type', async () => {

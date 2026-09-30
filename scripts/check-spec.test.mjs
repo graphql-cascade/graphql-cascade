@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { findCorruption, checkVersionConsistency } from "./check-spec.mjs";
+import {
+  findCorruption,
+  checkVersionConsistency,
+  checkReferenceSchema,
+  checkSnippets,
+} from "./check-spec.mjs";
 
 // Built from parts so this file never matches the pattern it tests.
 const MARKER = ["</xai", "function_call>"].join(":");
@@ -82,6 +87,110 @@ describe("checkVersionConsistency", () => {
     };
     assert.deepEqual(checkVersionConsistency(reader(tree)), [
       "README.md: expected badge Specification-v1.1.0",
+    ]);
+  });
+});
+
+const REFERENCE = `
+"""An entity."""
+interface Node {
+  id: ID!
+}
+
+"""An updated entity."""
+type UpdatedEntity {
+  "Type name of the entity."
+  typename: String!
+  id: ID!
+  entity: Node!
+}
+
+enum Color {
+  RED
+  GREEN
+}
+
+type Query {
+  node(id: ID!): Node
+}
+`;
+
+describe("checkReferenceSchema", () => {
+  it("accepts a valid schema", () => {
+    assert.deepEqual(checkReferenceSchema(REFERENCE), []);
+  });
+
+  it("accepts a schema without a Query root, which implementers provide", () => {
+    const withoutQuery = REFERENCE.slice(0, REFERENCE.indexOf("type Query"));
+    assert.deepEqual(checkReferenceSchema(withoutQuery), []);
+  });
+
+  it("reports syntax errors", () => {
+    assert.match(
+      checkReferenceSchema("type Query {")[0],
+      /^reference\/cascade_base\.graphql: Syntax Error/,
+    );
+  });
+
+  it("reports invalid schemas, such as reserved __ names", () => {
+    const problems = checkReferenceSchema(
+      REFERENCE.replace("typename: String!", "__typename: String!"),
+    );
+    assert.equal(problems.length, 1);
+    assert.match(problems[0], /"__typename" must not begin with "__"/);
+  });
+});
+
+const chapter = (graphql) => ({
+  path: "specification/99_test.md",
+  content: `# Title\n\nText\n\n\`\`\`graphql\n${graphql}\n\`\`\`\n`,
+});
+
+describe("checkSnippets", () => {
+  it("accepts snippets that match the reference, ignoring descriptions", () => {
+    const snippet = `
+      """Differently worded."""
+      type UpdatedEntity {
+        typename: String!
+        id: ID!
+        entity: Node!
+      }`;
+    assert.deepEqual(checkSnippets(REFERENCE, [chapter(snippet)]), []);
+  });
+
+  it("ignores types the reference does not define, and operations", () => {
+    const snippet = `
+      type CreateUserCascade { id: ID! }
+      mutation { createUser { id } }`;
+    assert.deepEqual(checkSnippets(REFERENCE, [chapter(snippet)]), []);
+  });
+
+  it("ignores root operation types, which implementers own", () => {
+    const snippet = `type Query { me: Node }`;
+    assert.deepEqual(checkSnippets(REFERENCE, [chapter(snippet)]), []);
+  });
+
+  it("reports snippets that do not parse, with their line", () => {
+    assert.deepEqual(checkSnippets(REFERENCE, [chapter("type {")]), [
+      'specification/99_test.md:5: graphql block does not parse: Syntax Error: Expected Name, found "{".',
+    ]);
+  });
+
+  it("reports field definitions with reserved __ names", () => {
+    const snippet = `type Example {
+  __typename: String!
+}`;
+    assert.deepEqual(checkSnippets(REFERENCE, [chapter(snippet)]), [
+      'specification/99_test.md:5: Example.__typename: names beginning with "__" are reserved by GraphQL',
+    ]);
+  });
+
+  it("reports definitions that differ from the reference", () => {
+    const snippet = `enum Color {
+  RED
+}`;
+    assert.deepEqual(checkSnippets(REFERENCE, [chapter(snippet)]), [
+      "specification/99_test.md:5: Color differs from reference/cascade_base.graphql",
     ]);
   });
 });

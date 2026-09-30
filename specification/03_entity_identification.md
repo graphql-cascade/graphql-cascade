@@ -106,36 +106,9 @@ type User implements Node & Timestamped {
 
 ## Identification in Cascade Responses
 
-### UpdatedEntity
-```graphql
-type UpdatedEntity {
-  """Type name of the entity (e.g., "User", "Company")."""
-  __typename: String!
+Entries in `cascade.updated` and `cascade.deleted` ([`UpdatedEntity`](04_mutation_responses.md#updatedentity-details) and [`DeletedEntity`](04_mutation_responses.md#deletedentity-details)) carry the entity's type name in `typename` and its identifier in `id`. Together they form the same `{typename}:{id}` key as the entity's own `__typename` and `id`.
 
-  """ID of the entity."""
-  id: ID!
-
-  """The operation performed."""
-  operation: CascadeOperation!
-
-  """The full entity data."""
-  entity: Node!
-}
-```
-
-### DeletedEntity
-```graphql
-type DeletedEntity {
-  """Type name of the deleted entity."""
-  __typename: String!
-
-  """ID of the deleted entity."""
-  id: ID!
-
-  """When the entity was deleted."""
-  deletedAt: DateTime!
-}
-```
+GraphQL reserves `__typename` for the type of the object being selected, so these wrapper types cannot declare a `__typename` field of their own; see [the deprecation note](04_mutation_responses.md#deprecated-__typename-on-updatedentity-and-deletedentity).
 
 ## Client-Side Identification
 

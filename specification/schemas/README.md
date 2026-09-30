@@ -117,7 +117,7 @@ Schemas are designed to be extensible while maintaining backward compatibility.
 - `cascade` must contain `updated`, `deleted`, `invalidations`, and `metadata`
 
 ### Entity Structures
-- `__typename` must be a non-empty string
+- `typename` must be a non-empty string; the deprecated `__typename`, if present, carries the same value
 - `id` must be a non-empty string
 - `operation` must be one of: "CREATED", "UPDATED", "DELETED"
 - `entity` can be any JSON value (schema-defined entity interface)

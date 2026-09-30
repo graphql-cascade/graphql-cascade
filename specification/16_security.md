@@ -17,13 +17,13 @@ class CascadeBuilder:
         # Filter updated entities
         filtered_updated = []
         for entity_data in updated_entities:
-            if self.user_can_access_entity(entity_data['__typename'], entity_data['id']):
+            if self.user_can_access_entity(entity_data['typename'], entity_data['id']):
                 filtered_updated.append(entity_data)
 
         # Filter deleted entities (user must have been able to see them)
         filtered_deleted = []
         for entity_data in deleted_entities:
-            if self.user_can_access_entity(entity_data['__typename'], entity_data['id']):
+            if self.user_can_access_entity(entity_data['typename'], entity_data['id']):
                 filtered_deleted.append(entity_data)
 
         # ... build response with filtered data ...
@@ -104,11 +104,11 @@ class CascadeAuditor:
             'user_id': user_id,
             'operation': 'cascade_access',
             'entities_accessed': [
-                f"{entity['__typename']}:{entity['id']}"
+                f"{entity['typename']}:{entity['id']}"
                 for entity in cascade_response['cascade']['updated']
             ],
             'entities_deleted': [
-                f"{entity['__typename']}:{entity['id']}"
+                f"{entity['typename']}:{entity['id']}"
                 for entity in cascade_response['cascade']['deleted']
             ],
             'query_invalidations': len(cascade_response['cascade']['invalidations'])
@@ -196,10 +196,10 @@ class SizeLimitedCascadeBuilder:
 
         def collapse(entries):
             # Largest type first, ties by name, for deterministic output
-            counts = Counter(e['__typename'] for e in entries)
+            counts = Counter(e['typename'] for e in entries)
             typename = min(counts, key=lambda t: (-counts[t], t))
             for key in ('updated', 'deleted'):
-                kept = [e for e in cascade[key] if e['__typename'] != typename]
+                kept = [e for e in cascade[key] if e['typename'] != typename]
                 collapsed[typename] += len(cascade[key]) - len(kept)
                 cascade[key] = kept
 
@@ -307,8 +307,8 @@ class SecureCascadeClient extends CascadeClient {
     // Check for unexpected entity types
     const allowedTypes = ['User', 'Company', 'Post', 'Comment']; // App-specific
     for (const entity of response.cascade.updated) {
-      if (!allowedTypes.includes(entity.__typename)) {
-        throw new Error(`Unexpected entity type: ${entity.__typename}`);
+      if (!allowedTypes.includes(entity.typename)) {
+        throw new Error(`Unexpected entity type: ${entity.typename}`);
       }
     }
   }
@@ -518,14 +518,14 @@ class SecureCascadeBuilder(CascadeBuilder):
 
         # Apply security filters
         response.cascade.updated = [
-            self.filter_entity_fields(entity, entity['__typename'])
+            self.filter_entity_fields(entity, entity['typename'])
             for entity in response.cascade.updated
-            if self.user_can_access_entity(entity['__typename'], entity['id'])
+            if self.user_can_access_entity(entity['typename'], entity['id'])
         ]
 
         response.cascade.deleted = [
             entity for entity in response.cascade.deleted
-            if self.user_can_access_entity(entity['__typename'], entity['id'])
+            if self.user_can_access_entity(entity['typename'], entity['id'])
         ]
 
         # Validate invalidations
@@ -590,8 +590,8 @@ class SecureApolloCascadeClient extends ApolloCascadeClient {
     // Client-side permission checks (defense in depth)
     // This should match server-side logic
     for (const entity of response.cascade.updated) {
-      if (!this.canAccessEntity(entity.__typename, entity.id)) {
-        console.warn(`Received unauthorized entity in cascade: ${entity.__typename}:${entity.id}`);
+      if (!this.canAccessEntity(entity.typename, entity.id)) {
+        console.warn(`Received unauthorized entity in cascade: ${entity.typename}:${entity.id}`);
         // Remove from cascade
         response.cascade.updated = response.cascade.updated.filter(e => e !== entity);
       }
