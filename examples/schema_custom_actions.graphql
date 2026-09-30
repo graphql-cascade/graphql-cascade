@@ -1,112 +1,26 @@
 # GraphQL Cascade - Custom Actions Example
 # Password reset and other custom business logic
 
-"""
-Base schema imports (from cascade_base.graphql)
-"""
-interface Node {
-  id: ID!
-}
-
-interface Timestamped {
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  version: Int
-}
-
-interface CascadeResponse {
-  success: Boolean!
-  errors: [CascadeError!]
-  data: MutationPayload
-  cascade: CascadeUpdates!
-}
-
-type CascadeUpdates {
-  updated: [UpdatedEntity!]!
-  deleted: [DeletedEntity!]!
-  invalidations: [QueryInvalidation!]!
-  metadata: CascadeMetadata!
-}
-
-type UpdatedEntity {
-  typename: String!
-  id: ID!
-  operation: CascadeOperation!
-  entity: Node!
-}
-
-type DeletedEntity {
-  typename: String!
-  id: ID!
-  deletedAt: DateTime!
-}
-
-type QueryInvalidation {
-  queryName: String
-  queryPattern: String
-  strategy: InvalidationStrategy!
-  scope: InvalidationScope!
-}
-
-enum CascadeOperation {
-  CREATED
-  UPDATED
-  DELETED
-}
-
-enum InvalidationStrategy {
-  INVALIDATE
-  REFETCH
-  REMOVE
-}
-
-enum InvalidationScope {
-  EXACT
-  PREFIX
-  PATTERN
-  ALL
-}
-
-type CascadeMetadata {
-  timestamp: DateTime!
-  depth: Int!
-  affectedCount: Int!
-}
-
-type CascadeError {
-  message: String!
-  code: CascadeErrorCode!
-  field: String
-  path: [String!]
-  extensions: JSON
-}
-
-enum CascadeErrorCode {
-  VALIDATION_ERROR
-  NOT_FOUND
-  UNAUTHORIZED
-  FORBIDDEN
-  CONFLICT
-  INTERNAL_ERROR
-  TRANSACTION_FAILED
-}
-
-scalar DateTime
-scalar JSON
-scalar MutationPayload
+# Core Cascade types, directives and scalars come from reference/cascade_base.graphql;
+# this file adds the application's own types.
 
 # Domain entities
 
 type User implements Node & Timestamped {
   id: ID!
   email: String!
+    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
   name: String!
+    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
   role: UserRole!
+    @cascadeInvalidates(queries: ["listUsers"])
   isEmailVerified: Boolean!
+    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
   lastLoginAt: DateTime
   passwordResetToken: PasswordResetToken
   createdAt: DateTime!
   updatedAt: DateTime!
+    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
   version: Int
 }
 
@@ -272,13 +186,6 @@ type AuditLogEdge {
   cursor: String!
 }
 
-type PageInfo {
-  hasNextPage: Boolean!
-  hasPreviousPage: Boolean!
-  startCursor: String
-  endCursor: String
-}
-
 input UserFilter {
   role: UserRole
   isEmailVerified: Boolean
@@ -334,53 +241,3 @@ type Mutation {
     @cascade(maxDepth: 1, excludeTypes: ["AuditLog"])
 }
 
-# Cascade directives on fields
-
-type User {
-  email: String!
-    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
-
-  name: String!
-    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
-
-  role: UserRole!
-    @cascadeInvalidates(queries: ["listUsers"])
-
-  isEmailVerified: Boolean!
-    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
-
-  lastLoginAt: DateTime
-  passwordResetToken: PasswordResetToken
-  createdAt: DateTime!
-  updatedAt: DateTime!
-    @cascadeInvalidates(queries: ["getUser", "getCurrentUser", "listUsers"])
-}
-
-type PasswordResetToken {
-  user: User!
-  token: String!
-  expiresAt: DateTime!
-  isUsed: Boolean!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-type EmailVerificationToken {
-  user: User!
-  token: String!
-  expiresAt: DateTime!
-  isUsed: Boolean!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-type AuditLog {
-  user: User
-  action: String!
-  resourceType: String!
-  resourceId: ID!
-  details: JSON
-  ipAddress: String
-  userAgent: String
-  createdAt: DateTime!
-}

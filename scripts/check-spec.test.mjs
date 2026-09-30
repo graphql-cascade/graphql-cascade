@@ -249,31 +249,50 @@ describe("checkRequirements", () => {
 describe("checkExampleSchemas", () => {
   const example = (content) => ({ path: "examples/schema.graphql", content });
 
-  it("accepts schemas without reserved field names", () => {
-    assert.deepEqual(
-      checkExampleSchemas([
-        example("type UpdatedEntity { typename: String! }"),
-      ]),
-      [],
+  it("accepts an example that uses the reference types", () => {
+    const app = `
+      type Query { me: UpdatedEntity }
+      type Mutation { touch: UpdatedEntity }`;
+    assert.deepEqual(checkExampleSchemas(REFERENCE, [example(app)]), []);
+  });
+
+  it("accepts an example that repeats a reference type exactly", () => {
+    const app = `
+      type Query { me: UpdatedEntity }
+      type UpdatedEntity { typename: String! id: ID! entity: Node! }`;
+    assert.deepEqual(checkExampleSchemas(REFERENCE, [example(app)]), []);
+  });
+
+  it("reports reference types the example redefines differently", () => {
+    const app = "type Query { me: Node }\nenum Color { RED }";
+    assert.deepEqual(checkExampleSchemas(REFERENCE, [example(app)]), [
+      "examples/schema.graphql:2: Color differs from reference/cascade_base.graphql",
+    ]);
+  });
+
+  it("reports schema errors", () => {
+    const app = `
+      type Query { r: Result }
+      interface Result { data: Int }
+      type Impl implements Result { data: String }`;
+    const problems = checkExampleSchemas(REFERENCE, [example(app)]);
+    assert.equal(problems.length, 1);
+    assert.match(
+      problems[0],
+      /^examples\/schema\.graphql: Interface field Result\.data expects type Int/,
     );
   });
 
   it("reports reserved __ field names", () => {
-    assert.deepEqual(
-      checkExampleSchemas([
-        example(
-          "type A { id: ID }\ntype UpdatedEntity {\n  __typename: String!\n}",
-        ),
-      ]),
-      [
-        'examples/schema.graphql:3: UpdatedEntity.__typename: names beginning with "__" are reserved by GraphQL',
-      ],
-    );
+    const app = "type Query { id: ID }\ntype Extra {\n  __typename: String!\n}";
+    assert.deepEqual(checkExampleSchemas(REFERENCE, [example(app)]), [
+      'examples/schema.graphql:3: Extra.__typename: names beginning with "__" are reserved by GraphQL',
+    ]);
   });
 
   it("reports schemas that do not parse", () => {
     assert.match(
-      checkExampleSchemas([example("type {")])[0],
+      checkExampleSchemas(REFERENCE, [example("type {")])[0],
       /^examples\/schema\.graphql: Syntax Error/,
     );
   });

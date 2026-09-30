@@ -24,7 +24,6 @@ class Timestamped:
 class CascadeResponse:
     success: bool
     errors: List['CascadeError']
-    data: Optional['MutationPayload']
     cascade: 'CascadeUpdates'
 
 @strawberry.type
@@ -210,12 +209,6 @@ class UserFilter:
 class CompanyFilter:
     name_contains: Optional[str] = None
     city: Optional[str] = None
-
-# Placeholder for mutation payload
-MutationPayload = strawberry.scalar(
-    strawberry.Union[User, Company],
-    name="MutationPayload"
-)
 
 # Mock data store (replace with real database)
 users_db = []

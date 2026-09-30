@@ -26,7 +26,7 @@ This provides namespace isolation and prevents ID collisions between different e
 graph TD
     A[CascadeResponse] --> B[success: Boolean!]
     A --> C[errors: [CascadeError!]]
-    A --> D[data: MutationPayload]
+    A -.-> D[data: result type, by convention]
     A --> E[cascade: CascadeUpdates!]
 
     E --> F[updated: [UpdatedEntity!]!]

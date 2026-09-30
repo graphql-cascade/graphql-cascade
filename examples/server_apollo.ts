@@ -19,7 +19,6 @@ const typeDefs = gql`
   interface CascadeResponse {
     success: Boolean!
     errors: [CascadeError!]
-    data: MutationPayload
     cascade: CascadeUpdates!
   }
 
@@ -87,7 +86,6 @@ const typeDefs = gql`
   }
 
   scalar DateTime
-  scalar MutationPayload
 
   # Cascade directives
   directive @cascade(

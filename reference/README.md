@@ -111,7 +111,14 @@ interface Node {
 interface CascadeResponse {
   success: Boolean!
   errors: [CascadeError!]
-  data: MutationPayload
+  cascade: CascadeUpdates!
+}
+
+# Payloads add a typed `data` field for the mutation's result
+type CreateUserCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
   cascade: CascadeUpdates!
 }
 
