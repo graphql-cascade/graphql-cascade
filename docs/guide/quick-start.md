@@ -1,296 +1,188 @@
 # Quick Start
 
-Build your first GraphQL Cascade application in 5 minutes.
+This guide builds a todo list whose mutations return cascades: an Apollo Server back end with `@graphql-cascade/server`, and an Apollo Client front end with `@graphql-cascade/apollo`.
 
-## 1. Initialize a New Project
+## 1. Install
 
 ```bash
-# Create a new project directory
-mkdir my-cascade-app && cd my-cascade-app
-npm init -y
-
-# Initialize Cascade
-npx @graphql-cascade/cli init
-
-# Or if CLI is installed globally
-# cascade init
+npm install @graphql-cascade/server @apollo/server graphql
+npm install @graphql-cascade/apollo @apollo/client
 ```
 
-## 2. Server Setup
+## 2. Schema
 
-Create a GraphQL server with Cascade support:
+Add the core Cascade types from the [reference schema](https://github.com/graphql-cascade/graphql-cascade/blob/main/reference/cascade_base.graphql) (`CascadeResponse`, `CascadeUpdates`, `UpdatedEntity`, `DeletedEntity`, and the types they use) to your schema. Then give each mutation a payload that implements `CascadeResponse`:
+
+```graphql
+type Todo implements Node {
+  id: ID!
+  title: String!
+  completed: Boolean!
+}
+
+type CreateTodoCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Todo
+  cascade: CascadeUpdates!
+}
+
+type DeleteTodoCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Todo
+  cascade: CascadeUpdates!
+}
+
+type Query {
+  todos: [Todo!]!
+}
+
+type Mutation {
+  createTodo(title: String!): CreateTodoCascade!
+  deleteTodo(id: ID!): DeleteTodoCascade!
+}
+```
+
+Use globally unique IDs, such as UUIDs, so every client cache recognizes the entities in a cascade.
+
+## 3. Server
+
+Each resolver records what it changes on a `CascadeTracker`, then builds its response with a `CascadeBuilder`:
 
 ```typescript
-// server.ts
-import { ApolloServer } from '@apollo/server';
-import { startStandaloneServer } from '@apollo/server/standalone';
-import { createCascadeContext, CascadePlugin } from '@graphql-cascade/server';
+import { ApolloServer } from "@apollo/server";
+import { startStandaloneServer } from "@apollo/server/standalone";
+import {
+  CascadeBuilder,
+  CascadeTracker,
+  InvalidationScope,
+  InvalidationStrategy,
+  notFoundError,
+  type Invalidator,
+} from "@graphql-cascade/server";
+import { randomUUID } from "node:crypto";
 
-const typeDefs = `#graphql
-  type Todo {
-    id: ID!
-    title: String!
-    completed: Boolean!
-  }
+const todos = new Map<string, { id: string; title: string; completed: boolean }>();
 
-  type Query {
-    todos: [Todo!]!
-  }
-
-  type Mutation {
-    createTodo(title: String!): TodoMutationResponse!
-    updateTodo(id: ID!, completed: Boolean!): TodoMutationResponse!
-    deleteTodo(id: ID!): TodoMutationResponse!
-  }
-
-  type TodoMutationResponse {
-    todo: Todo
-    __cascade: Cascade
-  }
-
-  type Cascade {
-    created: [EntityRef!]!
-    updated: [EntityRef!]!
-    deleted: [EntityRef!]!
-    invalidated: [InvalidationRef!]!
-  }
-
-  type EntityRef {
-    __typename: String!
-    id: ID!
-  }
-
-  type InvalidationRef {
-    __typename: String!
-    field: String
-  }
-`;
-
-const todos: any[] = [];
+// The list of todos changes whenever a todo is created or deleted
+const invalidator: Invalidator = {
+  computeInvalidations: () => [
+    {
+      queryName: "todos",
+      strategy: InvalidationStrategy.INVALIDATE,
+      scope: InvalidationScope.EXACT,
+    },
+  ],
+};
 
 const resolvers = {
   Query: {
-    todos: () => todos,
+    todos: () => [...todos.values()],
   },
   Mutation: {
-    createTodo: async (_: any, { title }: any, context: any) => {
-      const todo = {
-        id: String(todos.length + 1),
-        title,
-        completed: false,
-      };
-      todos.push(todo);
+    createTodo(_: unknown, { title }: { title: string }) {
+      const tracker = new CascadeTracker();
+      tracker.startTransaction();
 
-      // Track the creation
-      context.cascade.trackCreated('Todo', todo.id);
+      const todo = { id: randomUUID(), title, completed: false };
+      todos.set(todo.id, todo);
+      tracker.trackCreate({ __typename: "Todo", ...todo });
 
-      return {
-        todo,
-        __cascade: context.cascade.getCascade(),
-      };
+      return new CascadeBuilder(tracker, invalidator).buildResponse(todo);
     },
-    updateTodo: async (_: any, { id, completed }: any, context: any) => {
-      const todo = todos.find(t => t.id === id);
-      if (!todo) throw new Error('Todo not found');
 
-      todo.completed = completed;
+    deleteTodo(_: unknown, { id }: { id: string }) {
+      const tracker = new CascadeTracker();
+      tracker.startTransaction();
+      const builder = new CascadeBuilder(tracker, invalidator);
 
-      // Track the update
-      context.cascade.trackUpdated('Todo', todo.id);
+      const todo = todos.get(id);
+      if (!todo) {
+        return builder.buildErrorResponse([notFoundError(`Todo ${id} not found`)]);
+      }
+      todos.delete(id);
+      tracker.trackDelete("Todo", id);
 
-      return {
-        todo,
-        __cascade: context.cascade.getCascade(),
-      };
-    },
-    deleteTodo: async (_: any, { id }: any, context: any) => {
-      const index = todos.findIndex(t => t.id === id);
-      if (index === -1) throw new Error('Todo not found');
-
-      todos.splice(index, 1);
-
-      // Track the deletion
-      context.cascade.trackDeleted('Todo', id);
-
-      return {
-        todo: null,
-        __cascade: context.cascade.getCascade(),
-      };
+      return builder.buildResponse(todo);
     },
   },
 };
 
-const server = new ApolloServer({
-  typeDefs,
-  resolvers,
-  plugins: [new CascadePlugin()],
-});
-
-startStandaloneServer(server, {
-  context: async () => ({
-    cascade: createCascadeContext(),
-  }),
-  listen: { port: 4000 },
-}).then(({ url }) => {
-  console.log(`🚀 Server ready at ${url}`);
-});
+const server = new ApolloServer({ typeDefs, resolvers });
+await startStandaloneServer(server, { listen: { port: 4000 } });
 ```
 
-Start the server:
+`typeDefs` is the schema from step 2, including the reference types.
 
-```bash
-npm run dev
-```
+## 4. Client
 
-## 3. Client Setup
+Wrap your app in Apollo's `ApolloProvider` as usual, then use `useCascadeMutation` instead of `useMutation`. It applies each response's cascade to Apollo's cache:
 
-Create a React app with Apollo Client and Cascade:
+```tsx
+import { gql, useQuery } from "@apollo/client";
+import { useCascadeMutation } from "@graphql-cascade/apollo";
 
-```typescript
-// App.tsx
-import { ApolloClient, InMemoryCache, ApolloProvider, gql } from '@apollo/client';
-import { createCascadeLink } from '@graphql-cascade/client-apollo';
-import { HttpLink } from '@apollo/client/link/http';
-
-// Create Cascade-enabled Apollo Client
-const cascadeLink = createCascadeLink();
-const httpLink = new HttpLink({ uri: 'http://localhost:4000' });
-
-const client = new ApolloClient({
-  link: cascadeLink.concat(httpLink),
-  cache: new InMemoryCache(),
-});
-
-function App() {
-  return (
-    <ApolloProvider client={client}>
-      <TodoApp />
-    </ApolloProvider>
-  );
-}
-```
-
-## 4. Use Mutations with Automatic Cache Updates
-
-```typescript
-// TodoApp.tsx
-import { useQuery, useMutation, gql } from '@apollo/client';
-
-const GET_TODOS = gql`
-  query GetTodos {
-    todos {
-      id
-      title
-      completed
-    }
+const TODOS = gql`
+  query Todos {
+    todos { id title completed }
   }
 `;
 
 const CREATE_TODO = gql`
   mutation CreateTodo($title: String!) {
     createTodo(title: $title) {
-      todo {
-        id
-        title
-        completed
-      }
-      __cascade {
-        created { __typename id }
-        updated { typename id }
+      success
+      errors { message code }
+      data { id title completed }
+      cascade {
+        updated {
+          typename
+          id
+          operation
+          entity { id ... on Todo { title completed } }
+        }
         deleted { typename id }
-        invalidated { __typename field }
+        invalidations { queryName strategy scope }
+        metadata { timestamp affectedCount }
       }
     }
   }
 `;
 
-const UPDATE_TODO = gql`
-  mutation UpdateTodo($id: ID!, $completed: Boolean!) {
-    updateTodo(id: $id, completed: $completed) {
-      todo {
-        id
-        title
-        completed
-      }
-      __cascade {
-        created { __typename id }
-        updated { typename id }
-        deleted { typename id }
-        invalidated { __typename field }
-      }
-    }
-  }
-`;
-
-function TodoApp() {
-  const { data, loading } = useQuery(GET_TODOS);
-  const [createTodo] = useMutation(CREATE_TODO);
-  const [updateTodo] = useMutation(UPDATE_TODO);
-
-  if (loading) return <div>Loading...</div>;
+function TodoList() {
+  const { data } = useQuery(TODOS);
+  const [createTodo] = useCascadeMutation(CREATE_TODO);
 
   return (
-    <div>
-      <h1>My Todos</h1>
-
-      {/* Create new todo */}
-      <form onSubmit={(e) => {
-        e.preventDefault();
-        const title = (e.target as any).title.value;
-        createTodo({ variables: { title } });
-        (e.target as any).reset();
-      }}>
-        <input name="title" placeholder="New todo..." />
-        <button type="submit">Add</button>
-      </form>
-
-      {/* List todos */}
+    <>
+      <button onClick={() => createTodo({ variables: { title: "Buy milk" } })}>
+        Add
+      </button>
       <ul>
-        {data?.todos.map((todo: any) => (
-          <li key={todo.id}>
-            <input
-              type="checkbox"
-              checked={todo.completed}
-              onChange={() =>
-                updateTodo({
-                  variables: {
-                    id: todo.id,
-                    completed: !todo.completed
-                  }
-                })
-              }
-            />
-            <span style={{
-              textDecoration: todo.completed ? 'line-through' : 'none'
-            }}>
-              {todo.title}
-            </span>
-          </li>
+        {data?.todos.map((todo) => (
+          <li key={todo.id}>{todo.title}</li>
         ))}
       </ul>
-    </div>
+    </>
   );
 }
 ```
 
-## 5. Run and Test
-
-1. Start the server: `npm run dev` (in server directory)
-2. Start the client: `npm start` (in client directory)
-3. Create a todo - notice the list updates automatically
-4. Toggle a todo's completion - notice it updates without manual cache logic
-5. Delete a todo - it disappears from the list automatically
+In a real project, generate the `entity { … }` selection instead of writing it: [`@graphql-cascade/codegen`](https://github.com/graphql-cascade/graphql-cascade/tree/main/packages/codegen#cascadeentityfragment) builds a `CascadeEntity` fragment from your queries, and mutations select `entity { ...CascadeEntity }`.
 
 ## What Just Happened?
 
-- The server tracked entity changes during mutations
-- Mutation responses included `__cascade` metadata
-- The Cascade link automatically updated the Apollo cache
-- Your UI stayed in sync without any manual cache update code
+When you click **Add**:
+
+1. The resolver creates the todo, tracks it, and returns it in `cascade.updated`, with an invalidation hint for the `todos` query.
+2. `useCascadeMutation` writes the new `Todo` into Apollo's cache and invalidates `todos`.
+3. The `todos` query refetches on its next read and shows the new item. No `update` function, no `refetchQueries`.
+
+Deleting works the same way: the todo arrives in `cascade.deleted`, and the client evicts it from the cache.
 
 ## Next Steps
 
-- **[Core Concepts](/guide/concepts)** - Understand the cascade data model
-- **[Client Integration](/clients/)** - Deep dive into your specific client
-- **[Server Implementation](/server/)** - Learn advanced server patterns
-- **[Optimistic Updates](/guide/optimistic-updates)** - Add instant UI feedback
+- **[Core Concepts](/guide/concepts)**: how cascades are built, limited and applied
+- **[Server Setup](/server/)**: Express, NestJS and the Apollo Server plugin
+- **[Client Integration](/clients/)**: urql, Relay and React Query

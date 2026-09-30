@@ -1,119 +1,70 @@
 # Installation
 
-Get started with GraphQL Cascade in your project.
+GraphQL Cascade has a server library, one library per GraphQL client, a code generator and a CLI. Install the ones your project uses.
 
 ## Prerequisites
 
-- **Node.js**: 18.x or higher
-- **GraphQL**: 16.x or higher
-- A GraphQL client (Apollo Client, React Query, Relay, or URQL)
+- Node.js 18 or later
+- A GraphQL server you control (to add cascades to mutation payloads)
+- TypeScript is recommended; every package ships its own type definitions
 
-## Client Installation
-
-Choose the client library that matches your GraphQL client:
-
-### Apollo Client
+## Server
 
 ```bash
-npm install @graphql-cascade/client-apollo
+npm install @graphql-cascade/server graphql
 ```
 
-### React Query
+`@graphql-cascade/server` tracks the entities a mutation changes and builds the cascade. It includes an Apollo Server plugin, Express middleware and a NestJS module. See [Server Setup](/server/).
+
+## Client
+
+Install the library for your GraphQL client:
+
+| Client | Package | Install |
+|--------|---------|---------|
+| Apollo Client | `@graphql-cascade/apollo` | `npm install @graphql-cascade/apollo @apollo/client graphql` |
+| urql | `@graphql-cascade/urql` | `npm install @graphql-cascade/urql urql graphql` |
+| Relay | `@graphql-cascade/relay` | `npm install @graphql-cascade/relay relay-runtime react-relay graphql` |
+| React Query | `@graphql-cascade/react-query` | `npm install @graphql-cascade/react-query @tanstack/react-query graphql` |
+
+Each depends on `@graphql-cascade/client`, the client-independent core, which you can also use directly to support another client. See [Client Integration](/clients/).
+
+## Code Generation
 
 ```bash
-npm install @graphql-cascade/client-react-query
+npm install -D @graphql-cascade/codegen @graphql-codegen/cli
 ```
 
-### Relay
+`@graphql-cascade/codegen` is a [GraphQL Code Generator](https://the-guild.dev/graphql/codegen) plugin. It generates the `CascadeEntity` fragment that mutations select entities with, and typed helpers for cascade responses.
+
+## CLI
 
 ```bash
-npm install @graphql-cascade/client-relay
+npm install -D @graphql-cascade/cli
 ```
 
-### URQL
-
 ```bash
-npm install @graphql-cascade/client-urql
-```
-
-## Server Installation
-
-### Node.js/TypeScript
-
-```bash
-npm install @graphql-cascade/server
-```
-
-
-
-## CLI Tools
-
-Install the Cascade CLI for project initialization and validation:
-
-```bash
-npm install -g @graphql-cascade/cli
-```
-
-Or use with npx (without global installation):
-
-```bash
-npx @graphql-cascade/cli init
-```
-
-After installation, use the `cascade` command:
-
-```bash
-cascade init
-cascade validate
-cascade doctor
+npx cascade init       # write cascade.config.ts for your client and schema
+npx cascade doctor     # check that packages and configuration are in place
+npx cascade validate   # check a schema against the Cascade conventions
+npx cascade codegen    # run GraphQL Code Generator with the Cascade plugin
 ```
 
 ## Verify Installation
 
-### Client
-
 ```typescript
-import { createCascadeLink } from '@graphql-cascade/client-apollo';
+import { CascadeTracker } from "@graphql-cascade/server";
+import { CascadeClient } from "@graphql-cascade/client";
 
-// If this imports without errors, installation was successful
-console.log('Cascade installed successfully!');
+console.log(typeof CascadeTracker, typeof CascadeClient); // "function function"
 ```
-
-### Server
-
-```typescript
-import { createCascadeContext } from '@graphql-cascade/server';
-
-// If this imports without errors, installation was successful
-console.log('Cascade server installed successfully!');
-```
-
-### CLI
 
 ```bash
-cascade --version
-```
-
-## TypeScript Configuration
-
-Cascade includes full TypeScript support. Add these settings to your `tsconfig.json`:
-
-```json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true
-  }
-}
+npx cascade doctor
 ```
 
 ## Next Steps
 
-- **[Quick Start](/guide/quick-start)** - Build your first Cascade-enabled app
-- **[Core Concepts](/guide/concepts)** - Understand how Cascade works
-- **[Client Integration](/clients/)** - Detailed client setup for your framework
-- **[Server Setup](/server/)** - Configure your GraphQL server
+- **[Quick Start](/guide/quick-start)**: build a mutation with a cascade, end to end
+- **[Core Concepts](/guide/concepts)**: how cascades are built and applied
+- **[Server Setup](/server/)** and **[Client Integration](/clients/)**: framework details
