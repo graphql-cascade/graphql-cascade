@@ -88,7 +88,7 @@ const result = await cascadeClient.mutate(
       success
       data { id title completed }
       cascade {
-        updated { typename id operation entity }
+        updated { typename id operation entity { ...CascadeEntity } }
         deleted { typename id }
         invalidations { queryName scope }
       }

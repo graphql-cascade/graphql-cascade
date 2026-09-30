@@ -283,6 +283,20 @@ fragment CascadeFields on CascadeUpdates {
 }
 ```
 
+### Selecting Entities
+
+`entity` is typed `Node!`, an interface, so a selection names each type's fields through fragments; a bare `entity` is not a valid selection. The examples in this specification use a fragment named `CascadeEntity`:
+
+```graphql
+fragment CascadeEntity on Node {
+  id
+  ... on User { name email }
+  ... on Post { title authorId }
+}
+```
+
+It SHOULD select, for each type, the fields that the client's cached queries read, so every cached field is refreshed and no unused field is sent. A type the fragment leaves out still arrives with its `typename` and `id`, but none of its fields. Clients SHOULD therefore derive the fragment from their queries rather than write it by hand ([RFC 0001](../design/rfc-0001-cascade-2.md) proposes generating it).
+
 ### TypeInvalidation Details
 ```graphql
 type TypeInvalidation {
@@ -975,7 +989,7 @@ subscription JobCompleted($id: ID!) {
     id
     status
     cascade {
-      updated { typename id entity }
+      updated { typename id entity { ...CascadeEntity } }
       deleted { typename id }
       invalidations { queryName }
     }

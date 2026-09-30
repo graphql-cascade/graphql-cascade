@@ -52,7 +52,9 @@ const result = await cascade.mutate(
             typename
             id
             operation
-            entity
+            entity {
+              ...CascadeEntity
+            }
           }
           deleted {
             typename
@@ -99,7 +101,9 @@ const TodoItem: React.FC<{ todo: Todo }> = ({ todo }) => {
               typename
               id
               operation
-              entity
+              entity {
+                ...CascadeEntity
+              }
             }
             metadata {
               timestamp
@@ -311,7 +315,9 @@ const handle = subscriptionManager.subscribeToEntity(
             typename
             id
             operation
-            entity
+            entity {
+              ...CascadeEntity
+            }
           }
           deleted {
             typename

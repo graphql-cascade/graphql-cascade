@@ -119,7 +119,7 @@ const CREATE_USER = gql`
         updatedAt
       }
       cascade {
-        updated { typename id operation entity }
+        updated { typename id operation entity { ...CascadeEntity } }
         deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }
@@ -142,7 +142,7 @@ const UPDATE_USER = gql`
         version
       }
       cascade {
-        updated { typename id operation entity }
+        updated { typename id operation entity { ...CascadeEntity } }
         deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }
@@ -769,7 +769,7 @@ const CASCADE_SUBSCRIPTION = gql`
         typename
         id
         operation
-        entity
+        entity { ...CascadeEntity }
       }
       deletedEntity {
         typename
@@ -978,7 +978,7 @@ function UserProfile({ userId }) {
       updateUser(id: $id, input: $input) {
         success
         data { id name email }
-        cascade { updated { typename id entity } }
+        cascade { updated { typename id entity { ...CascadeEntity } } }
       }
     }
   `);

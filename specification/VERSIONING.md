@@ -223,6 +223,18 @@ Breaking changes and deprecations are called out in all three, each with a migra
 
 ## Appendix: Version History
 
+### v1.7.1 (2026-09-30)
+
+#### Changes
+- Examples selected `entity` without a selection set, which GraphQL rejects because `entity` is an interface. They now select through a `CascadeEntity` fragment, and chapter 04 explains how to select entities
+- `check-spec` validates every cascade selection in the specification against the reference schema
+
+#### Backward Compatibility
+No normative change: the corrected examples were invalid GraphQL.
+
+#### Migration
+- Clients select entity fields with fragments, for example `entity { ...CascadeEntity }`.
+
 ### v1.7.0 (2026-09-30)
 
 #### Changes

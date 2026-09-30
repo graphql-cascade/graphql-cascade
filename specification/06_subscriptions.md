@@ -258,7 +258,7 @@ class RealtimeCascadeClient extends CascadeClient {
         subscription OnCascadeUpdates {
           cascadeUpdates {
             eventType
-            entity { typename id operation entity }
+            entity { typename id operation entity { ...CascadeEntity } }
             deletedEntity { typename id deletedAt }
             timestamp
             transactionId
@@ -442,7 +442,7 @@ function useCascadeSubscription() {
       subscription OnCascadeUpdates {
         cascadeUpdates(entityTypes: ["User"]) {
           eventType
-          entity { typename id operation entity }
+          entity { typename id operation entity { ...CascadeEntity } }
         }
       }
     `,
@@ -466,7 +466,7 @@ function useCascadeSubscription() {
       subscription OnCascadeUpdates {
         cascadeUpdates(entityTypes: ["User"]) {
           eventType
-          entity { typename id operation entity }
+          entity { typename id operation entity { ...CascadeEntity } }
         }
       }
     `,

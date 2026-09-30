@@ -383,7 +383,7 @@ const updatedUser = await cascade.mutate(
         errors { message code }
         data { id name email }
         cascade {
-          updated { typename id operation entity }
+          updated { typename id operation entity { ...CascadeEntity } }
           deleted { typename id }
           invalidations { queryName strategy scope }
           metadata { timestamp affectedCount }
@@ -841,7 +841,7 @@ const UPDATE_USER = gql`
       errors { message code }
       data { id name email }
       cascade {
-        updated { typename id operation entity }
+        updated { typename id operation entity { ...CascadeEntity } }
         deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }

@@ -186,16 +186,17 @@ mutation CreateTodo($title: String!) {
         typename
         id
         operation
-        entity
-        timestamp
+        entity {
+          ...CascadeEntity
+        }
       }
       deleted {
         typename
         id
-        timestamp
+        deletedAt
       }
       invalidations {
-        query
+        queryName
         strategy
         scope
       }

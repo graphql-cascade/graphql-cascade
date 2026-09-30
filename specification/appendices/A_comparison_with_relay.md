@@ -114,7 +114,7 @@ const mutation = graphql`
         }
       }
       cascade {
-        updated { typename id operation entity }
+        updated { typename id operation entity { ...CascadeEntity } }
         deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }
@@ -208,7 +208,7 @@ const mutation = graphql`
     updateUser(input: $input) {
       # Include both Relay and Cascade fields
       user { id name }
-      cascade { updated { typename id entity } }
+      cascade { updated { typename id entity { ...CascadeEntity } } }
     }
   }
 `;

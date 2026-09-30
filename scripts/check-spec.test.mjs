@@ -210,6 +210,81 @@ describe("checkSnippets", () => {
     ]);
   });
 
+  describe("cascade selections", () => {
+    const CASCADE_REFERENCE = `${REFERENCE}
+      type CascadeUpdates { updated: [UpdatedEntity!]! count: Int! }`;
+    const check = (snippet) =>
+      checkSnippets(CASCADE_REFERENCE, [chapter(snippet)]);
+
+    it("accepts selections that follow the reference types", () => {
+      assert.deepEqual(
+        check(
+          `mutation { m { cascade { count updated { typename entity { id ... on User { name } } } } } }`,
+        ),
+        [],
+      );
+    });
+
+    it("reports object fields selected without a selection set", () => {
+      assert.deepEqual(
+        check(`mutation { m { cascade { updated { typename entity } } } }`),
+        [
+          "specification/99_test.md:5: cascade selection UpdatedEntity.entity needs a selection set",
+        ],
+      );
+    });
+
+    it("reports scalar fields given a selection set", () => {
+      assert.deepEqual(check(`mutation { m { cascade { count { x } } } }`), [
+        "specification/99_test.md:5: cascade selection CascadeUpdates.count is a scalar and takes no selection set",
+      ]);
+    });
+
+    it("reports fields the reference type does not have", () => {
+      assert.deepEqual(check(`mutation { m { cascade { created { id } } } }`), [
+        "specification/99_test.md:5: cascade selection CascadeUpdates.created does not exist",
+      ]);
+    });
+
+    it("checks untagged operation strings in code blocks", () => {
+      const doc = {
+        path: "docs/page.md",
+        content:
+          "# Page\n\n```typescript\nclient.mutate(\n  `mutation { m { cascade { updated { entity } } } }`,\n);\n```\n",
+      };
+      assert.deepEqual(checkSnippets(CASCADE_REFERENCE, [doc]), [
+        "docs/page.md:5: cascade selection UpdatedEntity.entity needs a selection set",
+      ]);
+    });
+
+    it("checks subscription events against the reference Subscription type", () => {
+      const withSubscription = `${CASCADE_REFERENCE}
+        type CascadeUpdateEvent { entity: UpdatedEntity }
+        type Subscription { cascadeUpdates: CascadeUpdateEvent! }`;
+      assert.deepEqual(
+        checkSnippets(withSubscription, [
+          chapter(
+            "subscription { cascadeUpdates { entity { typename entity } } }",
+          ),
+        ]),
+        [
+          "specification/99_test.md:5: cascade selection UpdatedEntity.entity needs a selection set",
+        ],
+      );
+    });
+
+    it("checks gql templates in code blocks", () => {
+      const doc = {
+        path: "docs/page.md",
+        content:
+          "# Page\n\n```typescript\nconst M = gql`\n  mutation { m { cascade { updated { entity } } } }\n`;\n```\n",
+      };
+      assert.deepEqual(checkSnippets(CASCADE_REFERENCE, [doc]), [
+        "docs/page.md:4: cascade selection UpdatedEntity.entity needs a selection set",
+      ]);
+    });
+  });
+
   it("reports definitions that differ from the reference", () => {
     const snippet = `enum Color {
   RED

@@ -55,7 +55,7 @@ mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
       updated {
         typename
         id
-        entity { id name email updatedAt }
+        entity { id ... on User { name email updatedAt } }
       }
       deleted { typename id }
       invalidations { queryName strategy scope }
@@ -73,7 +73,10 @@ mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
       updated {
         typename
         id
-        entity { id name email address { street city country } posts { id title content author { id name } } }
+        entity {
+          id
+          ... on User { name email address { street city country } posts { id title content author { id name } } }
+        }
       }
       # ... more fields ...
     }
