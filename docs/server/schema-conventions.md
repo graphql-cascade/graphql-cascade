@@ -1,80 +1,81 @@
 # Schema Conventions
 
-Best practices for designing GraphQL schemas with Cascade support.
+How to shape a schema for Cascade. The normative rules are in the specification's [Schema Conventions](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/07_schema_conventions.md) chapter.
 
-## Mutation Response Pattern
+## Core Types
 
-All mutations should return a response type with cascade:
+Add the types from the [reference schema](https://github.com/graphql-cascade/graphql-cascade/blob/main/reference/cascade_base.graphql) to your schema: `Node`, `CascadeResponse`, `CascadeUpdates`, `UpdatedEntity`, `DeletedEntity`, `QueryInvalidation`, `TypeInvalidation`, `CascadeMetadata`, `CascadeError`, their enums, and the `DateTime` and `JSON` scalars. Keep them unchanged; the specification's conformance checks compare against them.
 
-```graphql
-type Mutation {
-  createTodo(input: CreateTodoInput!): TodoMutationResponse!
-  updateTodo(id: ID!, input: UpdateTodoInput!): TodoMutationResponse!
-  deleteTodo(id: ID!): TodoMutationResponse!
-}
+## Entities
 
-type TodoMutationResponse {
-  todo: Todo
-  __cascade: Cascade!
-}
-```
-
-## Cascade Types
-
-Include these standard types in your schema:
+Every entity implements `Node`, with an `id` that should be unique across all types (a UUID, or an encoded `Type:key`):
 
 ```graphql
-type Cascade {
-  created: [EntityRef!]!
-  updated: [EntityRef!]!
-  deleted: [EntityRef!]!
-  invalidated: [InvalidationRef!]!
-}
-
-type EntityRef {
-  __typename: String!
+type Todo implements Node {
   id: ID!
-}
-
-type InvalidationRef {
-  __typename: String!
-  field: String
-}
-```
-
-## Entity Identification
-
-All entities must have:
-- A `__typename` field (automatic in GraphQL)
-- An `id` field of type `ID!`
-
-```graphql
-type Todo {
-  id: ID! # Required for cascade
   title: String!
   completed: Boolean!
+  owner: User!
 }
 ```
 
-## Error Handling
+## Mutations
 
-Include error information in mutation responses:
+Mutations follow `{verb}{EntityType}`, take a `{Verb}{EntityType}Input`, and return a `{Verb}{EntityType}Cascade` payload implementing `CascadeResponse`. The payload's `data` field is the mutation's result, typed as that result:
 
 ```graphql
-type TodoMutationResponse {
-  todo: Todo
-  errors: [MutationError!]
-  __cascade: Cascade!
+input UpdateTodoInput {
+  title: String
+  completed: Boolean
 }
 
-type MutationError {
-  message: String!
-  field: String
-  code: String!
+type UpdateTodoCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Todo
+  cascade: CascadeUpdates!
 }
+
+type Mutation {
+  updateTodo(id: ID!, input: UpdateTodoInput!): UpdateTodoCascade!
+}
+```
+
+### Result Unions
+
+A mutation may instead return a union of a success payload and `CascadeFailure`. The success payload implements `CascadePayload` and reports non-critical problems as `warnings`; `CascadeFailure` means nothing was committed:
+
+```graphql
+type UpdateTodoPayload implements CascadePayload {
+  data: Todo!
+  cascade: CascadeUpdates!
+  warnings: [CascadeError!]!
+}
+
+union UpdateTodoResult = UpdateTodoPayload | CascadeFailure
+
+type Mutation {
+  updateTodo(id: ID!, input: UpdateTodoInput!): UpdateTodoResult!
+}
+```
+
+The Cascade client libraries accept both forms.
+
+## Queries
+
+Queries follow `get{EntityType}` for one entity, `list{EntityType}s` for lists and `search{EntityType}s` for searches. Consistent names let invalidation hints use `PREFIX` and `PATTERN` scopes, for example `{ queryName: "listTodos", scope: PREFIX }` for every variant of the todo list.
+
+## Errors
+
+Payloads report errors as `CascadeError`: a standard `code` that clients act on generically, an optional `domainCode` for application-specific conditions, and `field`/`path` pointing at the input that caused it.
+
+## Checking a Schema
+
+```bash
+npx cascade validate schema.graphql
 ```
 
 ## Next Steps
 
-- **[Directives](/server/directives)** - Custom cascade directives
-- **[Entity Identification](/server/entity-identification)** - ID strategies
+- **[Entity Identification](/server/entity-identification)**: IDs and `node`
+- **[Directives](/server/directives)**: the specification's schema directives

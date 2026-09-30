@@ -1,308 +1,186 @@
 # Node.js/TypeScript Server
 
-Complete guide to implementing GraphQL Cascade in Node.js/TypeScript servers.
+`@graphql-cascade/server` works with any Node.js GraphQL server. This page covers the tracker in depth; [Server Implementation](/server/) gives the overview.
 
 ## Installation
 
 ```bash
-npm install @graphql-cascade/server
+npm install @graphql-cascade/server graphql
 ```
 
-## Basic Setup
+## Tracking a Mutation
+
+Create a tracker per mutation, start a transaction, record changes, and build the response:
 
 ```typescript
-import { createCascadeContext } from '@graphql-cascade/server';
-import { ApolloServer } from '@apollo/server';
-import { startStandaloneServer } from '@apollo/server/standalone';
+import { CascadeBuilder, CascadeTracker } from "@graphql-cascade/server";
 
-const server = new ApolloServer({
-  typeDefs,
-  resolvers
-});
+async function createPost(_: unknown, { input }, { db }) {
+  const tracker = new CascadeTracker();
+  tracker.startTransaction();
 
-const { url } = await startStandaloneServer(server, {
-  context: async () => ({
-    cascade: createCascadeContext()
-  }),
-  listen: { port: 4000 }
-});
+  const post = await db.posts.create(input);
+  tracker.trackCreate({ __typename: "Post", ...post });
 
-console.log(`Server ready at ${url}`);
+  const author = await db.users.incrementPostCount(input.authorId);
+  tracker.trackUpdate(
+    { __typename: "User", ...author },
+    { updatedFields: ["postCount"] },
+  );
+
+  return new CascadeBuilder(tracker).buildResponse(post);
+}
 ```
 
-## Cascade Context API
+`buildResponse` ends the transaction and returns `{ success, errors, data, cascade }`. On failure, `buildErrorResponse(errors)` returns an empty cascade: a failed mutation committed nothing.
 
-### Creating a Context
+### Recorded Changes
+
+| Call | Cascade entry |
+|------|---------------|
+| `trackCreate(entity)` | `updated`, operation `CREATED` |
+| `trackUpdate(entity, { updatedFields? })` | `updated`, operation `UPDATED`, with `updatedFields` when given |
+| `trackDelete(typename, id)` | `deleted`, with `deletedAt`; removes the entity from `updated` |
+
+Tracking the same entity twice keeps one entry; the `updatedFields` of repeated updates are merged.
+
+### Entity Types and Data
+
+The tracker reads an entity's type from `__typename`, then `_typename`, then the class name, and its ID from `id`. Entity data is the object's own fields, minus fields starting with `_` (except `__typename`); an entity with a `toDict()` method is serialized through it. Nested entities are serialized as `{ __typename, id }` references.
+
+## Relationships
+
+With `enableRelationshipTracking` (default `true`), tracking an entity also tracks the entities it references, found in its fields or returned by a `getRelatedEntities()` method, down to `maxDepth` levels. Each entity is tracked once, so cycles end naturally.
 
 ```typescript
-import { createCascadeContext, CascadeContext } from '@graphql-cascade/server';
-
-const cascade: CascadeContext = createCascadeContext({
-  maxDepth: 2, // Relationship traversal depth
-  maxEntities: 1000, // Maximum entities in cascade
-  debug: true // Enable debug logging
+const tracker = new CascadeTracker({
+  maxDepth: 2,               // levels of related entities (default 3)
+  maxRelatedPerEntity: 50,   // related entities followed per entity (default 100)
+  excludeTypes: ["AuditLog"],
 });
 ```
 
-### Tracking Operations
+Past `maxEntities` (default 1000), further entities are counted by type instead of listed, and the response covers those types with `typeInvalidations`.
+
+## Security
+
+Cascades carry entity data, so apply the same access rules as your queries:
 
 ```typescript
-// Track created entity
-cascade.trackCreated(typename: string, id: string);
+const tracker = new CascadeTracker({
+  // Leave fields out of entity data
+  fieldFilter: (typename, field) => !(typename === "User" && field === "passwordHash"),
 
-// Track updated entity
-cascade.trackUpdated(typename: string, id: string, options?: {
-  propagate?: boolean; // Track related entities
-  depth?: number; // Traversal depth
-});
+  // Leave out entities the viewer may not see (may be async)
+  entityFilter: async (entity, context) => canRead(context.viewer, entity),
 
-// Track deleted entity
-cascade.trackDeleted(typename: string, id: string);
-
-// Batch operations
-cascade.trackCreatedMany(typename: string, ids: string[]);
-cascade.trackUpdatedMany(typename: string, ids: string[]);
-cascade.trackDeletedMany(typename: string, ids: string[]);
-
-// Invalidate queries
-cascade.invalidate(typename: string, field?: string);
-cascade.invalidateType(typename: string);
-
-// Get the cascade result
-const result = cascade.getCascade();
-```
-
-## Complete Example
-
-```typescript
-import { createCascadeContext } from '@graphql-cascade/server';
-
-const typeDefs = `
-  type Todo {
-    id: ID!
-    title: String!
-    completed: Boolean!
-    list: TodoList!
-  }
-
-  type TodoList {
-    id: ID!
-    name: String!
-    todos: [Todo!]!
-  }
-
-  type Query {
-    todos: [Todo!]!
-    todoLists: [TodoList!]!
-  }
-
-  type Mutation {
-    createTodo(listId: ID!, title: String!): TodoMutationResponse!
-    updateTodo(id: ID!, completed: Boolean!): TodoMutationResponse!
-    deleteTodo(id: ID!): TodoMutationResponse!
-  }
-
-  type TodoMutationResponse {
-    todo: Todo
-    __cascade: Cascade!
-  }
-
-  type Cascade {
-    created: [EntityRef!]!
-    updated: [EntityRef!]!
-    deleted: [EntityRef!]!
-    invalidated: [InvalidationRef!]!
-  }
-
-  type EntityRef {
-    __typename: String!
-    id: ID!
-  }
-
-  type InvalidationRef {
-    __typename: String!
-    field: String
-  }
-`;
-
-const resolvers = {
-  Query: {
-    todos: () => db.getAllTodos(),
-    todoLists: () => db.getAllTodoLists()
+  // Reject entities that must never be tracked
+  validateEntity: (entity) => {
+    if (!entity.id) throw new Error("Entity without id");
   },
 
-  Mutation: {
-    createTodo: async (_, { listId, title }, { cascade }) => {
-      const todo = await db.createTodo({ listId, title });
-
-      // Track the created todo
-      cascade.trackCreated('Todo', todo.id);
-
-      // Track the updated list
-      cascade.trackUpdated('TodoList', listId);
-
-      return {
-        todo,
-        __cascade: cascade.getCascade()
-      };
-    },
-
-    updateTodo: async (_, { id, completed }, { cascade }) => {
-      const todo = await db.updateTodo(id, { completed });
-
-      // Track the update
-      cascade.trackUpdated('Todo', id);
-
-      // If status changed, invalidate filtered queries
-      if (completed !== todo.previousCompleted) {
-        cascade.invalidate('Query', 'activeTodos');
-        cascade.invalidate('Query', 'completedTodos');
-      }
-
-      return {
-        todo,
-        __cascade: cascade.getCascade()
-      };
-    },
-
-    deleteTodo: async (_, { id }, { cascade }) => {
-      const todo = await db.getTodo(id);
-      await db.deleteTodo(id);
-
-      // Track the deletion
-      cascade.trackDeleted('Todo', id);
-
-      // Track the updated list
-      cascade.trackUpdated('TodoList', todo.listId);
-
-      return {
-        todo: null,
-        __cascade: cascade.getCascade()
-      };
-    }
-  }
-};
-```
-
-## Advanced Features
-
-### Relationship Propagation
-
-```typescript
-// Automatic relationship tracking
-cascade.trackUpdated('Todo', todoId, {
-  propagate: true,
-  depth: 2
+  // Mask or reshape entity data
+  transformEntity: (entity) => ({ ...entity, email: mask(entity.email) }),
 });
 
-// Manually tracks:
-// - Todo:123 (explicit)
-// - TodoList:456 (parent, depth 1)
-// - User:789 (owner, depth 2)
+tracker.setContext({ viewer });
 ```
 
-### Transaction Support
+`entityFilter` receives the context passed to `setContext`. When it is async, as authorization checks usually are, build the response with `buildResponseAsync`, which awaits it:
 
 ```typescript
-async function createProject(_, { input }, { cascade, db }) {
-  return db.transaction(async (trx) => {
-    const project = await trx.projects.create(input);
-    const tasks = await Promise.all(
-      input.tasks.map(t => trx.tasks.create({ ...t, projectId: project.id }))
-    );
+return await new CascadeBuilder(tracker).buildResponseAsync(post);
+```
 
-    cascade.trackCreated('Project', project.id);
-    cascade.trackCreatedMany('Task', tasks.map(t => t.id));
+`buildResponse` cannot await the filter, so it throws `AsyncEntityFilterError` instead of sending entities the filter never checked.
 
-    return {
-      project,
-      __cascade: cascade.getCascade()
-    };
-  });
+## Invalidation Hints
+
+Pass an `Invalidator` to the builder; see [Server Implementation](/server/#invalidation-hints). The builder drops hints without a valid `strategy` and `scope` and reports them through `onInvalidationError`.
+
+## Express
+
+`cascadeMiddleware` puts a tracker and a builder on each request:
+
+```typescript
+import express from "express";
+import { cascadeMiddleware } from "@graphql-cascade/server";
+
+const app = express();
+app.use(cascadeMiddleware({ maxDepth: 2, invalidator }));
+
+// In a resolver with access to the request
+req.cascadeTracker.startTransaction();
+req.cascadeTracker.trackUpdate(user);
+return req.cascadeBuilder.buildResponse(user);
+```
+
+`getCascadeData(req)` and `buildCascadeResponse(req, data)` are shortcuts for the same objects.
+
+## Large Cascades
+
+`StreamingCascadeBuilder` builds the response from the tracker's change stream, applying size limits as it goes instead of first building full lists:
+
+```typescript
+import { StreamingCascadeBuilder } from "@graphql-cascade/server";
+
+return new StreamingCascadeBuilder(tracker, invalidator).buildStreamingResponse(post);
+```
+
+## Undoing Changes
+
+`checkpoint()` records the tracked changes, and `restore(checkpoint)` undoes everything tracked since, for example when one step of a mutation fails and its database changes are rolled back:
+
+```typescript
+const checkpoint = tracker.checkpoint();
+try {
+  await applyDiscount(order, tracker);
+} catch {
+  tracker.restore(checkpoint);
 }
 ```
 
-### Custom Cascade Logic
+The Apollo Server plugin uses this to drop the changes of mutation fields that fail.
+
+## Observability
 
 ```typescript
-// Extend CascadeContext for custom logic
-class CustomCascadeContext extends CascadeContext {
-  trackUpdated(typename: string, id: string) {
-    super.trackUpdated(typename, id);
+import {
+  CascadeTracker,
+  DefaultMetricsCollector,
+  createHealthCheck,
+  exportPrometheusMetrics,
+} from "@graphql-cascade/server";
 
-    // Custom logic: Log updates
-    logger.info(`Entity updated: ${typename}:${id}`);
+const metrics = new DefaultMetricsCollector();
+const tracker = new CascadeTracker({ metrics, debug: true });
 
-    // Custom logic: Notify subscribers
-    pubsub.publish('ENTITY_UPDATED', { typename, id });
-  }
-}
+const health = createHealthCheck(metrics);
+health(); // { status: "healthy" | "degraded" | "unhealthy", ... }
+
+exportPrometheusMetrics(metrics); // Prometheus text format
 ```
 
-## TypeScript Support
-
-Full type safety:
-
-```typescript
-import { CascadeContext, Cascade, EntityRef } from '@graphql-cascade/server';
-
-interface Context {
-  cascade: CascadeContext;
-  db: Database;
-  user: User;
-}
-
-type Resolvers = {
-  Mutation: {
-    createTodo: (
-      parent: unknown,
-      args: { input: CreateTodoInput },
-      context: Context
-    ) => Promise<{ todo: Todo; __cascade: Cascade }>;
-  };
-};
-```
+`OpenTelemetryMetricsCollector` sends the same metrics to an OpenTelemetry meter, and `configureLogger` routes log output.
 
 ## Testing
 
+Build a response and assert on its cascade:
+
 ```typescript
-import { createCascadeContext } from '@graphql-cascade/server';
+const tracker = new CascadeTracker();
+tracker.startTransaction();
+tracker.trackUpdate({ __typename: "User", id: "1", name: "Ada" });
 
-describe('createTodo resolver', () => {
-  test('tracks created entity', async () => {
-    const cascade = createCascadeContext();
-    const mockDb = { createTodo: jest.fn().mockResolvedValue(mockTodo) };
+const { cascade } = new CascadeBuilder(tracker).buildResponse(null);
 
-    const result = await resolvers.Mutation.createTodo(
-      null,
-      { listId: '1', title: 'Test' },
-      { cascade, db: mockDb }
-    );
-
-    expect(result.__cascade.created).toContainEqual({
-      __typename: 'Todo',
-      id: mockTodo.id
-    });
-  });
-
-  test('propagates to related entities', async () => {
-    const cascade = createCascadeContext();
-
-    cascade.trackUpdated('Todo', '123', { propagate: true });
-
-    const result = cascade.getCascade();
-    expect(result.updated).toEqual(
-      expect.arrayContaining([
-        { __typename: 'Todo', id: '123' },
-        { __typename: 'TodoList', id: expect.any(String) }
-      ])
-    );
-  });
-});
+expect(cascade.updated).toEqual([
+  expect.objectContaining({ typename: "User", id: "1", operation: "UPDATED" }),
+]);
 ```
 
 ## Next Steps
 
-- **[Apollo Server Integration](/server/apollo-server)** - Plugin-based setup
-- **[Schema Conventions](/server/schema-conventions)** - Best practices
-- **[Performance](/guide/performance)** - Optimization techniques
+- **[Apollo Server](/server/apollo-server)**: the `extensions.cascade` plugin
+- **[NestJS](/server/nestjs)**: the module and service
+- **[API Reference](/api/server-node)**: every class and option
