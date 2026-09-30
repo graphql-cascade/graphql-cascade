@@ -120,7 +120,7 @@ Reference materials and additional resources:
 
 ## 📊 Specification Status
 
-- **Version**: 1.7.1
+- **Version**: 1.8.0
 - **Status**: Stable (1.x changes are backward compatible)
 - **Versioning**: See [VERSIONING.md](VERSIONING.md). The canonical version lives in [`VERSION`](VERSION); specification versions are independent of package versions.
 

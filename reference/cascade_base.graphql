@@ -40,11 +40,14 @@ directive @cascadeInvalidates(
 ) on FIELD_DEFINITION
 
 """
-Global object identification for GraphQL Cascade.
-All domain entities MUST implement this interface.
+An object with an ID, following GraphQL Global Object Identification (the
+Relay Node interface). All domain entities MUST implement this interface.
 """
 interface Node {
-  """Globally unique identifier for this entity."""
+  """
+  Identifier of this entity. SHOULD be unique across all types (MUST from
+  2.0.0): a UUID, or an encoded "Type:key".
+  """
   id: ID!
 }
 
@@ -155,6 +158,12 @@ type UpdatedEntity {
 
   """The full entity data."""
   entity: Node!
+
+  """
+  Fields whose values the update changed. Null when the server does not know,
+  and for created entities, whose fields are all new.
+  """
+  updatedFields: [String!]
 }
 
 """

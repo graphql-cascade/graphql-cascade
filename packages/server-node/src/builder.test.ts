@@ -466,6 +466,17 @@ describe("CascadeBuilder", () => {
       ]);
     });
 
+    it("streams the fields each update changed", () => {
+      tracker.startTransaction();
+      tracker.trackUpdate(new MockEntity(1, "Test"), {
+        updatedFields: ["name"],
+      });
+
+      const response = streamingBuilder.buildStreamingResponse();
+
+      expect(response.cascade.updated[0].updatedFields).toEqual(["name"]);
+    });
+
     it("names each streamed entry's type in typename and __typename", () => {
       tracker.startTransaction();
       tracker.trackUpdate(new MockEntity(1, "Test"));

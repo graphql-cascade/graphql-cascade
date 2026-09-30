@@ -250,6 +250,22 @@ export function validateResponse(
             path: `cascade.updated[${i}].operation`,
           });
         }
+        const { updatedFields } = e;
+        if (
+          updatedFields !== undefined &&
+          updatedFields !== null &&
+          !(
+            Array.isArray(updatedFields) &&
+            updatedFields.every((field) => typeof field === "string")
+          )
+        ) {
+          errors.push({
+            code: "INVALID_UPDATED_FIELDS",
+            message:
+              "UpdatedEntity.updatedFields must be null or a list of field names",
+            path: `cascade.updated[${i}].updatedFields`,
+          });
+        }
       });
     }
 

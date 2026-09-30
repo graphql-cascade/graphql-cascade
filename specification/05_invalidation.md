@@ -258,7 +258,8 @@ for typename, entity_id in changed_entities:
 ```python
 # Check field-specific directives
 for entity in cascade.updated:
-    changed_fields = entity.get_changed_fields()
+    # Fields the server reported as changed; all fields when it didn't
+    changed_fields = entity.updated_fields or entity.entity.keys()
     for field_name in changed_fields:
         rules = get_invalidation_rules(entity.typename, field_name)
         for rule in rules:

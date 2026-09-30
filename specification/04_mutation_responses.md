@@ -229,6 +229,12 @@ type UpdatedEntity {
 
   """The full entity data."""
   entity: Node!
+
+  """
+  Fields whose values the update changed. Null when the server does not know,
+  and for created entities, whose fields are all new.
+  """
+  updatedFields: [String!]
 }
 
 """
