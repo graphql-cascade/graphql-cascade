@@ -5,12 +5,26 @@
  * from the extensions field, applying updates to the cache.
  */
 
-import { pipe, tap } from "wonka";
-import type { Exchange, Operation } from "@urql/core";
+import {
+  delay,
+  filter,
+  fromValue,
+  makeSubject,
+  merge,
+  mergeMap,
+  pipe,
+  takeUntil,
+  tap,
+} from "wonka";
+import { makeOperation, type Exchange, type Operation } from "@urql/core";
 import {
   applyTypeInvalidations,
+  calculateRetryDelay,
   cascadeEntryTypename,
   createScopedLogger,
+  isRetryableError,
+  shouldRetry,
+  toCascadeResponse,
   RetryOptions,
   CascadeError,
 } from "@graphql-cascade/client";
@@ -196,44 +210,105 @@ function applyCascadeUpdates(
   return result;
 }
 
+/** Retry state carried in the context of a retried operation. */
+interface CascadeRetryState {
+  attempts: number;
+  delayMs: number;
+}
+
 /**
- * URQL Exchange for handling cascade errors with retry logic.
+ * URQL exchange that retries operations failing with retryable cascade
+ * errors (`TIMEOUT`, `SERVICE_UNAVAILABLE`, `RATE_LIMITED`), whether they
+ * arrive as GraphQL errors or in a failed mutation payload. Delays follow
+ * the server's `retryAfter` when it sends one, else exponential backoff.
  *
- * This exchange:
- * 1. Extracts cascade errors from GraphQL responses
- * 2. Determines if operations should be retried
- * 3. Implements exponential backoff retry logic
- * 4. Provides callbacks for retry lifecycle events
+ * Place it before the exchange that sends requests, such as `fetchExchange`.
  */
 export const cascadeErrorExchange = (
   options: CascadeErrorExchangeOptions = {},
 ): Exchange => {
   const {
-    onRetryAttempt: _onRetryAttempt,
-    onRetrySuccess: _onRetrySuccess,
+    onRetryAttempt,
+    onRetrySuccess,
     onRetryFailure,
     extractErrors = extractCascadeErrors,
-    ..._retryOptions
+    ...retryOptions
   } = options;
 
   return ({ forward }) =>
-    (ops$) => {
-      return pipe(
-        forward(ops$),
-        tap((result) => {
-          if (result.error) {
-            const cascadeErrors = extractErrors(result.error);
+    (operations$) => {
+      const { source: retries$, next: retry } = makeSubject<Operation>();
 
-            if (cascadeErrors.length > 0) {
-              // For now, just call the failure callback
-              // Retry logic in URQL would require a more complex exchange
-              onRetryFailure?.(result.operation, cascadeErrors, 1);
-            }
+      const delayedRetries$ = pipe(
+        retries$,
+        mergeMap((operation) => {
+          const { delayMs } = operation.context
+            .cascadeRetry as CascadeRetryState;
+          const teardown$ = pipe(
+            operations$,
+            filter((op) => op.kind === "teardown" && op.key === operation.key),
+          );
+          return pipe(
+            fromValue(operation),
+            delay(delayMs),
+            takeUntil(teardown$),
+          );
+        }),
+      );
+
+      return pipe(
+        merge([operations$, delayedRetries$]),
+        forward,
+        filter((result) => {
+          const { operation } = result;
+          const attempts =
+            ((operation.context.cascadeRetry as CascadeRetryState | undefined)
+              ?.attempts ?? 0) + 1;
+          const errors = [
+            ...(result.error ? extractErrors(result.error) : []),
+            ...payloadErrors(result.data),
+          ];
+
+          const retryable = errors.find((error) =>
+            shouldRetry(error, attempts, retryOptions),
+          );
+          if (retryable) {
+            onRetryAttempt?.(operation, attempts, retryable);
+            retry(
+              makeOperation(operation.kind, operation, {
+                ...operation.context,
+                cascadeRetry: {
+                  attempts,
+                  delayMs: calculateRetryDelay(
+                    retryable,
+                    attempts,
+                    retryOptions,
+                  ),
+                } satisfies CascadeRetryState,
+              }),
+            );
+            return false;
           }
+
+          if (errors.some(isRetryableError)) {
+            onRetryFailure?.(operation, errors, attempts);
+          } else if (errors.length === 0 && attempts > 1) {
+            onRetrySuccess?.(operation, attempts);
+          }
+          return true;
         }),
       );
     };
 };
+
+/** The errors of the failed mutation payloads in a result's data. */
+function payloadErrors(data: unknown): CascadeError[] {
+  if (data === null || typeof data !== "object") return [];
+  return Object.values(data).flatMap((field) => {
+    const response = toCascadeResponse(field);
+    return response && !response.success ? (response.errors ?? []) : [];
+  });
+}
 
 /**
  * Options for the cascade error exchange.

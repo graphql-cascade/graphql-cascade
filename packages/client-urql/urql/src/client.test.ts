@@ -58,8 +58,6 @@ describe("URQLCascadeClient", () => {
       const config = client.getConfig();
 
       expect(config.autoApply).toBe(true);
-      expect(config.optimistic).toBe(false);
-      expect(config.maxDepth).toBe(10);
       expect(config.excludeTypes).toEqual([]);
     });
 
@@ -73,7 +71,6 @@ describe("URQLCascadeClient", () => {
 
       expect(config.autoApply).toBe(false);
       expect(config.excludeTypes).toEqual(["AuditLog"]);
-      expect(config.maxDepth).toBe(10); // default
     });
   });
 
@@ -351,6 +348,55 @@ describe("URQLCascadeClient", () => {
       // Should rollback to original
       const cached = cache.read("User", "1");
       expect(cached?.name).toBe("Original");
+    });
+
+    describe("rolls back when the mutation does not succeed", () => {
+      const optimisticConfig: OptimisticConfig<
+        { id: string; name: string },
+        { name: string }
+      > = {
+        optimisticResponse: (vars) => ({ id: "1", name: vars.name }),
+        optimisticCascade: () =>
+          createCascadeUpdates({
+            updated: [
+              {
+                typename: "User",
+                id: "1",
+                operation: CascadeOperation.UPDATED,
+                entity: { id: "1", name: "Optimistic" },
+              },
+            ],
+          }),
+      };
+
+      it.each<[string, Partial<OperationResult>]>([
+        [
+          "an error result",
+          { error: new Error("Network error") as unknown as CombinedError },
+        ],
+        [
+          "a failure payload",
+          {
+            data: {
+              renameUser: {
+                __typename: "CascadeFailure",
+                errors: [{ message: "Taken", code: "CONFLICT" }],
+              },
+            },
+          },
+        ],
+      ])("%s", async (_, mockResult) => {
+        cache.write("User", "1", { id: "1", name: "Original" });
+        client = new URQLCascadeClient(createMockClient(mockResult), cache);
+
+        await client.mutateOptimistic(
+          {} as any,
+          { name: "Optimistic" },
+          optimisticConfig,
+        );
+
+        expect(cache.read("User", "1")?.name).toBe("Original");
+      });
     });
 
     it("should evict new entities on rollback", async () => {

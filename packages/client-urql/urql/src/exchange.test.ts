@@ -2,9 +2,13 @@ import {
   extractCascadeData,
   hasCascadeData,
   cascadeExchange,
+  cascadeErrorExchange,
+  type CascadeErrorExchangeOptions,
 } from "./exchange";
+import { Client, gql, makeResult, type Exchange } from "@urql/core";
+import { CascadeErrorCode } from "@graphql-cascade/client";
 import { InMemoryCascadeCache } from "./cache";
-import { fromValue, toArray } from "wonka";
+import { filter, fromValue, map, pipe, toArray } from "wonka";
 import {
   CascadeUpdates,
   CascadeOperation,
@@ -636,5 +640,124 @@ describe("cascadeExchange", () => {
     expect(results).toHaveLength(1);
     expect(results[0]).toBe(mockResult);
     expect(mockCacheAdapter.write).not.toHaveBeenCalled();
+  });
+});
+
+describe("cascadeErrorExchange", () => {
+  const RENAME = gql`
+    mutation Rename {
+      renameUser {
+        __typename
+      }
+    }
+  `;
+
+  const timeout = {
+    errors: [
+      { message: "Timed out", extensions: { code: CascadeErrorCode.TIMEOUT } },
+    ],
+  };
+  const unavailablePayload = {
+    data: {
+      renameUser: {
+        __typename: "CascadeFailure",
+        errors: [
+          { message: "Down", code: CascadeErrorCode.SERVICE_UNAVAILABLE },
+        ],
+      },
+    },
+  };
+  const invalid = {
+    errors: [
+      {
+        message: "Bad name",
+        extensions: { code: CascadeErrorCode.VALIDATION_ERROR },
+      },
+    ],
+  };
+  const renamed = { data: { renameUser: { __typename: "User" } } };
+
+  /** A client whose server answers each attempt with the next response. */
+  function clientAnswering(
+    responses: Array<Record<string, unknown>>,
+    options: CascadeErrorExchangeOptions = {},
+  ) {
+    let attempts = 0;
+    const server: Exchange = () => (operations$) =>
+      pipe(
+        operations$,
+        filter((operation) => operation.kind !== "teardown"),
+        map((operation) => {
+          const { data, errors } = responses[attempts++] as {
+            data?: unknown;
+            errors?: unknown[];
+          };
+          return makeResult(operation, { data, errors } as never);
+        }),
+      );
+    const client = new Client({
+      url: "/graphql",
+      exchanges: [cascadeErrorExchange({ baseDelay: 1, ...options }), server],
+    });
+    return { client, attempts: () => attempts };
+  }
+
+  it("retries retryable GraphQL errors until the operation succeeds", async () => {
+    const onRetryAttempt = jest.fn();
+    const onRetrySuccess = jest.fn();
+    const { client, attempts } = clientAnswering([timeout, renamed], {
+      onRetryAttempt,
+      onRetrySuccess,
+    });
+
+    const result = await client.mutation(RENAME, {}).toPromise();
+
+    expect(result.data).toEqual(renamed.data);
+    expect(attempts()).toBe(2);
+    expect(onRetryAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "mutation" }),
+      1,
+      expect.objectContaining({ code: CascadeErrorCode.TIMEOUT }),
+    );
+    expect(onRetrySuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "mutation" }),
+      2,
+    );
+  });
+
+  it("retries failure payloads with retryable errors", async () => {
+    const { client, attempts } = clientAnswering([unavailablePayload, renamed]);
+
+    const result = await client.mutation(RENAME, {}).toPromise();
+
+    expect(result.data).toEqual(renamed.data);
+    expect(attempts()).toBe(2);
+  });
+
+  it("returns errors that are not retryable at once", async () => {
+    const { client, attempts } = clientAnswering([invalid, renamed]);
+
+    const result = await client.mutation(RENAME, {}).toPromise();
+
+    expect(result.error?.graphQLErrors[0].message).toBe("Bad name");
+    expect(attempts()).toBe(1);
+  });
+
+  it("gives up after maxRetries attempts", async () => {
+    const onRetryFailure = jest.fn();
+    const { client, attempts } = clientAnswering([timeout, timeout, renamed], {
+      maxRetries: 2,
+      onRetryFailure,
+    });
+
+    const result = await client.mutation(RENAME, {}).toPromise();
+
+    expect(result.error?.graphQLErrors[0].message).toBe("Timed out");
+    expect(attempts()).toBe(2);
+    expect(onRetryFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "mutation" }),
+      [expect.objectContaining({ code: CascadeErrorCode.TIMEOUT })],
+      2,
+    );
   });
 });

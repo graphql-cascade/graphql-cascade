@@ -39,7 +39,7 @@ It applies the cascade of every mutation field, and falls back to `extensions.ca
 | `autoApply` | `true` | Apply cascades as mutations complete |
 | `excludeTypes` | `[]` | Types whose entries are never applied |
 
-`mutateOptimistic(mutation, variables, { optimisticResponse, optimisticCascade })` applies the cascade `optimisticCascade(variables, response)` returns before the server answers, and restores the previous entities if the mutation rejects. urql resolves failed operations with `error` set rather than rejecting, so check `error` and restore what you need yourself.
+`mutateOptimistic(mutation, variables, { optimisticResponse, optimisticCascade })` applies the cascade `optimisticCascade(variables, response)` returns before the server answers, and restores the previous entities unless the mutation succeeds: when it rejects, resolves with `error`, or returns a failure payload.
 
 `applyCascade(cascade)` applies a cascade you received another way.
 
@@ -75,9 +75,29 @@ const client = createClient({
 
 The exchange reads extensions only; for cascades in payloads, use `URQLCascadeClient`. `onCacheUpdate` and `onCacheDelete` report each write and eviction, and `debug` logs them. `extractCascadeData(result)` and `hasCascadeData(result)` read `extensions.cascade` yourself.
 
-## Cascade Errors
+## Retrying Failed Operations
 
-`cascadeErrorExchange({ onRetryFailure })` calls `onRetryFailure(operation, errors, 1)` with the cascade errors of each failed operation; it does not retry. `extractCascadeErrors(error)` reads cascade errors from an urql `CombinedError`, and the helpers in `@graphql-cascade/client` (`shouldRetry`, `calculateRetryDelay`) decide whether and when to retry.
+`cascadeErrorExchange` retries operations failing with retryable cascade errors (`TIMEOUT`, `SERVICE_UNAVAILABLE`, `RATE_LIMITED`), whether they arrive as GraphQL errors or in a failed mutation payload. It waits for the server's `retryAfter` when one is sent, else backs off exponentially. Place it before `fetchExchange`:
+
+```typescript
+import { createClient, cacheExchange, fetchExchange } from "@urql/core";
+import { cascadeErrorExchange } from "@graphql-cascade/urql";
+
+const client = createClient({
+  url: "/graphql",
+  exchanges: [cacheExchange, cascadeErrorExchange({ maxRetries: 3 }), fetchExchange],
+});
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `maxRetries` | `3` | Attempts in all, including the first |
+| `baseDelay`, `maxDelay` | `1000`, `30000` | Backoff bounds, in milliseconds |
+| `exponentialBackoff` | `true` | Double the delay on each attempt |
+| `onRetryAttempt(operation, attempt, error)` | | Called before each retry |
+| `onRetrySuccess(operation, attempts)` | | Called when a retried operation succeeds |
+| `onRetryFailure(operation, errors, attempts)` | | Called when retryable errors remain after the last attempt |
+| `extractErrors(error)` | `extractCascadeErrors` | Reads cascade errors from an urql `CombinedError` |
 
 ## Next Steps
 
