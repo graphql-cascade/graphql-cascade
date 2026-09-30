@@ -1,13 +1,13 @@
 {
   "id": "TC-S-012",
-  "name": "Batch Mutation Response",
-  "description": "Servers MUST aggregate cascade data from multiple mutations in a single request",
+  "name": "One Cascade per Mutation Field",
+  "description": "When an operation contains several mutation fields, each field's payload MUST carry its own cascade, describing only the changes made by that field",
   "category": "server",
   "subcategory": "response-building",
   "requirement": "REQ-012",
   "priority": "high",
   "input": {
-    "mutation": "mutation BatchUpdate { updateUser1: updateUser(id: \"1\", name: \"User 1\") { id name } updateUser2: updateUser(id: \"2\", name: \"User 2\") { id name } }",
+    "mutation": "mutation BatchUpdate { updateUser1: updateUser(id: \"1\", name: \"User 1\") { data { id name } cascade { updated { typename id operation entity } deleted { typename id } invalidations { queryName strategy scope } typeInvalidations { typename } metadata { affectedCount } } } updateUser2: updateUser(id: \"2\", name: \"User 2\") { data { id name } cascade { updated { typename id operation entity } deleted { typename id } invalidations { queryName strategy scope } typeInvalidations { typename } metadata { affectedCount } } } }",
     "context": {
       "entities": [
         { "__typename": "User", "id": "1", "name": "Old Name 1" },
@@ -16,17 +16,22 @@
     }
   },
   "expected": {
-    "cascade": {
-      "updated": [
-        { "typename": "User", "id": "1", "name": "User 1" },
-        { "typename": "User", "id": "2", "name": "User 2" }
-      ],
-      "invalidations": [],
-      "metadata": {
-        "affectedCount": 2,
-        "operationType": "UPDATE"
+    "cascades": {
+      "updateUser1": {
+        "updated": [{ "typename": "User", "id": "1", "name": "User 1" }],
+        "deleted": [],
+        "invalidations": [],
+        "typeInvalidations": [],
+        "metadata": { "affectedCount": 1 }
+      },
+      "updateUser2": {
+        "updated": [{ "typename": "User", "id": "2", "name": "User 2" }],
+        "deleted": [],
+        "invalidations": [],
+        "typeInvalidations": [],
+        "metadata": { "affectedCount": 1 }
       }
     }
   },
-  "tags": ["batch", "multiple-mutations", "aggregation"]
+  "tags": ["batch", "multiple-mutations"]
 }

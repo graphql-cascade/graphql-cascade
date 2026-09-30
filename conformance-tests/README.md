@@ -15,30 +15,35 @@ The conformance test suite consists of JSON test case files that define specific
 
 ```
 conformance-tests/
-├── test-case-schema.json    # JSON Schema for test cases
-├── README.md               # This file
-├── server/                 # Server-side conformance tests
-│   ├── tracking/          # Entity tracking tests
-│   │   ├── entity-creation.json
-│   │   ├── entity-update.json
-│   │   ├── entity-deletion.json
-│   │   ├── relationship-tracking.json
-│   │   └── cycle-detection.json
-│   ├── response-building/  # Response construction tests
-│   │   └── truncation.json    # Limits collapse into type invalidations
-│   └── error-handling/     # Error handling tests
-├── client/                 # Client-side conformance tests
-│   ├── cache-updates/     # Cache update tests
-│   │   ├── normalized-cache.json
-│   │   └── document-cache.json
-│   └── invalidation/      # Cache invalidation tests
+├── test-case-schema.json   # JSON Schema for test cases
+├── spec-version.json       # Specification version the cases target
+├── README.md
+├── client/
+│   ├── cache-updates/
+│   │   ├── document-cache.json
+│   │   ├── in-place-updates.json
+│   │   └── normalized-cache.json
+│   └── invalidation/
 │       ├── exact-match.json
-│       ├── pattern-match.json
 │       ├── prefix-match.json
 │       └── type-invalidation.json
-└── transport/              # Transport layer tests
-    ├── http.json
-    └── websocket.json
+├── server/
+│   ├── error-handling/
+│   │   ├── partial-failure.json
+│   │   └── transaction-rollback.json
+│   ├── response-building/
+│   │   ├── basic-response.json
+│   │   ├── batch-mutations.json
+│   │   ├── nested-entities.json
+│   │   └── truncation.json
+│   └── tracking/
+│       ├── cycle-detection.json
+│       ├── entity-creation.json
+│       ├── entity-deletion.json
+│       ├── entity-update.json
+│       └── relationship-tracking.json
+└── transport/
+    └── http.json
 ```
 
 ## Test Case Format
@@ -137,36 +142,39 @@ async function runConformanceTests(serverUrl: string): Promise<TestResult[]> {
 
 ### Server Tests
 
-#### Tracking Tests (`server/tracking/`)
-- **TC-S-001**: Entity Creation Tracking
-- **TC-S-002**: Entity Update Tracking
-- **TC-S-003**: Entity Deletion Tracking
-- **TC-S-004**: Relationship Cascade Tracking
-- **TC-S-005**: Cycle Detection
+#### Tracking (`server/tracking/`)
+- **TC-S-001** (REQ-001): Entity Creation Tracking
+- **TC-S-002** (REQ-002): Entity Update Tracking
+- **TC-S-003** (REQ-003): Entity Deletion Tracking
+- **TC-S-004** (REQ-004): Relationship Cascade Tracking
+- **TC-S-005** (REQ-005): Cycle Detection in Entity Relationships
 
-#### Response Building Tests (`server/response-building/`)
-- Basic cascade response structure
-- Nested entity handling
-- Invalidation hint generation
+#### Response Building (`server/response-building/`)
+- **TC-S-010** (REQ-010): Basic Cascade Response Structure
+- **TC-S-011** (REQ-004): Nested Entity Response
+- **TC-S-012** (REQ-012): One Cascade per Mutation Field
+- **TC-S-030** (REQ-050): Truncation Collapses Types Into Type Invalidations
 
-#### Error Handling Tests (`server/error-handling/`)
-- Transaction rollback scenarios
-- Partial failure handling
+#### Error Handling (`server/error-handling/`)
+- **TC-S-020** (REQ-020): Transaction Rollback on Error
+- **TC-S-021** (REQ-021): Failed Field Leaves Other Cascades Intact
 
 ### Client Tests
 
 #### Cache Updates (`client/cache-updates/`)
-- **TC-C-001**: Normalized Cache Updates
-- **TC-C-002**: Document Cache Updates
+- **TC-C-001** (REQ-101): Normalized Cache Updates
+- **TC-C-002** (REQ-102): Document Cache Updates
+- **TC-C-021** (REQ-031): Updated Entities Apply In Place
 
 #### Invalidation (`client/invalidation/`)
-- **TC-C-003**: Exact Match Invalidation
-- Pattern-based invalidation
-- Prefix-based invalidation
+- **TC-C-003** (REQ-103): Exact Match Invalidation
+- **TC-C-004** (REQ-104): Type Invalidation
+- **TC-C-020** (REQ-030): Prefix-Based Query Invalidation
 
-### Transport Tests (`transport/`)
-- HTTP transport requirements
-- WebSocket transport requirements
+### Transport Tests
+
+#### Transport (`transport/`)
+- **TC-T-001** (REQ-040): HTTP Response Extensions
 
 ## Compliance Levels
 
@@ -197,24 +205,15 @@ async function runConformanceTests(serverUrl: string): Promise<TestResult[]> {
    - Transport: `TC-T-XXX`
    - Integration: `TC-I-XXX`
 
-2. **Define Test**: Create JSON file following the schema
+2. **Define Test**: Create JSON file following the schema, citing the specification requirement it tests. Tag a new requirement **[REQ-NNN]** where the specification states it
 
 3. **Validate**: `pnpm --filter @graphql-cascade/conformance test` checks every case against `test-case-schema.json` and for unique ids; CI runs it too
 
-4. **Document**: Update this README with the new test
+4. **Document**: Add the case to the lists above
 
-## Requirements Mapping
+## Requirements
 
-| Requirement | Test Cases |
-|-------------|------------|
-| REQ-001 | TC-S-001 |
-| REQ-002 | TC-S-002 |
-| REQ-003 | TC-S-003 |
-| REQ-004 | TC-S-004 |
-| REQ-005 | TC-S-005 |
-| REQ-101 | TC-C-001 |
-| REQ-102 | TC-C-002 |
-| REQ-103 | TC-C-003 |
+Each case cites the requirement it tests in `requirement`. Requirements are tagged **[REQ-NNN]** where the specification states them, for example in [Server Requirements](../specification/09_server_requirements.md#core-requirements) and [Cascade Delivery](../specification/04_mutation_responses.md#cascade-delivery). `node scripts/check-spec.mjs` fails if a case cites an undefined requirement, a requirement is defined twice, or a tagged requirement has no case.
 
 ## Contributing
 

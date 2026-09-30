@@ -119,6 +119,11 @@
         "cascade": {
           "$ref": "#/definitions/CascadeResponse"
         },
+        "cascades": {
+          "type": "object",
+          "description": "Expected payload cascade of each mutation field, keyed by response key (alias or field name)",
+          "additionalProperties": { "$ref": "#/definitions/CascadeResponse" }
+        },
         "error": {
           "type": "object",
           "description": "Expected error response",

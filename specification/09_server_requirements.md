@@ -8,17 +8,21 @@ GraphQL Cascade requires servers to track entity changes during mutations and co
 
 ## Core Requirements
 
+Requirements tagged **[REQ-NNN]** are tested by the conformance cases in [`conformance-tests/`](../conformance-tests/) that cite them; `node scripts/check-spec.mjs` checks that every tagged requirement has a case.
+
 ### Entity Change Tracking
 
-Servers MUST track all entity changes that occur during mutation execution:
+Servers MUST track all entity changes that occur during mutation execution. All changes within a mutation's database transaction MUST be captured:
 
-1. **Transaction-Level Tracking**: All changes within a mutation's database transaction MUST be captured
-2. **Relationship Traversal**: Changes MUST cascade through entity relationships up to configured depth
-3. **Operation Classification**: Each change MUST be classified as CREATED, UPDATED, or DELETED
+- **[REQ-001]** An entity created by the mutation MUST appear in `cascade.updated` with operation `CREATED` and its full data.
+- **[REQ-002]** An entity whose fields the mutation changed MUST appear in `cascade.updated` with operation `UPDATED` and its full, current data.
+- **[REQ-003]** An entity deleted by the mutation MUST appear in `cascade.deleted` with its `typename`, `id` and `deletedAt`, and MUST NOT also appear in `cascade.updated`.
+- **[REQ-004]** Changes MUST cascade through entity relationships up to the configured depth: related entities whose data the mutation changed, including nested ones, MUST appear in `cascade.updated`.
+- **[REQ-005]** Relationship traversal MUST terminate on cyclic relationships, and each entity MUST appear at most once in `cascade.updated` and at most once in `cascade.deleted`.
 
 ### Response Construction
 
-Servers MUST construct CascadeResponse objects containing:
+**[REQ-010]** Servers MUST construct CascadeResponse objects whose `cascade` contains `updated`, `deleted`, `invalidations`, `typeInvalidations` and `metadata`, as defined in [CascadeUpdates Structure](04_mutation_responses.md#cascadeupdates-structure). A response contains:
 
 1. **Success Status**: Boolean indicating overall mutation success
 2. **Primary Result**: The main entity affected by the mutation
@@ -30,7 +34,7 @@ Servers MUST construct CascadeResponse objects containing:
 
 Cascade operations MUST maintain database consistency:
 
-1. **Atomicity**: Cascade tracking and response construction must be atomic with the mutation
+1. **Atomicity**: Cascade tracking and response construction must be atomic with the mutation. **[REQ-020]** When a mutation fails and its transaction is rolled back, the response MUST still contain a cascade, and that cascade MUST report no entity changes: `updated`, `deleted` and `typeInvalidations` are empty
 2. **Isolation**: Cascade data must reflect committed transaction state
 3. **Consistency**: All entities in cascade must be consistent with each other
 

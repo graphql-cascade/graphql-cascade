@@ -4,7 +4,7 @@
   "description": "Servers MUST include nested related entities in the cascade response when relationships are modified",
   "category": "server",
   "subcategory": "response-building",
-  "requirement": "REQ-011",
+  "requirement": "REQ-004",
   "priority": "high",
   "input": {
     "mutation": "mutation CreatePost($input: CreatePostInput!) { createPost(input: $input) { id title author { id name } } }",

@@ -95,7 +95,7 @@ queryCache.remove(queryKey);
 ## Invalidation Scopes
 
 ### EXACT
-Only invalidate queries with exact name and arguments.
+**[REQ-103]** Clients MUST apply the strategy to the cached queries whose name equals `queryName` and, when `arguments` is present, whose arguments equal it; no other query is affected.
 
 **Example:**
 ```json
@@ -111,7 +111,7 @@ Only invalidate queries with exact name and arguments.
 **Doesn't match:** `getUser(id: "456")`, `listUsers`
 
 ### PREFIX
-Invalidate all queries with names matching the prefix.
+**[REQ-030]** Clients MUST apply the strategy to every cached query whose name starts with `queryName`.
 
 **Example:**
 ```json
@@ -164,7 +164,7 @@ Invalidate all queries in the cache.
 }
 ```
 
-Clients MUST process type invalidations after applying `updated`, `deleted` and `invalidations`. For each entry, clients MUST treat as stale:
+**[REQ-104]** Clients MUST process type invalidations after applying `updated`, `deleted` and `invalidations`. For each entry, clients MUST treat as stale:
 
 - every cached entity of that type, and
 - every cached query result that contains, or may contain, an entity of that type. A cached empty list may be missing newly created entities, so it counts as "may contain" unless the client knows the list's element type.

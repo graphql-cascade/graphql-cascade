@@ -1,13 +1,13 @@
 {
   "id": "TC-S-021",
-  "name": "Partial Failure Handling",
-  "description": "Servers MAY include cascade data for successful operations when some mutations in a batch fail",
+  "name": "Failed Field Leaves Other Cascades Intact",
+  "description": "A failed mutation field MUST NOT affect the cascades of the others: its own cascade reports no entity changes, and the fields that succeeded describe their changes in full",
   "category": "server",
   "subcategory": "error-handling",
   "requirement": "REQ-021",
-  "priority": "medium",
+  "priority": "high",
   "input": {
-    "mutation": "mutation BatchUpdate { user1: updateUser(id: \"1\", name: \"New Name\") { id name } user2: updateUser(id: \"999\", name: \"Fail\") { id name } }",
+    "mutation": "mutation BatchUpdate { user1: updateUser(id: \"1\", name: \"New Name\") { success data { id name } cascade { updated { typename id operation entity } deleted { typename id } typeInvalidations { typename } metadata { affectedCount } } } user2: updateUser(id: \"999\", name: \"Fail\") { success errors { message code } cascade { updated { typename id operation entity } deleted { typename id } typeInvalidations { typename } metadata { affectedCount } } } }",
     "context": {
       "entities": [
         { "__typename": "User", "id": "1", "name": "Old Name" }
@@ -15,18 +15,25 @@
     }
   },
   "expected": {
-    "cascade": {
-      "updated": [
-        { "typename": "User", "id": "1", "name": "New Name" }
-      ],
-      "invalidations": [],
-      "metadata": {
-        "affectedCount": 1,
-        "operationType": "UPDATE"
+    "cascades": {
+      "user1": {
+        "updated": [{ "typename": "User", "id": "1", "name": "New Name" }],
+        "deleted": [],
+        "invalidations": [],
+        "typeInvalidations": [],
+        "metadata": { "affectedCount": 1 }
+      },
+      "user2": {
+        "updated": [],
+        "deleted": [],
+        "invalidations": [],
+        "typeInvalidations": [],
+        "metadata": { "affectedCount": 0 }
       }
     },
     "error": {
-      "message": "User not found: 999"
+      "message": "User not found: 999",
+      "extensions": { "code": "NOT_FOUND" }
     }
   },
   "tags": ["error-handling", "partial-failure", "batch"]

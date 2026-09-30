@@ -103,7 +103,10 @@ Cascade-compliant clients MUST:
    ```
 
 2. **Apply Cascade Responses**
-   - Process all `updated` entities
+   - Process all `updated` entities:
+     - **[REQ-101]** A normalized cache MUST write each entity's data under its `typename` and `id`, replacing the fields it holds.
+     - **[REQ-102]** A document cache MUST update every cached query result that contains the entity with the entity's new data.
+     - **[REQ-031]** Clients SHOULD NOT invalidate or refetch a cached query only because it contains an updated entity. The cascade carries the entity's full data, so queries that contain it read the new data from the cache without a network request; invalidation is reserved for the queries named by `invalidations` and `typeInvalidations`.
    - Process all `deleted` entities
    - Apply all `invalidations`
    - Apply all `typeInvalidations` last ([Type Invalidation](05_invalidation.md#type-invalidation))

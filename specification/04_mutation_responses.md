@@ -78,6 +78,30 @@ For failed mutations:
 }
 ```
 
+## Cascade Delivery
+
+### In the Mutation Payload
+
+The normative location of a cascade is the `cascade` field of the mutation's payload type, which implements `CascadeResponse`.
+
+**[REQ-012]** When an operation contains several mutation fields, each field's payload MUST carry its own cascade, describing only the changes made by that field. GraphQL executes mutation fields serially, so clients apply the cascades in field order and the state from a later field wins.
+
+**[REQ-021]** A failed mutation field MUST NOT affect the cascades of the others: its own cascade reports no entity changes (as for any failed mutation), and the cascades of the fields that succeeded describe their changes in full.
+
+### In Response Extensions (Optional)
+
+Schemas whose payload types cannot carry a `cascade` field MAY deliver cascades in the response's `extensions` instead.
+
+**[REQ-040]** A server that delivers cascades in extensions MUST put one cascade for the whole operation in `extensions.cascade`, with the shape of `CascadeUpdates`. It covers every mutation field of the operation:
+
+- An entity changed by several fields appears once, with its state after the last of them. An entity that a later field deleted appears only in `deleted`.
+- Fields that failed contribute no changes.
+- `invalidations` and `typeInvalidations` are the union of those of all fields, and size limits and truncation apply to the combined cascade.
+
+Clients that support this transport apply `extensions.cascade` exactly like a payload cascade. A server SHOULD use one transport per operation; a client that receives both applies the payload cascades and ignores `extensions.cascade`.
+
+The payload form keeps each field's changes separate, which a client can always merge; the extensions form needs no schema changes. Both describe the same changes.
+
 ## Mutation Naming Conventions
 
 ### Verb-Based Naming
@@ -641,7 +665,7 @@ Servers MUST enforce limits on cascade size to bound response size and server me
 | Deleted entities | 100 |
 | Serialized cascade size | 5 MB |
 
-When a cascade exceeds a limit, the server MUST truncate it as follows:
+**[REQ-050]** When a cascade exceeds a limit, the server MUST truncate it as follows, so that no affected entity is dropped silently:
 
 1. Choose a type whose entities are listed. Servers SHOULD choose the type with the most entries in the list that exceeds its limit, breaking ties by type name so the output is deterministic.
 2. Remove every entity of that type from `updated` and `deleted`, and add a `typeInvalidations` entry for the type. `affectedCount` SHOULD be the number of entities of the type that were affected.
