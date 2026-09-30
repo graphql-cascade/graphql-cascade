@@ -79,10 +79,10 @@ const environment = createCascadeRelayEnvironment(network, store, { getDataID })
 |---------|-------------|
 | `updated` | Scalar fields with `setValue`; fields holding entities (objects with `__typename` and `id`) as linked records; other nested objects are left to the next query that selects them |
 | `deleted` | `store.delete` of the record |
-| `INVALIDATE` hint with scope `ALL` | `invalidateRecord` on the root, so every query refetches on its next read |
+| `invalidations` | `invalidateRecord` on the root, so every query refetches on its next read |
 | `typeInvalidations` | `invalidateStore`, since Relay cannot mark one type's records stale |
 
-Relay invalidates records, not queries, so it has no way to act on a hint that names one query. Refetch those queries in the component, for example with `fetchQuery` or a `useLazyLoadQuery` fetch key.
+Relay marks records stale, not queries, so a hint naming one query marks every query stale: always correct, only less precise. Where that refetches too much, keep lists current in the mutation instead, with Relay's `@appendEdge` / `@deleteEdge` directives or an `updater`, and have the server send no hint for them.
 
 ## Applying a Cascade Yourself
 
