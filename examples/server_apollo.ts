@@ -37,14 +37,14 @@ const typeDefs = gql`
   }
 
   type UpdatedEntity {
-    __typename: String!
+    typename: String!
     id: ID!
     operation: CascadeOperation!
     entity: Node!
   }
 
   type DeletedEntity {
-    __typename: String!
+    typename: String!
     id: ID!
     deletedAt: DateTime!
   }
@@ -428,18 +428,6 @@ const resolvers = {
     employees: (company: any) => {
       return users.filter(u => u.companyId === company.id);
     }
-  },
-
-  User: {
-    __typename: () => 'User'
-  },
-
-  Company: {
-    __typename: () => 'Company'
-  },
-
-  Address: {
-    __typename: () => 'Address'
   }
 };
 
@@ -489,7 +477,7 @@ startServer().catch(console.error);
 //     success
 //     data { id name email }
 //     cascade {
-//       updated { __typename id operation }
+//       updated { typename id operation }
 //       invalidations { queryName strategy scope }
 //       metadata { affectedCount depth }
 //     }
@@ -502,7 +490,7 @@ startServer().catch(console.error);
 //     success
 //     data { id name }
 //     cascade {
-//       updated { __typename id operation }
+//       updated { typename id operation }
 //       invalidations { queryName strategy scope }
 //     }
 //   }
@@ -517,7 +505,7 @@ startServer().catch(console.error);
 //     success
 //     data { id name address { street city } }
 //     cascade {
-//       updated { __typename id operation }
+//       updated { typename id operation }
 //       metadata { affectedCount }
 //     }
 //   }

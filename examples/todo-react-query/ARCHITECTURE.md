@@ -241,7 +241,7 @@ When an entity is created or updated:
    ```json
    {
      "updated": [{
-       "__typename": "Todo",
+       "typename": "Todo",
        "id": "123",
        "operation": "UPDATE",
        "entity": {...newData}
@@ -262,7 +262,7 @@ When an entity is deleted:
    ```json
    {
      "deleted": [{
-       "__typename": "Todo",
+       "typename": "Todo",
        "id": "123",
        "deletedAt": "2024-01-01T00:00:00Z"
      }]

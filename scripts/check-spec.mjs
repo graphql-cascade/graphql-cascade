@@ -7,6 +7,8 @@
  * - reference/cascade_base.graphql is a valid GraphQL schema, and is the
  *   normative source: every graphql block in the specification parses, and
  *   any definition of a reference type matches it (descriptions aside).
+ * - Example schemas under examples/ parse and use no reserved `__` field
+ *   names.
  * - Every requirement tagged **[REQ-NNN]** in the specification is defined
  *   once and tested by a conformance case, and every case cites a defined
  *   requirement.
@@ -116,6 +118,36 @@ const withoutDescriptions = (node) =>
       n.description ? { ...n, description: undefined } : undefined,
   });
 
+const RESERVED_NAME = 'names beginning with "__" are reserved by GraphQL';
+
+/** Field definitions named with GraphQL's reserved `__` prefix. */
+function reservedFields(document) {
+  return document.definitions.flatMap((def) =>
+    (def.fields ?? [])
+      .filter((field) => field.name.value.startsWith("__"))
+      .map((field) => ({
+        name: `${def.name.value}.${field.name.value}`,
+        line: field.loc.startToken.line,
+      })),
+  );
+}
+
+/**
+ * @param {{ path: string, content: string }[]} files example GraphQL schemas
+ * @returns {string[]} one message per unparseable schema or reserved name
+ */
+export function checkExampleSchemas(files) {
+  return files.flatMap(({ path, content }) => {
+    try {
+      return reservedFields(parse(content)).map(
+        ({ name, line }) => `${path}:${line}: ${name}: ${RESERVED_NAME}`,
+      );
+    } catch (e) {
+      return [`${path}: ${e.message}`];
+    }
+  });
+}
+
 /**
  * @param {string} sdl the reference schema
  * @param {{ path: string, content: string }[]} files specification Markdown
@@ -139,14 +171,10 @@ export function checkSnippets(sdl, files) {
         problems.push(`${where}: graphql block does not parse: ${e.message}`);
         continue;
       }
+      for (const { name } of reservedFields(document)) {
+        problems.push(`${where}: ${name}: ${RESERVED_NAME}`);
+      }
       for (const def of document.definitions) {
-        for (const field of def.fields ?? []) {
-          if (field.name.value.startsWith("__")) {
-            problems.push(
-              `${where}: ${def.name.value}.${field.name.value}: names beginning with "__" are reserved by GraphQL`,
-            );
-          }
-        }
         const expected =
           isTypeSystemDefinitionNode(def) &&
           def.name &&
@@ -247,6 +275,11 @@ function main() {
     ...schemaProblems,
     ...(schemaProblems.length > 0 ? [] : checkSnippets(sdl, specFiles)),
     ...checkRequirements(specFiles, caseFiles),
+    ...checkExampleSchemas(
+      files.filter(
+        ({ path }) => path.startsWith("examples/") && path.endsWith(".graphql"),
+      ),
+    ),
   ];
   if (problems.length > 0) {
     console.error(problems.join("\n"));

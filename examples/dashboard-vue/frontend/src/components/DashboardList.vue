@@ -26,7 +26,7 @@ const UPDATE_DASHBOARD_MUTATION = `
       }
       cascade {
         updated {
-          __typename
+          typename
           id
         }
       }

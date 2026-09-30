@@ -43,13 +43,13 @@ const UPDATE_CART_ITEM = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity
         }
         deleted {
-          __typename
+          typename
           id
         }
         invalidations {
@@ -86,13 +86,13 @@ const REMOVE_FROM_CART = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity
         }
         deleted {
-          __typename
+          typename
           id
         }
         invalidations {

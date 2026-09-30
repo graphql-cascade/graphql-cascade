@@ -32,11 +32,11 @@ const UPDATE_METRIC = `
       }
       cascade {
         updated {
-          __typename
+          typename
           id
         }
         deleted {
-          __typename
+          typename
           id
         }
         invalidations

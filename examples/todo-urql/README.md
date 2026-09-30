@@ -87,7 +87,7 @@ mutation CreateTodo($input: CreateTodoInput!) {
     }
     cascade {
       updated {
-        __typename
+        typename
         id
         operation
       }

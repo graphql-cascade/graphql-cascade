@@ -120,7 +120,7 @@ When you perform a mutation, the GraphQL server includes cascade metadata in the
     "cascade": {
       "updated": [
         {
-          "__typename": "Todo",
+          "typename": "Todo",
           "id": "123",
           "operation": "CREATE",
           "entity": { "id": "123", "title": "Learn Cascade", ... }
