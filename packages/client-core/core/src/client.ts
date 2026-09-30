@@ -157,16 +157,30 @@ export class CascadeClient {
    * Execute a mutation and apply the cascade automatically.
    */
   async mutate<T = any>(mutation: DocumentNode, variables?: any): Promise<T> {
+    const { fieldResult, response } = await this.runMutation<T>(
+      mutation,
+      variables,
+    );
+    return (response ? response.data : fieldResult) as T;
+  }
+
+  /**
+   * Execute a mutation and apply the cascade of its first field. Returns
+   * that field's result, and its normalized response when it is a cascade
+   * result.
+   */
+  protected async runMutation<T>(
+    mutation: DocumentNode,
+    variables?: any,
+  ): Promise<{
+    fieldResult: unknown;
+    response: CascadeResponse<T | null> | undefined;
+  }> {
     const result = await this.executor(mutation, variables);
-
-    // The mutation result is the first field in data
-    const mutationName = Object.keys(result.data)[0];
-    const fieldResult = result.data[mutationName];
-    const cascadeResponse = toCascadeResponse<T>(fieldResult);
-    if (!cascadeResponse) return fieldResult as T;
-
-    this.applyCascade(cascadeResponse);
-    return cascadeResponse.data as T;
+    const fieldResult = result.data[Object.keys(result.data)[0]];
+    const response = toCascadeResponse<T>(fieldResult);
+    if (response) this.applyCascade(response);
+    return { fieldResult, response };
   }
 
   /**

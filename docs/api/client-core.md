@@ -29,7 +29,7 @@ The executor returns a GraphQL response (`{ data, errors }`).
 
 ### OptimisticCascadeClient
 
-Extends `CascadeClient` with `mutateOptimistic(mutation, variables, optimisticResponse)`: it applies `optimisticResponse` first and, if the mutation throws, restores the entities it changed from what `cache.read` returned before.
+Extends `CascadeClient` with `mutateOptimistic(mutation, variables, optimisticResponse)`: it applies `optimisticResponse` first and, unless the mutation succeeds (it throws, or returns a failure payload), restores the entities the optimistic cascade updated or deleted from what `cache.read` returned before.
 
 ## CascadeCache
 

@@ -45,10 +45,10 @@ A created entity needs an ID before the server assigns one. Two approaches:
 | Library | Optimistic API | Rollback |
 |---------|----------------|----------|
 | [Apollo](/clients/apollo#optimistic-cascades) | `useCascadeMutation(mutation, { optimistic: true, optimisticCascadeResponse })` | The cascade lives in its own optimistic layer, removed when the mutation settles |
-| [React Query](/clients/react-query#mutations) | `useOptimisticCascadeMutation(client, mutation, variables => response)` | The entities' previous fields are written back if the mutation throws |
+| [React Query](/clients/react-query#mutations) | `useOptimisticCascadeMutation(client, mutation, variables => response)` | The entities' previous fields are written back unless the mutation succeeds |
 | [urql](/clients/urql#urqlcascadeclient) | `cascadeClient.mutateOptimistic(mutation, variables, { optimisticResponse, optimisticCascade })` | The entities' previous state is restored unless the mutation succeeds |
 | [Relay](/clients/relay) | Relay's own `optimisticResponse` / `optimisticUpdater` | Relay discards optimistic updates when the mutation settles |
-| Any `CascadeCache` | `OptimisticCascadeClient.mutateOptimistic(mutation, variables, response)` | The entities' previous state is restored if the mutation throws |
+| Any `CascadeCache` | `OptimisticCascadeClient.mutateOptimistic(mutation, variables, response)` | The entities' previous state is restored unless the mutation succeeds |
 
 For example, with Apollo:
 

@@ -264,6 +264,87 @@ describe("OptimisticCascadeClient", () => {
     });
   });
 
+  describe("rolls back when the mutation does not succeed", () => {
+    const renameOptimistic: CascadeResponse = {
+      success: true,
+      data: { __typename: "User", id: "1", name: "Optimistic" },
+      cascade: {
+        updated: [
+          {
+            typename: "User",
+            id: "1",
+            operation: CascadeOperation.UPDATED,
+            entity: { __typename: "User", id: "1", name: "Optimistic" },
+          },
+        ],
+        deleted: [],
+        invalidations: [],
+        metadata: { timestamp: "t", depth: 1, affectedCount: 1 },
+      },
+    };
+
+    beforeEach(() => {
+      cache.write("User", "1", {
+        __typename: "User",
+        id: "1",
+        name: "Original",
+      });
+    });
+
+    it.each([
+      [
+        "a CascadeFailure",
+        {
+          __typename: "CascadeFailure",
+          errors: [{ message: "Taken", code: "CONFLICT" }],
+        },
+      ],
+      [
+        "a failed CascadeResponse",
+        {
+          success: false,
+          errors: [{ message: "Taken", code: "CONFLICT" }],
+          data: null,
+          cascade: {
+            updated: [],
+            deleted: [],
+            invalidations: [],
+            metadata: { timestamp: "t", depth: 0, affectedCount: 0 },
+          },
+        },
+      ],
+    ])("%s", async (_, payload) => {
+      mockExecutor.mockResolvedValue({ data: { renameUser: payload } });
+
+      await client.mutateOptimistic({} as any, {}, renameOptimistic);
+
+      expect(cache.read("User", "1")?.name).toBe("Original");
+    });
+
+    it("restores entities an optimistic deletion evicted", async () => {
+      mockExecutor.mockRejectedValue(new Error("Delete failed"));
+
+      await expect(
+        client.mutateOptimistic(
+          {} as any,
+          {},
+          {
+            success: true,
+            data: null,
+            cascade: {
+              updated: [],
+              deleted: [{ typename: "User", id: "1", deletedAt: "t" }],
+              invalidations: [],
+              metadata: { timestamp: "t", depth: 1, affectedCount: 1 },
+            },
+          },
+        ),
+      ).rejects.toThrow("Delete failed");
+
+      expect(cache.read("User", "1")?.name).toBe("Original");
+    });
+  });
+
   describe("rollback", () => {
     it("should restore previous entity state", () => {
       cache.write("User", "1", {

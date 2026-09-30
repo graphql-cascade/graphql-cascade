@@ -17,23 +17,26 @@ export class OptimisticCascadeClient extends CascadeClient {
     optimisticResponse: CascadeResponse<T>,
   ): Promise<T> {
     const mutationId = this.generateMutationId();
-
-    // 1. Apply optimistic update
     this.applyOptimistic(mutationId, optimisticResponse);
 
+    let outcome: Awaited<ReturnType<CascadeClient["runMutation"]>>;
     try {
-      // 2. Execute real mutation
-      const result = await this.mutate<T>(mutation, variables);
-
-      // 3. Confirm optimistic update
-      this.confirmOptimistic(mutationId);
-
-      return result;
+      outcome = await this.runMutation<T>(mutation, variables);
     } catch (error) {
-      // 4. Rollback on error
       this.rollbackOptimistic(mutationId);
       throw error;
     }
+
+    // A failed payload commits nothing, so the optimistic changes go; on
+    // success the server's cascade has replaced them.
+    if (outcome.response?.success === false) {
+      this.rollbackOptimistic(mutationId);
+    } else {
+      this.confirmOptimistic(mutationId);
+    }
+    return (
+      outcome.response ? outcome.response.data : outcome.fieldResult
+    ) as T;
   }
 
   private applyOptimistic(mutationId: string, response: CascadeResponse): void {
@@ -61,25 +64,27 @@ export class OptimisticCascadeClient extends CascadeClient {
   }
 
   private captureRollbackInfo(response: CascadeResponse): () => void {
-    // Capture current state for rollback
-    const previousState = new Map<string, any>();
-
-    response.cascade.updated.forEach((entry) => {
+    // The state before the optimistic cascade of every entity it touches
+    const previous = [
+      ...response.cascade.updated,
+      ...response.cascade.deleted,
+    ].map((entry) => {
       const typename = cascadeEntryTypename(entry);
-      const current = this.cache.read(typename, entry.id);
-      previousState.set(`${typename}:${entry.id}`, current);
+      return {
+        typename,
+        id: entry.id,
+        data: this.cache.read(typename, entry.id),
+      };
     });
 
     return () => {
-      // Restore previous state
-      previousState.forEach((data, key) => {
-        const [typename, id] = key.split(":");
+      for (const { typename, id, data } of previous) {
         if (data === null) {
           this.cache.evict(typename, id);
         } else {
           this.cache.write(typename, id, data);
         }
-      });
+      }
     };
   }
 
