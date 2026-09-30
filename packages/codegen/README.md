@@ -124,6 +124,45 @@ export function isCreateTodoSuccess(
 }
 ```
 
+### `cascadeEntityFragment`
+
+- **Type:** `boolean | { fragmentName?: string; interfaceName?: string }`
+- **Default:** `false`
+
+Outputs only the `CascadeEntity` fragment that mutations select entities with: `entity { ...CascadeEntity }`. For each type implementing `Node`, it selects the fields your documents read on that type, so every cached field is refreshed and nothing unused is sent.
+
+- Entities referenced from another entity are selected as `{ id }`; their own cascade entries refresh them.
+- Embedded objects keep the union of the fields selected on them.
+- Fields with arguments are left out: each argument set is a separate cache entry, covered by invalidation hints.
+
+Generate it in its own target whose documents are your queries and fragments, not the mutations that spread it (codegen validates documents before generating, and the fragment doesn't exist yet on the first run). Then include the output in your other targets' documents:
+
+```typescript
+// codegen.ts
+const config: CodegenConfig = {
+  schema: "schema.graphql",
+  generates: {
+    "src/cascade-entity.graphql": {
+      documents: ["src/queries/**/*.graphql"],
+      plugins: ["@graphql-cascade/codegen"],
+      config: { cascadeEntityFragment: true },
+    },
+    "src/generated/graphql.ts": {
+      documents: ["src/**/*.graphql"],
+      preset: "client",
+    },
+  },
+};
+```
+
+The generator is also available as a function:
+
+```typescript
+import { buildCascadeEntityFragment } from "@graphql-cascade/codegen";
+
+const fragment = buildCascadeEntityFragment(schema, [{ document: queries }]);
+```
+
 ## Generated Types
 
 The plugin generates several utility types:
