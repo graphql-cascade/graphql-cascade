@@ -147,21 +147,23 @@ const invalidations = invalidator.computeInvalidations(
 ### Apollo Server Integration
 
 ```typescript
-import { createCascadePlugin } from "@graphql-cascade/server";
+import { createCascadePlugin, CascadeTracker } from "@graphql-cascade/server";
 import { ApolloServer } from "@apollo/server";
+import { startStandaloneServer } from "@apollo/server/standalone";
 
 const server = new ApolloServer({
   typeDefs,
   resolvers,
-  plugins: [
-    createCascadePlugin({
-      tracker: new CascadeTracker(),
-      invalidator: new CascadeInvalidator(schema),
-      // Plugin options
-    }),
-  ],
+  plugins: [createCascadePlugin()],
+});
+
+await startStandaloneServer(server, {
+  // Resolvers track changes on the request's tracker
+  context: async () => ({ cascadeTracker: new CascadeTracker() }),
 });
 ```
+
+The plugin writes one cascade for the whole operation to `extensions.cascade`. A mutation field that throws, or returns a payload with `success: false`, contributes no changes: the plugin undoes whatever that field tracked, so clients never receive entities from a rolled-back transaction.
 
 ### NestJS Integration
 

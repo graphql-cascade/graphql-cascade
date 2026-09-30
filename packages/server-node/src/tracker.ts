@@ -63,6 +63,19 @@ export class CascadeTransaction {
  * - Database triggers
  * - Manual tracking
  */
+/**
+ * Tracked changes at a point in a transaction; see `CascadeTracker.checkpoint`.
+ */
+export interface TrackerCheckpoint {
+  readonly updatedEntities: ReadonlyMap<string, EntityChange>;
+  readonly deletedEntities: ReadonlySet<string>;
+  readonly visitedEntities: ReadonlySet<string>;
+  readonly maxDepthReached: number;
+  readonly entityLimitReached: boolean;
+  readonly overflowKeys: ReadonlySet<string>;
+  readonly overflowByType: ReadonlyMap<string, number>;
+}
+
 export class CascadeTracker implements EntityChangeIterator {
   private maxDepth: number;
   private excludeTypes: Set<string>;
@@ -120,6 +133,36 @@ export class CascadeTracker implements EntityChangeIterator {
    */
   resetTransactionState(): void {
     this.resetTransactionStateInternal(true);
+  }
+
+  /**
+   * Record the tracked changes so far, to undo later changes with `restore`.
+   * Used to drop the changes of a mutation field that fails while others in
+   * the same operation succeed.
+   */
+  checkpoint(): TrackerCheckpoint {
+    return {
+      updatedEntities: new Map(this.updatedEntities),
+      deletedEntities: new Set(this.deletedEntities),
+      visitedEntities: new Set(this.visitedEntities),
+      maxDepthReached: this.maxDepthReached,
+      entityLimitReached: this.entityLimitReached,
+      overflowKeys: new Set(this.overflowKeys),
+      overflowByType: new Map(this.overflowByType),
+    };
+  }
+
+  /**
+   * Undo every change tracked since `checkpoint` was taken.
+   */
+  restore(checkpoint: TrackerCheckpoint): void {
+    this.updatedEntities = new Map(checkpoint.updatedEntities);
+    this.deletedEntities = new Set(checkpoint.deletedEntities);
+    this.visitedEntities = new Set(checkpoint.visitedEntities);
+    this.maxDepthReached = checkpoint.maxDepthReached;
+    this.entityLimitReached = checkpoint.entityLimitReached;
+    this.overflowKeys = new Set(checkpoint.overflowKeys);
+    this.overflowByType = new Map(checkpoint.overflowByType);
   }
 
   /**

@@ -5,6 +5,8 @@
  * GraphQL response extensions.
  */
 
+import assert from "node:assert";
+import { ApolloServer } from "@apollo/server";
 import { createCascadePlugin, CascadePluginOptions } from "./apollo";
 import { CascadeTracker } from "../tracker";
 
@@ -544,5 +546,83 @@ describe("createCascadePlugin", () => {
         id: "1",
       });
     });
+  });
+});
+
+describe("Failed mutation fields", () => {
+  const typeDefs = `#graphql
+    type User {
+      id: ID!
+      name: String!
+    }
+    type UpdateUserPayload {
+      success: Boolean!
+      user: User
+    }
+    type Query {
+      ok: Boolean
+    }
+    type Mutation {
+      updateUser(id: ID!, name: String!, fail: String): UpdateUserPayload
+    }
+  `;
+  const resolvers = {
+    Mutation: {
+      updateUser: (
+        _: unknown,
+        { id, name, fail }: { id: string; name: string; fail?: string },
+        context: { cascadeTracker: CascadeTracker },
+      ) => {
+        context.cascadeTracker.trackUpdate({ __typename: "User", id, name });
+        if (fail === "throw") throw new Error("Update failed");
+        if (fail === "payload") return { success: false, user: null };
+        return { success: true, user: { id, name } };
+      },
+    },
+  };
+
+  async function cascadeFor(query: string) {
+    const server = new ApolloServer({
+      typeDefs,
+      resolvers,
+      plugins: [createCascadePlugin()],
+    });
+    const cascadeTracker = new CascadeTracker();
+    cascadeTracker.startTransaction();
+    const response = await server.executeOperation(
+      { query },
+      { contextValue: { cascadeTracker } },
+    );
+    assert(response.body.kind === "single");
+    return response.body.singleResult.extensions?.cascade as {
+      updated: Array<{ id: string }>;
+    };
+  }
+
+  it("drops the changes of a field that throws", async () => {
+    const cascade = await cascadeFor(`mutation {
+      a: updateUser(id: "1", name: "A") { success }
+      b: updateUser(id: "2", name: "B", fail: "throw") { success }
+    }`);
+
+    expect(cascade.updated.map((e) => e.id)).toEqual(["1"]);
+  });
+
+  it("drops the changes of a field whose payload reports failure", async () => {
+    const cascade = await cascadeFor(`mutation {
+      a: updateUser(id: "1", name: "A", fail: "payload") { success }
+      b: updateUser(id: "2", name: "B") { success }
+    }`);
+
+    expect(cascade.updated.map((e) => e.id)).toEqual(["2"]);
+  });
+
+  it("keeps the changes of every field that succeeds", async () => {
+    const cascade = await cascadeFor(`mutation {
+      a: updateUser(id: "1", name: "A") { success user { name } }
+      b: updateUser(id: "2", name: "B") { success }
+    }`);
+
+    expect(cascade.updated.map((e) => e.id)).toEqual(["1", "2"]);
   });
 });

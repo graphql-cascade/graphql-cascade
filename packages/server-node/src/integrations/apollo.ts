@@ -81,6 +81,15 @@ export interface CascadePluginOptions extends CascadeTrackerConfig {
  * };
  * ```
  */
+/** A Cascade payload whose `success` is false reports a failed mutation. */
+function isFailedPayload(result: unknown): boolean {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    (result as { success?: unknown }).success === false
+  );
+}
+
 export function createCascadePlugin(
   options?: CascadePluginOptions,
 ): ApolloServerPlugin {
@@ -91,6 +100,28 @@ export function createCascadePlugin(
   return {
     async requestDidStart(): Promise<GraphQLRequestListener<any>> {
       return {
+        // A mutation field that fails contributes no changes (spec REQ-040):
+        // undo whatever it tracked. Mutation fields run serially, so each
+        // root field's checkpoint covers exactly its own changes.
+        async executionDidStart({ operation }) {
+          if (operation.operation !== "mutation") return;
+          return {
+            willResolveField({ contextValue, info }) {
+              if (info.path.prev !== undefined) return;
+              const tracker = (contextValue as any)[contextKey] as
+                | CascadeTracker
+                | undefined;
+              if (typeof tracker?.checkpoint !== "function") return;
+              const checkpoint = tracker.checkpoint();
+              return (error, result) => {
+                if (error || isFailedPayload(result)) {
+                  tracker.restore(checkpoint);
+                }
+              };
+            },
+          };
+        },
+
         async willSendResponse({ contextValue, response }) {
           // Skip if auto-inject is disabled
           if (!autoInject) {
