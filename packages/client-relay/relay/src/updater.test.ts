@@ -1,643 +1,305 @@
-import { CascadeUpdates, CascadeOperation } from "@graphql-cascade/client";
-import { createCascadeUpdater, applyCascadeToStore } from "./updater";
+/**
+ * Runs cascades against a real Relay store, keyed the way Relay keys records,
+ * so a test fails whenever an update misses what queries read.
+ */
+import {
+  Environment,
+  Network,
+  Observable,
+  RecordSource,
+  Store,
+  commitLocalUpdate,
+  type RecordSourceProxy,
+} from "relay-runtime";
+import {
+  CascadeOperation,
+  type CascadeUpdates,
+  type UpdatedEntity,
+} from "@graphql-cascade/client";
+import { applyCascadeToStore, createCascadeUpdater } from "./updater";
+import type { GetDataID } from "./types";
 
-// Mock Relay runtime
-let mockRecord: any;
-let mockStoreProxy: any;
+const cascadeOf = (parts: Partial<CascadeUpdates>): CascadeUpdates => ({
+  updated: [],
+  deleted: [],
+  invalidations: [],
+  metadata: { timestamp: "2026-01-01T00:00:00Z", depth: 1, affectedCount: 1 },
+  ...parts,
+});
+
+const updated = (
+  typename: string,
+  entity: Record<string, unknown> & { id: string },
+  operation = CascadeOperation.UPDATED,
+): UpdatedEntity => ({ typename, id: entity.id, operation, entity });
+
+/** An environment whose store holds the given records, keyed by data ID. */
+function environmentWith(
+  records: Record<string, Record<string, unknown>> = {},
+  getDataID?: GetDataID,
+) {
+  const source = Object.fromEntries(
+    Object.entries(records).map(([dataID, fields]) => [
+      dataID,
+      { __id: dataID, ...fields },
+    ]),
+  );
+  return new Environment({
+    network: Network.create(() => Observable.from({ data: {} })),
+    store: new Store(new RecordSource(source)),
+    ...(getDataID && { getDataID }),
+  });
+}
+
+const alice = { __typename: "User", id: "1", name: "Alice", email: "a@x.io" };
+
+function apply(environment: Environment, cascade: CascadeUpdates) {
+  environment.commitUpdate(createCascadeUpdater(cascade));
+}
+
+const record = (environment: Environment, dataID: string) =>
+  environment.getStore().getSource().get(dataID);
 
 describe("createCascadeUpdater", () => {
-  beforeEach(() => {
-    mockRecord = {
-      setValue: jest.fn(),
-      getValue: jest.fn(),
-    };
+  describe("updated entities", () => {
+    it("updates the record queries read, keyed by id", () => {
+      const environment = environmentWith({ "1": alice });
 
-    mockStoreProxy = {
-      get: jest.fn().mockReturnValue(null), // Default to null, will be overridden in specific tests
-      create: jest.fn(() => mockRecord),
-      delete: jest.fn(),
-      invalidateStore: jest.fn(),
-    };
-  });
-
-  describe("type invalidations", () => {
-    const cascadeWith = (
-      typeInvalidations?: CascadeUpdates["typeInvalidations"],
-    ): CascadeUpdates => ({
-      updated: [],
-      deleted: [],
-      invalidations: [],
-      typeInvalidations,
-      metadata: {
-        timestamp: "2024-01-01T00:00:00Z",
-        depth: 0,
-        affectedCount: 0,
-      },
-    });
-
-    it("invalidates the whole store, since Relay cannot target records by type", () => {
-      createCascadeUpdater(cascadeWith([{ typename: "Post" }]))(mockStoreProxy);
-
-      expect(mockStoreProxy.invalidateStore).toHaveBeenCalledTimes(1);
-    });
-
-    it("leaves the store alone when there are none", () => {
-      createCascadeUpdater(cascadeWith(undefined))(mockStoreProxy);
-      createCascadeUpdater(cascadeWith([]))(mockStoreProxy);
-
-      expect(mockStoreProxy.invalidateStore).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("entity updates", () => {
-    it("should create new records for CREATED operations", () => {
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "1",
-            operation: CascadeOperation.CREATED,
-            entity: { name: "John", email: "john@example.com" },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx1",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockStoreProxy.create).toHaveBeenCalledWith("User:1", "User");
-      expect(mockRecord.setValue).toHaveBeenCalledWith("John", "name");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(
-        "john@example.com",
-        "email",
+      apply(
+        environment,
+        cascadeOf({ updated: [updated("User", { id: "1", name: "Alicia" })] }),
       );
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isCreated");
+
+      expect(record(environment, "1")).toMatchObject({
+        name: "Alicia",
+        email: "a@x.io",
+      });
+      expect(record(environment, "User:1")).toBeUndefined();
     });
 
-    it("should update existing record during CREATE operation without error", () => {
-      mockStoreProxy.get.mockReturnValueOnce(mockRecord); // Record already exists
+    it("creates records for new entities", () => {
+      const environment = environmentWith();
 
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "3",
-            operation: CascadeOperation.CREATED,
-            entity: { name: "Bob", email: "bob@example.com" },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx3",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockStoreProxy.get).toHaveBeenCalledWith("User:3");
-      expect(mockStoreProxy.create).not.toHaveBeenCalled(); // Should not create since record exists
-      expect(mockRecord.setValue).toHaveBeenCalledWith("Bob", "name");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(
-        "bob@example.com",
-        "email",
+      apply(
+        environment,
+        cascadeOf({
+          updated: [
+            updated(
+              "Post",
+              { id: "7", title: "Hello" },
+              CascadeOperation.CREATED,
+            ),
+          ],
+        }),
       );
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isCreated");
+
+      expect(record(environment, "7")).toMatchObject({
+        __typename: "Post",
+        id: "7",
+        title: "Hello",
+      });
     });
 
-    it("should log warning for DELETED entity in updated array", () => {
-      const consoleWarnSpy = jest
-        .spyOn(console, "warn")
-        .mockImplementation(() => {});
-      mockStoreProxy.get.mockReturnValueOnce(mockRecord);
+    it("applies several entities in one cascade", () => {
+      const environment = environmentWith({ "1": alice });
 
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "4",
-            operation: CascadeOperation.DELETED,
-            entity: { name: "Deleted User" },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx4",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        "Received DELETED operation in updated entities for User:4",
+      apply(
+        environment,
+        cascadeOf({
+          updated: [
+            updated("User", { id: "1", name: "Alicia" }),
+            updated(
+              "Post",
+              { id: "7", title: "Hello" },
+              CascadeOperation.CREATED,
+            ),
+          ],
+        }),
       );
-      expect(mockRecord.setValue).toHaveBeenCalledWith("Deleted User", "name");
 
-      consoleWarnSpy.mockRestore();
+      expect(record(environment, "1")).toMatchObject({ name: "Alicia" });
+      expect(record(environment, "7")).toMatchObject({ title: "Hello" });
     });
 
-    it("should skip __typename and id fields during setValue", () => {
-      mockStoreProxy.get.mockReturnValueOnce(mockRecord);
+    it("stores scalars, lists of scalars and nulls as values", () => {
+      const environment = environmentWith({ "1": alice });
 
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "5",
-            operation: CascadeOperation.UPDATED,
-            entity: {
-              __typename: "User", // Should be skipped
-              id: "5", // Should be skipped
-              name: "Alice",
-              email: "alice@example.com",
+      apply(
+        environment,
+        cascadeOf({
+          updated: [
+            updated("User", {
+              id: "1",
+              tags: ["a", "b"],
+              email: null,
+              age: 36,
+            }),
+          ],
+        }),
+      );
+
+      expect(record(environment, "1")).toMatchObject({
+        tags: ["a", "b"],
+        email: null,
+        age: 36,
+      });
+    });
+
+    it("links nested entities to their own records", () => {
+      const environment = environmentWith({ "1": alice });
+
+      apply(
+        environment,
+        cascadeOf({
+          updated: [
+            updated(
+              "Post",
+              {
+                id: "7",
+                author: { __typename: "User", id: "1" },
+                reviewers: [{ __typename: "User", id: "2" }],
+              },
+              CascadeOperation.CREATED,
+            ),
+          ],
+        }),
+      );
+
+      expect(record(environment, "7")).toMatchObject({
+        author: { __ref: "1" },
+        reviewers: { __refs: ["2"] },
+      });
+      expect(record(environment, "2")).toMatchObject({ __typename: "User" });
+    });
+
+    it("keeps the entry's typename and id over the entity's own fields", () => {
+      const environment = environmentWith();
+
+      apply(
+        environment,
+        cascadeOf({
+          updated: [
+            {
+              typename: "User",
+              id: "1",
+              operation: CascadeOperation.UPDATED,
+              entity: { __typename: "Wrong", id: "1", name: "Alice" },
             },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx5",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockRecord.setValue).not.toHaveBeenCalledWith(
-        "User",
-        "__typename",
+          ],
+        }),
       );
-      expect(mockRecord.setValue).not.toHaveBeenCalledWith("5", "id");
-      expect(mockRecord.setValue).toHaveBeenCalledWith("Alice", "name");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(
-        "alice@example.com",
-        "email",
-      );
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isUpdated");
-    });
 
-    it("should handle multiple entities in single cascade update", () => {
-      mockStoreProxy.get
-        .mockReturnValueOnce(mockRecord) // First entity exists
-        .mockReturnValueOnce(null); // Second entity doesn't exist
-
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "6",
-            operation: CascadeOperation.UPDATED,
-            entity: { name: "User1", email: "user1@example.com" },
-          },
-          {
-            typename: "Post",
-            id: "10",
-            operation: CascadeOperation.CREATED,
-            entity: { title: "Post Title", content: "Post content" },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx6",
-          depth: 1,
-          affectedCount: 2,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      // First entity (existing)
-      expect(mockStoreProxy.get).toHaveBeenCalledWith("User:6");
-      expect(mockRecord.setValue).toHaveBeenCalledWith("User1", "name");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(
-        "user1@example.com",
-        "email",
-      );
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isUpdated");
-
-      // Second entity (new)
-      expect(mockStoreProxy.get).toHaveBeenCalledWith("Post:10");
-      expect(mockStoreProxy.create).toHaveBeenCalledWith("Post:10", "Post");
-      expect(mockRecord.setValue).toHaveBeenCalledWith("Post Title", "title");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(
-        "Post content",
-        "content",
-      );
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isCreated");
-    });
-
-    it("should update existing records for UPDATED operations", () => {
-      mockStoreProxy.get.mockReturnValueOnce(mockRecord);
-
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "1",
-            operation: CascadeOperation.UPDATED,
-            entity: { name: "John", email: "john@example.com" },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx1",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockStoreProxy.get).toHaveBeenCalledWith("User:1");
-      expect(mockRecord.setValue).toHaveBeenCalledWith("John", "name");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(
-        "john@example.com",
-        "email",
-      );
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isUpdated");
-    });
-
-    it("should create record if missing during UPDATE operation", () => {
-      mockStoreProxy.get.mockReturnValueOnce(null); // Record doesn't exist
-
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "2",
-            operation: CascadeOperation.UPDATED,
-            entity: { name: "Jane", email: "jane@example.com" },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx2",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockStoreProxy.get).toHaveBeenCalledWith("User:2");
-      expect(mockStoreProxy.create).toHaveBeenCalledWith("User:2", "User");
-      expect(mockRecord.setValue).toHaveBeenCalledWith("Jane", "name");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(
-        "jane@example.com",
-        "email",
-      );
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isUpdated");
-    });
-  });
-
-  describe("entity deletions", () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
-    it("should mark records as deleted", () => {
-      mockStoreProxy.get.mockReturnValueOnce(mockRecord);
-
-      const cascade: CascadeUpdates = {
-        updated: [],
-        deleted: [
-          {
-            typename: "User",
-            id: "1",
-            deletedAt: "2023-01-01T00:00:00Z",
-          },
-        ],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx1",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockStoreProxy.get).toHaveBeenCalledWith("User:1");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isDeleted");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(
-        "2023-01-01T00:00:00Z",
-        "deletedAt",
-      );
-    });
-
-    it("should mark records as deleted and set deletedAt timestamp", () => {
-      mockStoreProxy.get.mockReturnValueOnce(mockRecord);
-
-      const deletedAt = "2023-01-02T12:00:00Z";
-      const cascade: CascadeUpdates = {
-        updated: [],
-        deleted: [
-          {
-            typename: "Post",
-            id: "100",
-            deletedAt,
-          },
-        ],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-02T12:00:00Z",
-          transactionId: "tx10",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockStoreProxy.get).toHaveBeenCalledWith("Post:100");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isDeleted");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(deletedAt, "deletedAt");
-    });
-
-    it("should do nothing when deleting non-existent record", () => {
-      mockStoreProxy.get.mockReturnValueOnce(null); // Record doesn't exist
-
-      const cascade: CascadeUpdates = {
-        updated: [],
-        deleted: [
-          {
-            typename: "User",
-            id: "999",
-            deletedAt: "2023-01-01T00:00:00Z",
-          },
-        ],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx11",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockStoreProxy.get).toHaveBeenCalledWith("User:999");
-      expect(mockRecord.setValue).not.toHaveBeenCalled(); // No calls since record doesn't exist
-    });
-  });
-
-  describe("applyCascadeToStore", () => {
-    it("should apply cascade updates directly to store", () => {
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "1",
-            operation: CascadeOperation.CREATED,
-            entity: { name: "John" },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx1",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      applyCascadeToStore(mockStoreProxy as any, cascade);
-
-      expect(mockStoreProxy.create).toHaveBeenCalledWith("User:1", "User");
-      expect(mockRecord.setValue).toHaveBeenCalledWith("John", "name");
-    });
-  });
-
-  describe("edge cases and error handling", () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
-
-    it("should handle empty cascade update (no entities)", () => {
-      const cascade: CascadeUpdates = {
-        updated: [],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx7",
-          depth: 1,
-          affectedCount: 0,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockStoreProxy.get).not.toHaveBeenCalled();
-      expect(mockStoreProxy.create).not.toHaveBeenCalled();
-      expect(mockRecord.setValue).not.toHaveBeenCalled();
+      expect(record(environment, "1")).toMatchObject({
+        __typename: "User",
+        id: "1",
+        name: "Alice",
+      });
     });
 
     it("applies entries from pre-1.3 servers, which only send __typename", () => {
-      mockStoreProxy.get.mockReturnValueOnce(mockRecord);
+      const environment = environmentWith({ "1": alice });
+      const legacy = {
+        __typename: "User",
+        id: "1",
+        operation: CascadeOperation.UPDATED,
+        entity: { id: "1", name: "Alicia" },
+      } as unknown as UpdatedEntity;
 
-      const cascade = {
-        updated: [
-          {
-            __typename: "User",
-            id: "8",
-            operation: CascadeOperation.UPDATED,
-            entity: { name: "Test User" },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx8",
-          depth: 1,
-          affectedCount: 1,
-        },
-      } as unknown as CascadeUpdates;
+      apply(environment, cascadeOf({ updated: [legacy] }));
 
-      const updater = createCascadeUpdater(cascade);
-      expect(() => updater(mockStoreProxy as any)).not.toThrow();
-
-      expect(mockStoreProxy.get).toHaveBeenCalledWith("User:8");
-      expect(mockRecord.setValue).toHaveBeenCalledWith("Test User", "name");
+      expect(record(environment, "1")).toMatchObject({ name: "Alicia" });
     });
 
-    it("should handle malformed entity data - missing id gracefully", () => {
-      // Similar to above - tests that missing id doesn't cause crashes
-      mockStoreProxy.get.mockReturnValueOnce(mockRecord);
+    it("follows the environment's custom getDataID", () => {
+      const getDataID: GetDataID = (value, typeName) =>
+        `${typeName}:${value.id}`;
+      const environment = environmentWith({ "User:1": alice }, getDataID);
 
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "9",
-            operation: CascadeOperation.UPDATED,
-            entity: { name: "Test User 2" },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx9",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      expect(() => updater(mockStoreProxy as any)).not.toThrow();
-
-      expect(mockStoreProxy.get).toHaveBeenCalledWith("User:9");
-      expect(mockRecord.setValue).toHaveBeenCalledWith("Test User 2", "name");
-    });
-
-    it("should handle missing record during UPDATE operation", () => {
-      mockStoreProxy.get.mockReturnValueOnce(null); // Record doesn't exist
-
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "missing",
-            operation: CascadeOperation.UPDATED,
-            entity: { name: "Missing User", status: "active" },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx_missing",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockStoreProxy.get).toHaveBeenCalledWith("User:missing");
-      expect(mockStoreProxy.create).toHaveBeenCalledWith(
-        "User:missing",
-        "User",
+      environment.commitUpdate(
+        createCascadeUpdater(
+          cascadeOf({
+            updated: [updated("User", { id: "1", name: "Alicia" })],
+          }),
+          { getDataID },
+        ),
       );
-      expect(mockRecord.setValue).toHaveBeenCalledWith("Missing User", "name");
-      expect(mockRecord.setValue).toHaveBeenCalledWith("active", "status");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isUpdated");
+
+      expect(record(environment, "User:1")).toMatchObject({ name: "Alicia" });
     });
+  });
 
-    it("should skip __typename and id fields during setValue even when present in entity", () => {
-      mockStoreProxy.get.mockReturnValueOnce(mockRecord);
+  describe("deleted entities", () => {
+    it("deletes their records", () => {
+      const environment = environmentWith({ "1": alice });
 
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "10",
-            operation: CascadeOperation.UPDATED,
-            entity: {
-              __typename: "User", // Should be skipped
-              id: "10", // Should be skipped
-              name: "Test User",
-            },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx10",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockRecord.setValue).not.toHaveBeenCalledWith(
-        "User",
-        "__typename",
+      apply(
+        environment,
+        cascadeOf({
+          deleted: [{ typename: "User", id: "1", deletedAt: "2026-01-01" }],
+        }),
       );
-      expect(mockRecord.setValue).not.toHaveBeenCalledWith("10", "id");
-      expect(mockRecord.setValue).toHaveBeenCalledWith("Test User", "name");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isUpdated");
+
+      expect(record(environment, "1")).toBeNull();
     });
 
-    it("should handle null field values in entity data", () => {
-      mockStoreProxy.get.mockReturnValueOnce(mockRecord);
+    it("ignores entities the store does not hold", () => {
+      const environment = environmentWith({ "1": alice });
 
-      const cascade: CascadeUpdates = {
-        updated: [
-          {
-            typename: "User",
-            id: "11",
-            operation: CascadeOperation.UPDATED,
-            entity: {
-              name: null,
-              email: "test@example.com",
-              age: null,
-              active: false,
-            },
-          },
-        ],
-        deleted: [],
-        invalidations: [],
-        metadata: {
-          timestamp: "2023-01-01T00:00:00Z",
-          transactionId: "tx11",
-          depth: 1,
-          affectedCount: 1,
-        },
-      };
-
-      const updater = createCascadeUpdater(cascade);
-      updater(mockStoreProxy as any);
-
-      expect(mockRecord.setValue).toHaveBeenCalledWith(null, "name");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(
-        "test@example.com",
-        "email",
+      apply(
+        environment,
+        cascadeOf({
+          deleted: [{ typename: "User", id: "9", deletedAt: "2026-01-01" }],
+        }),
       );
-      expect(mockRecord.setValue).toHaveBeenCalledWith(null, "age");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(false, "active");
-      expect(mockRecord.setValue).toHaveBeenCalledWith(true, "__isUpdated");
+
+      expect(record(environment, "1")).toMatchObject({ name: "Alice" });
     });
+  });
+
+  describe("type invalidations", () => {
+    function invalidatesStore(cascade: CascadeUpdates): boolean {
+      let invalidated = false;
+      environmentWith({ "1": alice }).commitUpdate(
+        (store: RecordSourceProxy) => {
+          const proxy = store as RecordSourceProxy & {
+            invalidateStore(): void;
+          };
+          const original = proxy.invalidateStore.bind(proxy);
+          proxy.invalidateStore = () => {
+            invalidated = true;
+            original();
+          };
+          createCascadeUpdater(cascade)(proxy);
+        },
+      );
+      return invalidated;
+    }
+
+    it("invalidates the whole store, since Relay cannot target records by type", () => {
+      expect(
+        invalidatesStore(
+          cascadeOf({ typeInvalidations: [{ typename: "Post" }] }),
+        ),
+      ).toBe(true);
+    });
+
+    it("leaves the store alone when there are none", () => {
+      expect(invalidatesStore(cascadeOf({}))).toBe(false);
+    });
+  });
+});
+
+describe("applyCascadeToStore", () => {
+  it("applies a cascade inside a local update", () => {
+    const environment = environmentWith({ "1": alice });
+
+    commitLocalUpdate(environment, (store) => {
+      applyCascadeToStore(
+        store,
+        cascadeOf({ updated: [updated("User", { id: "1", name: "Alicia" })] }),
+      );
+    });
+
+    expect(record(environment, "1")).toMatchObject({ name: "Alicia" });
   });
 });

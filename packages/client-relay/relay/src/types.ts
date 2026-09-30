@@ -1,4 +1,8 @@
-import { RecordSourceSelectorProxy, MutationConfig } from "relay-runtime";
+import type {
+  MutationConfig,
+  MutationParameters,
+  RecordSourceProxy,
+} from "relay-runtime";
 import { CascadeResponse, CascadeUpdates } from "@graphql-cascade/client";
 import { RelayRetryOptions } from "./error-handling";
 
@@ -9,7 +13,23 @@ import { RelayRetryOptions } from "./error-handling";
 /**
  * Store updater function that applies cascade updates to Relay's normalized store.
  */
-export type CascadeStoreUpdater = (store: RecordSourceSelectorProxy) => void;
+export type CascadeStoreUpdater = (store: RecordSourceProxy) => void;
+
+/**
+ * Maps an object to its Relay record ID. Relay's default is the object's
+ * `id`; environments configured with another `getDataID` pass the same one to
+ * the cascade updater.
+ */
+export type GetDataID = (
+  value: { [key: string]: any },
+  typeName: string,
+) => unknown;
+
+/** Options for the cascade store updater. */
+export interface CascadeUpdaterOptions {
+  /** The environment's getDataID, when it isn't Relay's default */
+  getDataID?: GetDataID;
+}
 
 /**
  * Configuration for generating Relay mutation configs from cascade responses.
@@ -18,7 +38,7 @@ export interface CascadeMutationConfig {
   /** The cascade response to generate configs for */
   cascade: CascadeResponse;
   /** Optional mutation config overrides */
-  config?: Partial<MutationConfig>;
+  config?: Partial<MutationConfig<MutationParameters>>;
 }
 
 /**
@@ -26,7 +46,7 @@ export interface CascadeMutationConfig {
  */
 export interface GeneratedMutationConfigs {
   /** Mutation configs to apply the cascade updates */
-  configs: MutationConfig[];
+  configs: MutationConfig<MutationParameters>[];
   /** Store updater for immediate application */
   updater?: CascadeStoreUpdater;
 }
@@ -75,6 +95,8 @@ export interface ConnectionUpdate {
  * Relay cascade environment configuration.
  */
 export interface RelayCascadeEnvironmentConfig {
+  /** Record IDs, when they aren't Relay's default (the object's `id`) */
+  getDataID?: GetDataID;
   /** Custom store updater factory */
   createUpdater?: (cascade: CascadeUpdates) => CascadeStoreUpdater;
   /** Custom optimistic response generator */
@@ -119,7 +141,8 @@ export interface RelayCascadeClient {
    * Apply cascade updates directly to a store.
    */
   applyCascadeToStore(
-    store: RecordSourceSelectorProxy,
+    store: RecordSourceProxy,
     cascade: CascadeUpdates,
+    options?: CascadeUpdaterOptions,
   ): void;
 }

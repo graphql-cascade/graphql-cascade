@@ -1,15 +1,17 @@
-import { RecordSourceSelectorProxy } from "relay-runtime";
+import type { RecordProxy, RecordSourceProxy } from "relay-runtime";
 import {
   CascadeUpdates,
   UpdatedEntity,
-  DeletedEntity,
-  CascadeOperation,
   QueryInvalidation,
   InvalidationStrategy,
   InvalidationScope,
   cascadeEntryTypename,
 } from "@graphql-cascade/client";
-import { CascadeStoreUpdater } from "./types";
+import type {
+  CascadeStoreUpdater,
+  CascadeUpdaterOptions,
+  GetDataID,
+} from "./types";
 
 /**
  * Create a Relay store updater that applies cascade updates to the normalized store.
@@ -22,16 +24,20 @@ import { CascadeStoreUpdater } from "./types";
  */
 export function createCascadeUpdater(
   cascade: CascadeUpdates,
+  options: CascadeUpdaterOptions = {},
 ): CascadeStoreUpdater {
-  return (store: RecordSourceSelectorProxy) => {
+  const getDataID = options.getDataID ?? defaultGetDataID;
+  return (store: RecordSourceProxy) => {
     // Apply entity updates
     cascade.updated.forEach((entity) => {
-      applyEntityUpdate(store, entity);
+      applyEntityUpdate(store, entity, getDataID);
     });
 
     // Apply entity deletions
     cascade.deleted.forEach((entity) => {
-      applyEntityDeletion(store, entity);
+      store.delete(
+        getDataID({ id: entity.id }, cascadeEntryTypename(entity)) as string,
+      );
     });
 
     // Apply invalidations
@@ -44,70 +50,82 @@ export function createCascadeUpdater(
     // Relay cannot enumerate records by type, so a type invalidation marks
     // every query stale; each refetches on its next read.
     if (cascade.typeInvalidations?.length) {
-      store.invalidateStore();
+      // Every Relay store proxy has invalidateStore at runtime; the type
+      // definitions only declare it on the selector proxy.
+      (
+        store as RecordSourceProxy & { invalidateStore(): void }
+      ).invalidateStore();
     }
   };
+}
+
+/**
+ * Relay's default record ID: the object's `id`. Environments configured with
+ * a different `getDataID` pass the same function in the updater options.
+ */
+const defaultGetDataID: GetDataID = (value) => value.id;
+
+type Primitive = string | number | boolean | null;
+
+const isPrimitive = (value: unknown): value is Primitive =>
+  value === null || ["string", "number", "boolean"].includes(typeof value);
+
+const isReference = (
+  value: unknown,
+): value is { id: string; __typename: string } =>
+  typeof value === "object" &&
+  value !== null &&
+  "id" in value &&
+  "__typename" in value;
+
+/**
+ * Write one entity field. Relay stores scalars with setValue and entities as
+ * links to their own records; other nested objects have no record ID and are
+ * left to the next query that selects them.
+ */
+function writeField(
+  store: RecordSourceProxy,
+  record: RecordProxy,
+  key: string,
+  value: unknown,
+  getDataID: GetDataID,
+): void {
+  const link = (ref: { id: string; __typename: string }) => {
+    const dataID = getDataID(ref, ref.__typename) as string;
+    return store.get(dataID) ?? store.create(dataID, ref.__typename);
+  };
+  if (
+    isPrimitive(value) ||
+    (Array.isArray(value) && value.every(isPrimitive))
+  ) {
+    record.setValue(value as Primitive | Primitive[], key);
+  } else if (isReference(value)) {
+    record.setLinkedRecord(link(value), key);
+  } else if (Array.isArray(value) && value.every(isReference)) {
+    record.setLinkedRecords(value.map(link), key);
+  }
 }
 
 /**
  * Apply an entity update to the Relay store.
  */
 function applyEntityUpdate(
-  store: RecordSourceSelectorProxy,
-  entity: UpdatedEntity,
+  store: RecordSourceProxy,
+  entry: UpdatedEntity,
+  getDataID: GetDataID,
 ): void {
-  const typename = cascadeEntryTypename(entity);
-  const recordId = `${typename}:${entity.id}`;
-  let record = store.get(recordId);
+  const typename = cascadeEntryTypename(entry);
+  const dataID = getDataID(
+    { ...entry.entity, id: entry.id },
+    typename,
+  ) as string;
+  const record = store.get(dataID) ?? store.create(dataID, typename);
 
-  if (!record) {
-    // Create new record if it doesn't exist
-    record = store.create(recordId, typename);
-  }
-
-  // Update record fields
-  Object.keys(entity.entity).forEach((key) => {
+  record.setValue(entry.id, "id");
+  for (const [key, value] of Object.entries(entry.entity)) {
     if (key !== "__typename" && key !== "id") {
-      record.setValue(entity.entity[key], key);
+      writeField(store, record, key, value, getDataID);
     }
-  });
-
-  // Handle special cases based on operation type
-  switch (entity.operation) {
-    case CascadeOperation.CREATED:
-      // Ensure the record is marked as created
-      record.setValue(true, "__isCreated");
-      break;
-    case CascadeOperation.UPDATED:
-      // Ensure the record is marked as updated
-      record.setValue(true, "__isUpdated");
-      break;
-    case CascadeOperation.DELETED:
-      // This shouldn't happen here, but handle gracefully
-      console.warn(
-        `Received DELETED operation in updated entities for ${recordId}`,
-      );
-      break;
-  }
-}
-
-/**
- * Apply an entity deletion to the Relay store.
- */
-function applyEntityDeletion(
-  store: RecordSourceSelectorProxy,
-  entity: DeletedEntity,
-): void {
-  const recordId = `${cascadeEntryTypename(entity)}:${entity.id}`;
-  const record = store.get(recordId);
-
-  if (record) {
-    // Mark as deleted and set deletion timestamp
-    record.setValue(true, "__isDeleted");
-    record.setValue(entity.deletedAt, "deletedAt");
-
-    // Optionally remove from connections
-    // This would require additional connection-specific logic
   }
 }
 
@@ -120,7 +138,7 @@ function applyEntityDeletion(
  * - For REMOVE strategy, we can delete records (similar to eviction)
  */
 function applyInvalidation(
-  store: RecordSourceSelectorProxy,
+  store: RecordSourceProxy,
   invalidation: QueryInvalidation,
 ): void {
   // Relay doesn't have direct query invalidation like Apollo or React Query
@@ -167,9 +185,9 @@ function applyInvalidation(
  * Useful for immediate updates outside of mutation configs.
  */
 export function applyCascadeToStore(
-  store: RecordSourceSelectorProxy,
+  store: RecordSourceProxy,
   cascade: CascadeUpdates,
+  options: CascadeUpdaterOptions = {},
 ): void {
-  const updater = createCascadeUpdater(cascade);
-  updater(store);
+  createCascadeUpdater(cascade, options)(store);
 }

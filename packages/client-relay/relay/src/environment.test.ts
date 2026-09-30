@@ -1,207 +1,177 @@
 import {
-  createCascadeRelayEnvironment,
+  Network,
+  Observable,
+  RecordSource,
+  Store,
+  type GraphQLResponse,
+  type RequestParameters,
+} from "relay-runtime";
+import { CascadeOperation, type CascadeUpdates } from "@graphql-cascade/client";
+import {
   createBasicCascadeEnvironment,
+  createCascadeRelayEnvironment,
 } from "./environment";
 
-// Mock Relay runtime
-const mockObservable = {
-  map: jest.fn().mockReturnThis(),
-  subscribe: jest.fn(),
-  toPromise: jest.fn(),
+const renamed: CascadeUpdates = {
+  updated: [
+    {
+      typename: "User",
+      id: "1",
+      operation: CascadeOperation.UPDATED,
+      entity: { id: "1", name: "New" },
+    },
+  ],
+  deleted: [],
+  invalidations: [],
+  metadata: { timestamp: "2026-01-01T00:00:00Z", depth: 1, affectedCount: 1 },
 };
 
-const mockNetwork = {
-  execute: jest.fn().mockReturnValue(mockObservable),
-};
+const mutation = { operationKind: "mutation" } as RequestParameters;
+const query = { operationKind: "query" } as RequestParameters;
 
-const mockStore = {
-  commitUpdates: jest.fn(),
-};
+function storeWithUser(dataID = "1") {
+  return new Store(
+    new RecordSource({
+      [dataID]: { __id: dataID, __typename: "User", id: "1", name: "Old" },
+    }),
+  );
+}
 
-jest.mock("relay-runtime", () => ({
-  Network: {
-    create: jest.fn(() => mockNetwork),
-  },
-  Store: jest.fn(() => mockStore),
-  RecordSource: jest.fn(),
-  Observable: {
-    create: jest.fn(() => mockObservable),
-  },
-  Environment: jest.fn().mockImplementation(() => ({
-    execute: jest.fn(() => mockObservable),
-  })),
-}));
+async function respond(
+  request: RequestParameters,
+  payload: GraphQLResponse,
+  options: {
+    dataID?: string;
+    getDataID?: (v: any, t: string) => unknown;
+    debug?: boolean;
+  } = {},
+) {
+  const store = storeWithUser(options.dataID);
+  const environment = createCascadeRelayEnvironment(
+    Network.create(
+      () => Observable.from(payload),
+      () => Observable.from(payload),
+    ),
+    store,
+    { getDataID: options.getDataID, debug: options.debug },
+  );
+  const result = await environment
+    .getNetwork()
+    .execute(request, {}, {})
+    .toPromise();
+  return { result, record: store.getSource().get(options.dataID ?? "1") };
+}
 
 describe("createCascadeRelayEnvironment", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+  it("applies a mutation's cascade to the store and passes the payload on", async () => {
+    const payload = {
+      data: { renameUser: { data: { id: "1" }, cascade: renamed } },
+    };
+
+    const { result, record } = await respond(mutation, payload);
+
+    expect(record).toMatchObject({ name: "New" });
+    expect(result).toBe(payload);
   });
 
-  it("should create a Relay Environment", () => {
-    const { Environment } = require("relay-runtime");
-    const _environment = createCascadeRelayEnvironment(
-      mockNetwork as any,
-      mockStore as any,
-    );
-    expect(Environment).toHaveBeenCalled();
+  it("ignores queries, even if they carry a cascade field", async () => {
+    const { record } = await respond(query, {
+      data: { user: { cascade: renamed } },
+    });
+
+    expect(record).toMatchObject({ name: "Old" });
   });
 
-  it("should create environment with cascade network wrapper", () => {
-    const { Network } = require("relay-runtime");
-    const _environment = createCascadeRelayEnvironment(
-      mockNetwork as any,
-      mockStore as any,
+  it("ignores mutations without a cascade", async () => {
+    const { record } = await respond(mutation, {
+      data: { renameUser: { data: { id: "1" } } },
+    });
+
+    expect(record).toMatchObject({ name: "Old" });
+  });
+
+  it("ignores mutations that returned null", async () => {
+    const { record } = await respond(mutation, { data: { renameUser: null } });
+
+    expect(record).toMatchObject({ name: "Old" });
+  });
+
+  it("ignores subscriptions", async () => {
+    const subscription = { operationKind: "subscription" } as RequestParameters;
+
+    const { record } = await respond(subscription, {
+      data: { userChanged: { cascade: renamed } },
+    });
+
+    expect(record).toMatchObject({ name: "Old" });
+  });
+
+  it("applies every mutation field's cascade, in field order", async () => {
+    const renamedAgain: CascadeUpdates = {
+      ...renamed,
+      updated: [{ ...renamed.updated[0], entity: { id: "1", name: "Newer" } }],
+    };
+
+    const { record } = await respond(mutation, {
+      data: { first: { cascade: renamed }, second: { cascade: renamedAgain } },
+    });
+
+    expect(record).toMatchObject({ name: "Newer" });
+  });
+
+  it("passes the response on when a cascade cannot be applied", async () => {
+    const error = jest.spyOn(console, "error").mockImplementation();
+    const payload = {
+      data: { renameUser: { cascade: { ...renamed, updated: "not a list" } } },
+    };
+
+    const { result, record } = await respond(mutation, payload as any);
+
+    expect(result).toBe(payload);
+    expect(record).toMatchObject({ name: "Old" });
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it("uses a custom getDataID for the store and the cascade", async () => {
+    const getDataID = (value: any, typeName: string) =>
+      `${typeName}:${value.id}`;
+
+    const { record } = await respond(
+      mutation,
+      { data: { renameUser: { cascade: renamed } } },
+      { dataID: "User:1", getDataID },
     );
 
-    // Verify that Network.create was called to wrap the network
-    expect(Network.create).toHaveBeenCalled();
+    expect(record).toMatchObject({ name: "New" });
+  });
+
+  it("logs applied cascades when debug is enabled", async () => {
+    const log = jest.spyOn(console, "log").mockImplementation();
+
+    await respond(
+      mutation,
+      { data: { renameUser: { cascade: renamed } } },
+      { debug: true },
+    );
+
+    expect(log).toHaveBeenCalledWith("Applied cascade updates:", renamed);
+    log.mockRestore();
   });
 });
 
 describe("createBasicCascadeEnvironment", () => {
-  it("should create a basic environment with cascade support", () => {
-    const { Environment, Network, Store } = require("relay-runtime");
-    const fetchFn = jest.fn();
-
-    const _environment = createBasicCascadeEnvironment(fetchFn);
-    expect(Network.create).toHaveBeenCalledWith(fetchFn);
-    expect(Store).toHaveBeenCalled();
-    expect(Environment).toHaveBeenCalled();
-  });
-});
-
-describe("cascade processing", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("should log cascade updates when debug is enabled", () => {
-    const consoleLogSpy = jest
-      .spyOn(console, "log")
-      .mockImplementation(() => {});
-    const config = { debug: true };
-
-    createCascadeRelayEnvironment(mockNetwork as any, mockStore as any, config);
-
-    // Get the network wrapper function
-    const { Network } = require("relay-runtime");
-    const networkWrapper = (Network.create as jest.Mock).mock.calls[0][0];
-
-    // Mock the observable map to trigger cascade processing
-    mockObservable.map.mockImplementation((fn) => {
-      const payload = {
-        data: {
-          createUser: {
-            cascade: {
-              updated: [
-                {
-                  typename: "User",
-                  id: "1",
-                  operation: "CREATED",
-                  entity: { name: "Test" },
-                },
-              ],
-              deleted: [],
-              invalidations: [],
-              metadata: {
-                timestamp: "2023-01-01T00:00:00Z",
-                transactionId: "tx1",
-                depth: 1,
-                affectedCount: 1,
-              },
-            },
-          },
-        },
-      };
-      fn(payload);
-      return mockObservable;
+  it("builds a working environment from a fetch function", async () => {
+    const source = new RecordSource({
+      "1": { __id: "1", __typename: "User", id: "1", name: "Old" },
     });
-
-    // Trigger network execution through the wrapper
-    const operation = { operationKind: "mutation" };
-    networkWrapper(operation, {});
-
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      "Applied cascade updates:",
-      expect.any(Object),
+    const environment = createBasicCascadeEnvironment(
+      async () => ({ data: { renameUser: { cascade: renamed } } }),
+      source,
     );
-    consoleLogSpy.mockRestore();
-  });
 
-  it("should respect custom config options", () => {
-    const config = { debug: false, customOption: "test" };
-    const consoleLogSpy = jest
-      .spyOn(console, "log")
-      .mockImplementation(() => {});
+    await environment.getNetwork().execute(mutation, {}, {}).toPromise();
 
-    createCascadeRelayEnvironment(mockNetwork as any, mockStore as any, config);
-
-    // Get the network wrapper function
-    const { Network } = require("relay-runtime");
-    const networkWrapper = (Network.create as jest.Mock).mock.calls[0][0];
-
-    // Mock the observable map to trigger cascade processing
-    mockObservable.map.mockImplementation((fn) => {
-      const payload = {
-        data: {
-          createUser: {
-            cascade: {
-              updated: [],
-              deleted: [],
-              invalidations: [],
-              metadata: {
-                timestamp: "2023-01-01T00:00:00Z",
-                transactionId: "tx1",
-                depth: 1,
-                affectedCount: 0,
-              },
-            },
-          },
-        },
-      };
-      fn(payload);
-      return mockObservable;
-    });
-
-    // Trigger network execution through the wrapper
-    const operation = { operationKind: "mutation" };
-    networkWrapper(operation, {});
-
-    expect(consoleLogSpy).not.toHaveBeenCalled();
-    consoleLogSpy.mockRestore();
-  });
-
-  it("should handle null cascade data gracefully", () => {
-    const config = { debug: true };
-    const consoleLogSpy = jest
-      .spyOn(console, "log")
-      .mockImplementation(() => {});
-
-    createCascadeRelayEnvironment(mockNetwork as any, mockStore as any, config);
-
-    // Get the network wrapper function
-    const { Network } = require("relay-runtime");
-    const networkWrapper = (Network.create as jest.Mock).mock.calls[0][0];
-
-    // Mock the observable map to trigger cascade processing with null cascade
-    mockObservable.map.mockImplementation((fn) => {
-      const payload = {
-        data: {
-          createUser: {
-            cascade: null,
-          },
-        },
-      };
-      fn(payload);
-      return mockObservable;
-    });
-
-    // Trigger network execution through the wrapper
-    const operation = { operationKind: "mutation" };
-    networkWrapper(operation, {});
-
-    expect(consoleLogSpy).not.toHaveBeenCalled();
-    expect(mockStore.commitUpdates).not.toHaveBeenCalled();
-    consoleLogSpy.mockRestore();
+    expect(source.get("1")).toMatchObject({ name: "New" });
   });
 });

@@ -223,6 +223,9 @@ importers:
       '@types/react':
         specifier: ^18.0.0
         version: 18.3.27
+      '@types/relay-runtime':
+        specifier: ~14.1.24
+        version: 14.1.24
       '@typescript-eslint/eslint-plugin':
         specifier: ^5.0.0
         version: 5.62.0(@typescript-eslint/parser@5.62.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)
@@ -1925,6 +1928,9 @@ packages:
 
   '@types/react@18.3.27':
     resolution: {integrity: sha512-cisd7gxkzjBKU2GgdYrTdtQx1SORymWyaAFhaxQPK9bYO9ot3Y5OikQRvY0VYQtvwjeQnizCINJAenh/V7MK2w==}
+
+  '@types/relay-runtime@14.1.24':
+    resolution: {integrity: sha512-ta7vPoFXtEG1wu0Mk7sTngzhmfNGnIe8cDiy3yBEm8pJcGpv55YY/+vWrd9gYd9OQht8rALZpXIYSOLzS/0PVg==}
 
   '@types/semver@7.7.1':
     resolution: {integrity: sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA==}
@@ -6758,6 +6764,8 @@ snapshots:
     dependencies:
       '@types/prop-types': 15.7.15
       csstype: 3.2.3
+
+  '@types/relay-runtime@14.1.24': {}
 
   '@types/semver@7.7.1': {}
 
