@@ -43,9 +43,25 @@ describe("ReactQueryCascadeCache", () => {
   });
 
   describe("read", () => {
-    it("should return null (React Query does not support entity reading)", () => {
-      const result = cache.read("User", "1");
-      expect(result).toBeNull();
+    it("returns null for an entity no query holds", () => {
+      expect(cache.read("User", "1")).toBeNull();
+    });
+
+    it("returns the entity's fields from every query holding it", () => {
+      queryClient.setQueryData(
+        ["users"],
+        [{ __typename: "User", id: "1", name: "John" }],
+      );
+      queryClient.setQueryData(["user", { id: "1" }], {
+        user: { __typename: "User", id: "1", email: "john@example.com" },
+      });
+
+      expect(cache.read("User", "1")).toEqual({
+        __typename: "User",
+        id: "1",
+        name: "John",
+        email: "john@example.com",
+      });
     });
   });
 
