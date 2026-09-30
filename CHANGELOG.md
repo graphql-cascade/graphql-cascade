@@ -15,6 +15,7 @@ The **specification** is versioned independently: its version lives in
 ## [Unreleased]
 
 ### Fixed
+- `@graphql-cascade/apollo`: a failed optimistic `useCascadeMutation` restores existing entities completely (optimistic writes live in an Apollo optimistic layer), rejects with the real Apollo error, and `ApolloCascadeCache.read()` returns all stored fields.
 - `@graphql-cascade/server`: `cascade.updated[].entity` keeps the entity's `__typename`; it was dropped along with private `_`-prefixed fields.
 - Removed leaked tool-call transcript text from the tail of 18 files; `compliance-tests/cli.py` and `scripts/publish.py` failed to parse because of it.
 - Reconciled specification version stamps to 1.1.0 (previously 0.1, 1.0.0 and v1.1 in different places).

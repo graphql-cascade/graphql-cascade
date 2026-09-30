@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  ApolloError,
   useMutation,
   useApolloClient,
   MutationHookOptions,
@@ -7,12 +8,19 @@ import {
 } from "@apollo/client";
 import { DocumentNode } from "graphql";
 import {
+  CascadeClient,
   CascadeResponse,
   CascadeUpdates,
   CascadeConflictResolver,
   cascadeEntryTypename,
 } from "@graphql-cascade/client";
+import { ApolloCascadeCache } from "./cache";
 import { ApolloCascadeClient } from "./client";
+
+let optimisticLayerCount = 0;
+
+const noQueries = () =>
+  Promise.reject(new Error("Optimistic cascades do not run queries"));
 
 /**
  * Options for useCascadeMutation hook
@@ -185,6 +193,13 @@ export function useCascadeMutation<
       try {
         // Execute the mutation
         const result = await mutate(mutateOptions as any);
+        // With onError set, Apollo resolves failed mutations instead of
+        // rejecting them; surface the error to the caller.
+        if (!result.data) {
+          throw result.errors instanceof Error
+            ? result.errors
+            : new ApolloError({ graphQLErrors: result.errors ?? [] });
+        }
 
         // Extract cascade data
         const mutationName = Object.keys(result.data!)[0];
@@ -192,37 +207,32 @@ export function useCascadeMutation<
           mutationName
         ] as CascadeResponse<TData>;
 
-        // Handle conflicts if optimistic update was applied
-        if (optimistic && rollbackFn && cascadeResponse.cascade) {
-          const hasConflicts = detectConflicts(cascadeResponse);
-          if (hasConflicts) {
-            // Resolve conflicts based on strategy
-            const resolvedResponse = resolveConflicts(
-              cascadeResponse,
-              conflictResolution,
-            );
-            // Rollback optimistic and apply resolved response
-            rollbackFn();
-            cascadeClient.applyCascade(resolvedResponse);
-          }
+        // Compare the optimistic view with the server's, while it is visible
+        if (
+          rollbackFn &&
+          cascadeResponse.cascade &&
+          detectConflicts(cascadeResponse)
+        ) {
+          cascadeClient.applyCascade(
+            resolveConflicts(cascadeResponse, conflictResolution),
+          );
         }
 
         return {
           data: cascadeResponse.data,
           cascade: cascadeResponse.cascade,
         };
-      } catch (error) {
-        // Rollback on error (if not already done in onError)
-        if (rollbackFn) {
-          rollbackFn();
-        }
-        throw error;
+      } finally {
+        // The server's cascade is already in the cache, or the mutation
+        // failed; either way the optimistic layer goes.
+        rollbackFn?.();
       }
     },
     [mutate, optimistic, optimisticCascadeResponse, cascadeClient],
   );
 
-  // Helper function to apply optimistic updates
+  // Apply the optimistic cascade in its own layer of Apollo's cache, so
+  // removing the layer restores exactly what was there before.
   const applyOptimisticUpdate = (variables: TVariables): RollbackFunction => {
     if (!optimisticCascadeResponse) {
       throw new Error(
@@ -231,44 +241,14 @@ export function useCascadeMutation<
     }
 
     const optimisticResponse = optimisticCascadeResponse(variables);
+    const layerId = `cascade-optimistic-${++optimisticLayerCount}`;
+    apolloClient.cache.recordOptimisticTransaction((layer) => {
+      new CascadeClient(new ApolloCascadeCache(layer), noQueries).applyCascade(
+        optimisticResponse,
+      );
+    }, layerId);
 
-    // Capture current cache state for rollback
-    const rollbackInfo = captureRollbackState(optimisticResponse.cascade);
-
-    // Apply optimistic cascade
-    cascadeClient.applyCascade(optimisticResponse);
-
-    return () => {
-      // Rollback function
-      rollbackInfo.forEach(({ typename, id, previousData }) => {
-        if (previousData === null) {
-          // Entity was created optimistically, remove it
-          cascadeClient.getCache().evict(typename, id);
-        } else {
-          // Entity existed, restore previous state
-          cascadeClient.getCache().write(typename, id, previousData);
-        }
-      });
-    };
-  };
-
-  // Helper function to capture rollback state
-  const captureRollbackState = (
-    cascade: CascadeUpdates,
-  ): Array<{ typename: string; id: string; previousData: any }> => {
-    const rollbackInfo: Array<{
-      typename: string;
-      id: string;
-      previousData: any;
-    }> = [];
-
-    for (const entry of [...cascade.updated, ...cascade.deleted]) {
-      const typename = cascadeEntryTypename(entry);
-      const currentData = cascadeClient.getCache().read(typename, entry.id);
-      rollbackInfo.push({ typename, id: entry.id, previousData: currentData });
-    }
-
-    return rollbackInfo;
+    return () => apolloClient.cache.removeOptimistic(layerId);
   };
 
   // Helper function to detect conflicts
