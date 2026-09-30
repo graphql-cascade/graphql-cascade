@@ -13,7 +13,10 @@ import {
 } from "relay-runtime";
 import {
   CascadeOperation,
+  InvalidationScope,
+  InvalidationStrategy,
   type CascadeUpdates,
+  type QueryInvalidation,
   type UpdatedEntity,
 } from "@graphql-cascade/client";
 import { applyCascadeToStore, createCascadeUpdater } from "./updater";
@@ -254,6 +257,37 @@ describe("createCascadeUpdater", () => {
 
       expect(record(environment, "1")).toMatchObject({ name: "Alice" });
     });
+  });
+
+  describe("query invalidation hints", () => {
+    const rootAfter = (invalidation: QueryInvalidation) => {
+      const environment = environmentWith({
+        "client:root": { __typename: "__Root" },
+      });
+      apply(environment, cascadeOf({ invalidations: [invalidation] }));
+      return record(environment, "client:root");
+    };
+
+    it.each([
+      [InvalidationStrategy.INVALIDATE, InvalidationScope.EXACT],
+      [InvalidationStrategy.REFETCH, InvalidationScope.PREFIX],
+      [InvalidationStrategy.REMOVE, InvalidationScope.PATTERN],
+      [InvalidationStrategy.INVALIDATE, InvalidationScope.ALL],
+    ])(
+      "marks every query stale for %s %s hints, since Relay cannot target one query",
+      (strategy, scope) => {
+        const root = rootAfter({
+          queryName: "todos",
+          queryPattern: "todo*",
+          strategy,
+          scope,
+        });
+
+        expect(root?.__invalidated_at).toBeDefined();
+        expect(root).not.toHaveProperty("__invalidated_todos");
+        expect(root).not.toHaveProperty("__refetch_todos");
+      },
+    );
   });
 
   describe("type invalidations", () => {
