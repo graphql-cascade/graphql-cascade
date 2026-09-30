@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: GraphQL Cascade
-  text: Automatic Cache Updates for GraphQL
-  tagline: Stop writing manual cache update code. Let Cascade handle it automatically.
+  text: Cache updates that come with the mutation
+  tagline: The server returns everything a mutation changed. Clients apply it. No update functions, no guessing which queries to refetch.
   actions:
     - theme: brand
       text: Get Started
@@ -14,93 +14,60 @@ hero:
       link: /specification/
 
 features:
-  - icon: 🚀
-    title: Zero Configuration
-    details: Works out of the box with Apollo Client, React Query, Relay, and URQL. No complex cache update logic required.
+  - title: Complete by design
+    details: The server lists every entity a mutation changed, or covers it with a type invalidation when the list would be too large. Nothing stale survives in the cache.
 
-  - icon: 🎯
-    title: Type Safe
-    details: Full TypeScript support with automatic type inference. Catch errors at compile time, not runtime.
+  - title: Works with your client
+    details: Libraries for Apollo Client, urql, Relay and React Query apply cascades to the cache you already use.
 
-  - icon: ⚡
-    title: High Performance
-    details: Minimal overhead with intelligent batching and deduplication. Servers track what changed, clients update automatically.
+  - title: Plain GraphQL
+    details: A cascade is an ordinary field of the mutation payload, defined by a reference schema and checked by a conformance suite.
 
-  - icon: 🔄
-    title: Real-time Ready
-    details: Built-in support for subscriptions and optimistic updates. Keep your UI in sync effortlessly.
-
-  - icon: 🛡️
-    title: Production Tested
-    details: Battle-tested patterns with comprehensive security and performance requirements.
-
-  - icon: 📦
-    title: Framework Agnostic
-    details: Works with any GraphQL client or server. Integrate with your existing stack in minutes.
+  - title: Fewer round trips
+    details: Updated entities are written into the cache in place, so queries that show them are current without a refetch.
 ---
 
 ## What is GraphQL Cascade?
 
-GraphQL Cascade is a protocol and set of libraries that **automatically update your client cache** when mutations occur. Instead of manually writing cache update logic for every mutation, Cascade extends GraphQL responses with metadata that tells clients exactly what changed.
+GraphQL Cascade is a specification and a set of libraries for keeping client caches in sync after mutations. The server returns, with each mutation, the entities it created, updated or deleted, plus hints about which cached queries became stale. Client libraries apply that cascade to the cache.
 
 ```typescript
-// Without Cascade: Manual cache updates
+// Without Cascade: every mutation carries its own cache logic
 const [createTodo] = useMutation(CREATE_TODO, {
   update(cache, { data }) {
-    // 😫 Manual cache management
     const existing = cache.readQuery({ query: GET_TODOS });
     cache.writeQuery({
       query: GET_TODOS,
-      data: { todos: [...existing.todos, data.createTodo] }
+      data: { todos: [...existing.todos, data.createTodo.data] },
     });
-  }
+  },
 });
 
-// With Cascade: Automatic cache updates
-const [createTodo] = useMutation(CREATE_TODO);
-// ✨ Cache updates automatically!
+// With Cascade: the response says what changed
+const [createTodo] = useCascadeMutation(CREATE_TODO);
 ```
 
 ## How It Works
 
-1. **Server Tracks Changes**: Your GraphQL server tracks which entities are created, updated, or invalidated during mutations
-2. **Response Includes Metadata**: Mutation responses include cascade metadata describing what changed
-3. **Client Auto-Updates**: Client libraries automatically update the cache based on the metadata
-
-No manual cache management code. No complex update logic. It just works.
-
-## Quick Example
+1. **The server tracks changes.** While a mutation runs, the server records every entity it creates, updates or deletes.
+2. **The response carries the cascade.** The mutation payload has a `cascade` field listing those entities and the queries they affect.
+3. **The client applies it.** A Cascade client library writes the entities into the cache, evicts deleted ones and invalidates the queries the server named.
 
 ```graphql
 mutation CreateTodo($input: CreateTodoInput!) {
   createTodo(input: $input) {
-    todo {
-      id
-      title
-      completed
-    }
-    # Cascade metadata included automatically
-    __cascade {
-      created {
-        __typename
-        id
-      }
-      invalidated {
-        __typename
-        id
-      }
+    data { id title completed }
+    cascade {
+      updated { typename id operation entity { ...CascadeEntity } }
+      deleted { typename id }
+      invalidations { queryName strategy scope }
+      metadata { timestamp affectedCount }
     }
   }
 }
 ```
 
-The client reads the cascade metadata and automatically:
-- Adds new entities to the cache
-- Updates existing entities
-- Invalidates outdated queries
-- Triggers re-fetches where needed
-
-## Ready to Start?
+`CascadeEntity` is a fragment selecting the fields your queries read on each type; [`@graphql-cascade/codegen`](https://github.com/graphql-cascade/graphql-cascade/tree/main/packages/codegen#cascadeentityfragment) generates it.
 
 <div style="display: flex; gap: 1rem; margin-top: 1rem;">
   <a href="/guide/" style="display: inline-block; padding: 0.75rem 1.5rem; background: var(--vp-button-brand-bg); color: var(--vp-button-brand-text); border-radius: 8px; text-decoration: none; font-weight: 500;">Get Started →</a>

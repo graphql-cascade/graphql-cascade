@@ -1,262 +1,120 @@
 # Core Concepts
 
-Understanding the fundamental concepts of GraphQL Cascade.
+This page explains what a cascade contains, how the server builds it and how clients apply it. The [specification](/specification/) is the normative reference.
 
-## The Cascade Data Model
+## The Cascade
 
-At its core, GraphQL Cascade is about **tracking what changed** during a mutation and **communicating those changes** to the client.
-
-### Entity References
-
-An entity reference uniquely identifies an object in your GraphQL schema:
-
-```typescript
-{
-  __typename: "User",
-  id: "123"
-}
-```
-
-This is all the client needs to locate the entity in its cache and update it.
-
-### Cascade Metadata
-
-Every mutation response includes cascade metadata:
-
-```typescript
-{
-  __cascade: {
-    created: [/* entities that were created */],
-    updated: [/* entities that were updated */],
-    deleted: [/* entities that were deleted */],
-    invalidated: [/* queries that should be refetched */]
-  }
-}
-```
-
-## The Four Types of Changes
-
-### 1. Created Entities
-
-When a mutation creates a new entity, the server reports it in the `created` array:
+A cascade is the `cascade` field of a mutation payload, of type `CascadeUpdates`:
 
 ```graphql
-mutation CreateUser($input: CreateUserInput!) {
-  createUser(input: $input) {
-    user {
-      id
-      name
-      email
-    }
-    __cascade {
-      created {
-        __typename
-        id
-      }
-    }
-  }
+type CascadeUpdates {
+  updated: [UpdatedEntity!]!
+  deleted: [DeletedEntity!]!
+  invalidations: [QueryInvalidation!]!
+  typeInvalidations: [TypeInvalidation!]!
+  metadata: CascadeMetadata!
 }
 ```
 
-The client:
-1. Adds the entity to the cache
-2. Updates any queries that would include this entity
+### Updated Entities
 
-### 2. Updated Entities
-
-When a mutation modifies an entity, it appears in the `updated` array:
+Every entity the mutation created or updated, with its full current data:
 
 ```graphql
-mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
-  updateUser(id: $id, input: $input) {
-    user {
-      id
-      name
-      email
-    }
-    __cascade {
-      updated {
-        typename
-        id
-      }
-    }
-  }
+type UpdatedEntity {
+  typename: String!
+  id: ID!
+  operation: CascadeOperation!
+  entity: Node!
+  updatedFields: [String!]
 }
 ```
 
-The client:
-1. Merges the updated data into the cache
-2. Triggers re-renders for components using this data
+- `operation` is `CREATED` or `UPDATED`.
+- `entity` is the entity itself. It is typed `Node`, so selections name each type's fields through fragments: `entity { ...CascadeEntity }`.
+- `updatedFields` lists the fields an update changed, when the server knows them.
 
-### 3. Deleted Entities
-
-When a mutation deletes an entity, it's listed in the `deleted` array:
+### Deleted Entities
 
 ```graphql
-mutation DeleteUser($id: ID!) {
-  deleteUser(id: $id) {
-    success
-    __cascade {
-      deleted {
-        typename
-        id
-      }
-    }
-  }
+type DeletedEntity {
+  typename: String!
+  id: ID!
+  deletedAt: DateTime!
 }
 ```
 
-The client:
-1. Removes the entity from the cache
-2. Updates any queries that included this entity
-3. Cleans up references in related entities
+### Invalidation Hints
 
-### 4. Invalidated Queries
+`invalidations` names cached queries that may be stale in ways entity updates cannot fix, typically lists that gained or lost an item:
 
-When a mutation affects query results in a way that can't be represented by entity updates alone (e.g., sorting changes, new items in filtered lists), the server can mark queries for refetch:
-
-```graphql
-mutation UpdateUserRole($id: ID!, $role: Role!) {
-  updateUserRole(id: $id, role: $role) {
-    user {
-      id
-      role
-    }
-    __cascade {
-      updated {
-        typename
-        id
-      }
-      invalidated {
-        __typename
-        field
-      }
-    }
-  }
-}
+```json
+{ "queryName": "listTodos", "strategy": "INVALIDATE", "scope": "PREFIX" }
 ```
 
-Example invalidation:
-```typescript
-{
-  invalidated: [
-    { __typename: "Query", field: "adminUsers" },
-    { __typename: "Query", field: "regularUsers" }
-  ]
-}
-```
+- **Strategy**: `INVALIDATE` marks the queries stale, so they refetch on their next read; `REFETCH` refetches them now; `REMOVE` drops them from the cache.
+- **Scope**: `EXACT` matches the query name (and `arguments`, if given); `PREFIX` matches names starting with `queryName`; `PATTERN` matches the `queryPattern` glob; `ALL` matches every query.
 
-The client will refetch these queries to ensure they have the latest data.
+### Type Invalidations
 
-## Cascade Propagation
+`typeInvalidations` lists types whose affected entities are not all listed, usually because the cascade exceeded a size limit. Clients treat every cached entity of the type, and every query that may contain one, as stale. `metadata.truncated` is `true` when this happened.
 
-Cascades automatically propagate through relationships. When you update a user, related entities are tracked too:
+## Building a Cascade
+
+On the server, a `CascadeTracker` records what a mutation changes, and a `CascadeBuilder` turns that into the payload:
 
 ```typescript
-// Updating a user's profile
-mutation UpdateProfile {
-  updateUser(id: "123", input: { bio: "New bio" }) {
-    user { id bio }
-    __cascade {
-      updated {
-        typename
-        id
-      }
-    }
-  }
-}
+import { CascadeBuilder, CascadeTracker } from "@graphql-cascade/server";
 
-// Server tracks:
-// - User:123 (directly updated)
-// - Company:456 (if the user's company cache needs updating)
-// - Post:* (if the user's posts show their bio)
+const tracker = new CascadeTracker({ maxDepth: 2 });
+tracker.startTransaction();
+
+tracker.trackCreate(order);
+tracker.trackUpdate(customer, { updatedFields: ["orderCount"] });
+tracker.trackDelete("Cart", cart.id);
+
+return new CascadeBuilder(tracker, invalidator).buildResponse(order);
 ```
 
-## Cache Normalization
+- **Relationships.** When relationship tracking is on, tracking an entity also walks its related entities up to `maxDepth`, so a mutation's side effects on related data are included. Each entity appears once, and cycles are handled.
+- **Invalidation hints** come from an optional `Invalidator`, which receives the tracked entities and returns hints.
+- **Completeness.** The builder enforces size limits (by default 500 updated entities, 100 deleted, 5 MB). Past a limit, it moves whole types from `updated`/`deleted` into `typeInvalidations`, largest first, rather than dropping entities. Nothing affected is ever silently left out.
+- **Failures.** `buildErrorResponse(errors)` returns `success: false` and an empty cascade: a failed mutation committed nothing.
 
-Cascade works seamlessly with normalized caches (like Apollo's `InMemoryCache`):
+Trackers can also be fed from the database: an incremental view maintenance engine knows exactly which rows a mutation rewrote. See the specification's appendix on database-derived tracking.
 
-1. **Entities are identified** by `__typename` and `id`
-2. **Cache entries are keyed** as `"User:123"`, `"Post:456"`, etc.
-3. **Updates are merged** into existing cache entries
-4. **Deletions remove** cache entries and clean up references
+## Applying a Cascade
+
+A Cascade client library applies each response, in this order:
+
+1. **Updated entities** are written into the cache. Every query showing them is current, without a network request.
+2. **Deleted entities** are evicted.
+3. **Invalidation hints** are applied to the queries they name.
+4. **Type invalidations** mark every entity and query that may contain the type as stale.
+
+Clients do not refetch a query just because it contains an updated entity: the cascade already carries that entity's data.
+
+## Where the Cascade Travels
+
+- **In the payload** (normative): each mutation field's payload carries its own cascade, with only that field's changes. With several mutation fields, clients apply them in field order.
+- **In `extensions.cascade`** (optional): one cascade for the whole operation, for schemas whose payload types cannot carry a `cascade` field. The Apollo Server plugin (`createCascadePlugin`) delivers cascades this way.
+
+A mutation can also return a **result union**, `CreateTodoPayload | CascadeFailure`: the success member implements `CascadePayload` (`cascade`, `warnings`), and `CascadeFailure` carries `errors` and no cascade. The client libraries accept both forms.
+
+## Entity Identity
+
+Entities implement `Node` with an `id` that should be unique across all types, following Relay's Global Object Identification: UUIDs, or encoded IDs such as `base64("User:123")`. Clients key entities by type name and `id`, as Apollo and urql do; Relay keys them by `id` alone, which is why global uniqueness matters.
+
+## Errors
+
+Payloads report errors as `CascadeError`: a `message`, a standard `code` (`VALIDATION_ERROR`, `NOT_FOUND`, `CONFLICT`, …) that drives generic handling, and an optional application-specific `domainCode` such as `INSUFFICIENT_FUNDS`. Clients treat a `code` they don't recognize as `INTERNAL_ERROR`.
 
 ## Optimistic Updates
 
-Cascade supports optimistic updates by letting you predict what the cascade will be:
-
-```typescript
-const [createTodo] = useMutation(CREATE_TODO, {
-  optimisticResponse: {
-    createTodo: {
-      todo: {
-        __typename: 'Todo',
-        id: 'temp-id',
-        title: 'New todo',
-        completed: false,
-      },
-      __cascade: {
-        created: [{ __typename: 'Todo', id: 'temp-id' }],
-        updated: [],
-        deleted: [],
-        invalidated: []
-      }
-    }
-  }
-});
-```
-
-The UI updates instantly with the optimistic data, then reconciles with the real server response.
-
-## Batching and Deduplication
-
-Cascade implementations automatically batch and deduplicate changes:
-
-- Multiple updates to the same entity are merged
-- Redundant invalidations are removed
-- Related changes are grouped efficiently
-
-## Error Handling
-
-If a mutation fails, the cascade is not applied:
-
-```typescript
-{
-  data: null,
-  errors: [
-    {
-      message: "User not found",
-      extensions: {
-        code: "NOT_FOUND"
-      }
-    }
-  ]
-}
-```
-
-Optimistic updates are rolled back automatically.
-
-## Type Safety
-
-Cascade responses are fully typed in TypeScript:
-
-```typescript
-type CreateTodoMutation = {
-  createTodo: {
-    todo: Todo;
-    __cascade: {
-      created: EntityRef[];
-      updated: EntityRef[];
-      deleted: EntityRef[];
-      invalidated: InvalidationRef[];
-    };
-  };
-};
-```
+Clients can apply a predicted cascade before the server answers. `useCascadeMutation` in `@graphql-cascade/apollo` applies it in an Apollo optimistic layer, which it removes when the mutation settles: the real cascade replaces it on success, and a failure restores the cache exactly.
 
 ## Next Steps
 
-- **[Optimistic Updates](/guide/optimistic-updates)** - Instant UI feedback
-- **[Conflict Resolution](/guide/conflict-resolution)** - Handle concurrent updates
-- **[Performance](/guide/performance)** - Optimize cascade processing
-- **[Client Integration](/clients/)** - Framework-specific guides
+- **[Server Setup](/server/)**: tracking in Apollo Server, Express and NestJS
+- **[Client Integration](/clients/)**: setting up each client library
+- **[Specification](/specification/)**: the normative reference

@@ -556,7 +556,12 @@ function trackedTextFiles(root) {
  * Documentation whose code must match the packages and the reference schema.
  * Sections join this list as they are brought up to date.
  */
-const CHECKED_DOCS = [/^README\.md$/, /^packages\/.+\/README\.md$/];
+const CHECKED_DOCS = [
+  /^README\.md$/,
+  /^packages\/.+\/README\.md$/,
+  /^docs\/index\.md$/,
+  /^docs\/guide\/(index|installation|quick-start|concepts)\.md$/,
+];
 
 /** Exported names of every package, keyed by package name. */
 function packageExports(files, readFile) {
