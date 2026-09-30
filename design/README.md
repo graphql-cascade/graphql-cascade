@@ -24,6 +24,13 @@ Comprehensive implementation plan and technical strategy for GraphQL Cascade. Co
 
 ---
 
+### RFC 0001: GraphQL Cascade 2.0 (`rfc-0001-cascade-2.md`)
+**Status**: Proposed | **Audience**: Specification authors, implementers
+
+Combines the specification's and FraiseQL's strongest choices: Relay-compatible identity (`Node` with globally unique IDs), typed entities selected through a generated fragment, failures as a result-union member, and `typename` plus `updatedFields` on every entry. Lists the additive 1.x steps and the 2.0 breaking changes.
+
+---
+
 ## 🏗️ Architectural Decision Records (ADRs)
 
 **Status**: Planned | **Purpose**: Document significant design decisions
