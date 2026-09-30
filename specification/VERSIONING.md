@@ -223,6 +223,20 @@ Breaking changes and deprecations are called out in all three, each with a migra
 
 ## Appendix: Version History
 
+### v1.8.0 (2026-09-30)
+
+#### Changes
+- Entity identity follows GraphQL Global Object Identification (Relay's model): IDs SHOULD be unique across all types, and MUST be from 2.0.0; IDs reused across types are deprecated
+- Servers SHOULD provide `Query.node`; when they do, `node(id: x.id)` MUST return `x`
+- Added optional `UpdatedEntity.updatedFields`, the fields an update changed; the invalidation algorithm uses it for per-field rules
+
+#### Backward Compatibility
+Backward compatible: global uniqueness is recommended until 2.0.0, and `updatedFields` is optional.
+
+#### Migration
+- Servers with per-type IDs: expose UUIDs or encoded `Type:key` IDs before 2.0.0.
+- Servers: report changed fields in `updatedFields` where known.
+
 ### v1.7.1 (2026-09-30)
 
 #### Changes

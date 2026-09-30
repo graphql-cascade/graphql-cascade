@@ -95,6 +95,50 @@ describe("validateResponse", () => {
     });
   });
 
+  it.each([
+    ["a string", "name"],
+    ["a list with a number", ["name", 1]],
+  ])("rejects updatedFields that is %s", (_label, updatedFields) => {
+    const response = {
+      success: true,
+      cascade: {
+        updated: [
+          { typename: "User", id: "1", operation: "UPDATED", updatedFields },
+        ],
+        deleted: [],
+        invalidations: [],
+        metadata: { timestamp: Date.now() },
+      },
+    };
+
+    expect(validateResponse(response).errors).toContainEqual({
+      code: "INVALID_UPDATED_FIELDS",
+      message:
+        "UpdatedEntity.updatedFields must be null or a list of field names",
+      path: "cascade.updated[0].updatedFields",
+    });
+  });
+
+  it("accepts updatedFields as a list of names, or null", () => {
+    const entry = (updatedFields: unknown) => ({
+      typename: "User",
+      id: "1",
+      operation: "UPDATED",
+      updatedFields,
+    });
+    const response = {
+      success: true,
+      cascade: {
+        updated: [entry(["name"]), entry(null)],
+        deleted: [],
+        invalidations: [],
+        metadata: { timestamp: Date.now() },
+      },
+    };
+
+    expect(validateResponse(response).errors).toEqual([]);
+  });
+
   it("ignores __typename next to typename, where GraphQL resolves it to the wrapper type", () => {
     const response = {
       success: true,

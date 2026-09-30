@@ -52,6 +52,8 @@ export interface EntityChange {
   operation: "CREATED" | "UPDATED" | "DELETED";
   /** Timestamp when the change occurred */
   timestamp: number;
+  /** Fields an update changed, when the caller reported them */
+  updatedFields?: string[];
 }
 
 /**
@@ -99,6 +101,8 @@ export interface CascadeUpdatedEntity {
   operation: "CREATED" | "UPDATED" | "DELETED";
   /** The entity data */
   entity: Record<string, any>;
+  /** Fields the update changed; absent when unknown or for created entities */
+  updatedFields?: string[];
 }
 
 /**
@@ -237,6 +241,7 @@ export interface TrackerCascadeData {
     id: string;
     operation: "CREATED" | "UPDATED" | "DELETED";
     entity: Record<string, unknown>;
+    updatedFields?: string[];
   }>;
   /** List of deleted entities */
   deleted: Array<{

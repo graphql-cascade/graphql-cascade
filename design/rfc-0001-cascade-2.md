@@ -153,7 +153,7 @@ So adopting Cascade on the server improves standard clients before they add anyt
 
 ### 1.x (additive, no breaking change)
 
-1. Give `Node` its Relay meaning: IDs MUST be globally unique; `Query.node` RECOMMENDED with the `node(id: x.id)` invariant.
+1. Give `Node` its Relay meaning: IDs SHOULD be globally unique (MUST in 2.0, so servers with per-type IDs get a deprecation period); `Query.node` RECOMMENDED with the `node(id: x.id)` invariant.
 2. Add optional `UpdatedEntity.updatedFields`.
 3. Fix the specification's `entity` selections to select through fragments (#36), and let `check:spec` validate the specification's operations against the reference and example schemas.
 4. Add the codegen `CascadeEntity` fragment.
@@ -164,6 +164,7 @@ So adopting Cascade on the server improves standard clients before they add anyt
 
 - `CascadeResponse`, its `success` and `errors` fields, and REQ-020 (a failed mutation returns an empty cascade) are replaced by `CascadePayload` and `CascadeFailure`.
 - The `__typename` pseudo-field on entries, deprecated since 1.3.0, is removed.
+- Entity IDs MUST be unique across all types (SHOULD since 1.8.0).
 
 Deprecations follow VERSIONING.md: announced in 1.x with migration guides, removed in 2.0.
 

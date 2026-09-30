@@ -33,6 +33,7 @@ The **specification** is versioned independently: its version lives in
 - **Breaking** (`@graphql-cascade/server`): cascades that exceed size limits no longer lose entities. Whole types move into `cascade.typeInvalidations` and `metadata.truncated` is set. `metadata.truncatedUpdated`, `truncatedDeleted`, `truncatedInvalidations` and `truncatedSize` are replaced by `truncated`; tracker results carry an `overflow` map.
 
 ### Added
+- Specification 1.8.0: Relay-compatible entity identity (IDs SHOULD be unique across types, `node(id: x.id)` returns `x`) and optional `UpdatedEntity.updatedFields`. `@graphql-cascade/server`: `trackUpdate(entity, { updatedFields })` and `CascadeTracker.getUpdatedChanges()`; client and conformance types follow. See [release notes](releases/spec-v1.8.0.md).
 - Specification 1.7.0: version compatibility by MAJOR version and `cascadeInfo` discovery, replacing unimplementable negotiation rules. See [release notes](releases/spec-v1.7.0.md).
 - Specification 1.6.0: `CascadeResponse` leaves out `data`, which GraphQL could not type for every payload; payload types expose a typed `data` by convention. Example schemas are validated against the reference schema by `check:spec`. See [release notes](releases/spec-v1.6.0.md).
 - Specification 1.5.0: version discovery through a `cascadeInfo: CascadeInfo!` query field, replacing the `__cascade` query that GraphQL's reserved names made impossible. See [release notes](releases/spec-v1.5.0.md).

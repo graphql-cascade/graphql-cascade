@@ -408,7 +408,11 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
     };
 
     // Stream updated entities
-    for (const [entity, operation] of this.tracker.getUpdatedStream()) {
+    for (const {
+      entity,
+      operation,
+      updatedFields,
+    } of this.tracker.getUpdatedChanges()) {
       try {
         const typename = this.getEntityType(entity);
         if (cover(typename, cascadeData.updated, this.maxUpdatedEntities)) {
@@ -420,6 +424,7 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
           id: this.getEntityId(entity),
           operation,
           entity: this.entityToDict(entity),
+          ...(updatedFields && { updatedFields }),
         });
       } catch (e) {
         // Skip problematic entities

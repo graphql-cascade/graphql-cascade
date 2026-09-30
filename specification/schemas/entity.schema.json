@@ -51,6 +51,11 @@
               "type": "null"
             }
           ]
+        },
+        "updatedFields": {
+          "type": ["array", "null"],
+          "description": "Fields whose values the update changed; null when unknown or for created entities (added in 1.8.0)",
+          "items": { "type": "string" }
         }
       },
       "examples": [

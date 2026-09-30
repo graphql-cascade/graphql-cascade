@@ -63,6 +63,8 @@ export interface UpdatedEntity<T = Record<string, unknown>> {
   id: string;
   operation: CascadeOperation;
   entity: T;
+  /** Fields the update changed; null or absent when unknown or created */
+  updatedFields?: string[] | null;
 }
 
 /**

@@ -483,7 +483,10 @@ export class CascadeTracker implements EntityChangeIterator {
    * Track entity update.
    * @param entity - Entity with at least an `id` and optionally `__typename`
    */
-  trackUpdate(entity: TrackedEntity | Record<string, unknown>): void {
+  trackUpdate(
+    entity: TrackedEntity | Record<string, unknown>,
+    options: { updatedFields?: readonly string[] } = {},
+  ): void {
     this.ensureTransaction();
     const typename = this.getEntityType(entity);
     const entityId = this.getEntityId(entity);
@@ -492,7 +495,7 @@ export class CascadeTracker implements EntityChangeIterator {
       id: entityId,
       operation: "UPDATED",
     });
-    this.trackEntity(entity, "UPDATED");
+    this.trackEntity(entity, "UPDATED", options.updatedFields);
   }
 
   /**
@@ -522,6 +525,7 @@ export class CascadeTracker implements EntityChangeIterator {
   private trackEntity(
     entity: TrackedEntity | Record<string, unknown>,
     operation: "CREATED" | "UPDATED" | "DELETED",
+    updatedFields?: readonly string[],
   ): void {
     const typename = this.getEntityType(entity);
 
@@ -549,8 +553,18 @@ export class CascadeTracker implements EntityChangeIterator {
       this.validateEntity(entity as TrackedEntity);
     }
 
-    // Skip if already visited
+    // Skip if already visited, keeping every field an update reported. The
+    // entry is replaced, not mutated, so checkpoints stay valid.
     if (this.visitedEntities.has(key)) {
+      const existing = this.updatedEntities.get(key);
+      if (existing?.operation === "UPDATED" && updatedFields) {
+        this.updatedEntities.set(key, {
+          ...existing,
+          updatedFields: [
+            ...new Set([...(existing.updatedFields ?? []), ...updatedFields]),
+          ],
+        });
+      }
       return;
     }
 
@@ -561,6 +575,8 @@ export class CascadeTracker implements EntityChangeIterator {
       entity,
       operation,
       timestamp: Date.now(),
+      ...(operation === "UPDATED" &&
+        updatedFields && { updatedFields: [...updatedFields] }),
     });
 
     // Track entity metric
@@ -746,6 +762,7 @@ export class CascadeTracker implements EntityChangeIterator {
           id: entityId,
           operation: change.operation,
           entity: entityDict,
+          ...(change.updatedFields && { updatedFields: change.updatedFields }),
         });
       } catch (e) {
         this.serializationErrorCount++;
@@ -799,6 +816,7 @@ export class CascadeTracker implements EntityChangeIterator {
           id: entityId,
           operation: change.operation,
           entity: entityDict,
+          ...(change.updatedFields && { updatedFields: change.updatedFields }),
         });
       } catch (e) {
         this.serializationErrorCount++;
@@ -975,6 +993,11 @@ export class CascadeTracker implements EntityChangeIterator {
     for (const change of this.updatedEntities.values()) {
       yield [change.entity, change.operation];
     }
+  }
+
+  /** The tracked changes, including the fields each update reported. */
+  *getUpdatedChanges(): IterableIterator<EntityChange> {
+    yield* this.updatedEntities.values();
   }
 
   *getDeletedStream(): IterableIterator<[string, string]> {

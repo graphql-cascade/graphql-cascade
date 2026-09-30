@@ -89,6 +89,7 @@ UpdatedEntity ::= '{'
     '"id"' ':' ID ','
     '"operation"' ':' CascadeOperation ','
     '"entity"' ':' Node
+    ( ',' '"updatedFields"' ':' ( StringArray | 'null' ) )?   # since 1.8.0
 '}'
 ```
 

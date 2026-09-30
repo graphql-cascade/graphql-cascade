@@ -88,6 +88,43 @@ describe("CascadeTracker", () => {
     });
   });
 
+  describe("Updated fields", () => {
+    it("lists the fields an update changed", () => {
+      tracker.startTransaction();
+      tracker.trackUpdate(
+        { __typename: "User", id: "1", name: "A" },
+        {
+          updatedFields: ["name"],
+        },
+      );
+
+      expect(tracker.endTransaction().updated[0].updatedFields).toEqual([
+        "name",
+      ]);
+    });
+
+    it("merges the fields of repeated updates to one entity", () => {
+      tracker.startTransaction();
+      const user = { __typename: "User", id: "1", name: "A", email: "a@x" };
+      tracker.trackUpdate(user, { updatedFields: ["name"] });
+      tracker.trackUpdate(user, { updatedFields: ["email", "name"] });
+
+      expect(tracker.endTransaction().updated[0].updatedFields).toEqual([
+        "name",
+        "email",
+      ]);
+    });
+
+    it("omits them when unknown, and for created entities", () => {
+      tracker.startTransaction();
+      tracker.trackUpdate({ __typename: "User", id: "1" });
+      tracker.trackCreate({ __typename: "Post", id: "2" });
+
+      const { updated } = tracker.endTransaction();
+      expect(updated.map((e) => "updatedFields" in e)).toEqual([false, false]);
+    });
+  });
+
   describe("Checkpoints", () => {
     it("restores the tracked changes recorded at a checkpoint", () => {
       tracker.startTransaction();

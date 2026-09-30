@@ -134,7 +134,7 @@ class CascadeInvalidator:
             entity_type = entity['typename']
             entity_data = entity['entity']
 
-            # Get changed fields (simplified - would need entity diffing)
+            # Changed fields, as reported in updatedFields
             changed_fields = self._get_changed_fields(entity)
 
             # Apply rules for changed fields
@@ -194,10 +194,8 @@ class CascadeInvalidator:
         return deduplicated[:max_invalidations]
 
     def _get_changed_fields(self, entity):
-        """Determine which fields changed in an entity (simplified)."""
-        # In practice, this would compare entity to its previous state
-        # For now, assume all fields might have changed
-        return list(entity['entity'].keys())
+        """The fields the update changed, or all fields when unknown."""
+        return entity.get('updatedFields') or list(entity['entity'].keys())
 ```
 
 ## Invalidation Rules

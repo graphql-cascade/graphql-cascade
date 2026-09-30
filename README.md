@@ -24,7 +24,7 @@
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
   </a>
   <a href="./specification/">
-    <img src="https://img.shields.io/badge/Specification-v1.7.1-blue" alt="Specification v1.7.1">
+    <img src="https://img.shields.io/badge/Specification-v1.8.0-blue" alt="Specification v1.8.0">
   </a>
   <a href="https://github.com/graphql-cascade/graphql-cascade/issues">
     <img src="https://img.shields.io/github/issues/graphql-cascade/graphql-cascade" alt="GitHub issues">

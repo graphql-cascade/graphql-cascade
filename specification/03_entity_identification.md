@@ -8,41 +8,50 @@ All domain entities in a GraphQL Cascade system MUST implement the `Node` interf
 
 ```graphql
 """
-Global object identification for GraphQL Cascade.
-All domain entities MUST implement this interface.
+An object with an ID, following GraphQL Global Object Identification (the
+Relay Node interface). All domain entities MUST implement this interface.
 """
 interface Node {
-  """Globally unique identifier for this entity."""
+  """
+  Identifier of this entity. SHOULD be unique across all types (MUST from
+  2.0.0): a UUID, or an encoded "Type:key".
+  """
   id: ID!
 }
 ```
 
 ## Identification Strategy
 
-GraphQL Cascade uses a **typename + id** strategy for entity identification:
+GraphQL Cascade follows GraphQL Global Object Identification, the model Relay uses:
 
-### Components
-- **`__typename`**: The GraphQL type name (e.g., "User", "Company", "Address")
-- **`id`**: The entity's unique identifier within its type
+- **`id`** identifies an entity. It SHOULD be unique across all types, and MUST be from 2.0.0. UUIDs meet this as they are; per-type keys meet it once encoded, for example `base64("User:123")`.
+- **`__typename`** (on entities) and **`typename`** (on cascade entries) name the entity's type.
 
-### Composite Key
-Entities are uniquely identified by the combination: `{__typename}:{id}`
+Clients key entities by type name and `id`, as Apollo and urql do: `{typename}:{id}`. This key is correct whether or not IDs are globally unique. Relay keys its store by `id` alone, so Relay clients rely on globally unique IDs, or configure a `getDataID` that adds the type.
 
 ### Examples
 ```javascript
-// User with id "123"
-{ __typename: "User", id: "123" }
-// Company with id "456"
-{ __typename: "Company", id: "456" }
-// Address with id "789"
-{ __typename: "Address", id: "789" }
+{ __typename: "User", id: "550e8400-e29b-41d4-a716-446655440000" } // UUID
+{ __typename: "User", id: "VXNlcjoxMjM=" }                           // base64("User:123")
 ```
+
+### Refetching by ID
+
+Servers SHOULD provide the Relay `node` field:
+
+```graphql
+type Query {
+  node(id: ID!): Node
+}
+```
+
+When a server provides it, `node(id: x.id)` MUST return `x` for every entity `x`: clients refetch an entity by passing back exactly the `id` they received.
 
 ## ID Generation Requirements
 
 ### Uniqueness
 - IDs MUST be unique within each entity type
-- IDs MAY be reused across different entity types
+- IDs SHOULD be unique across all types; this becomes a requirement in 2.0.0, and IDs reused across types are deprecated
 - IDs SHOULD be stable (not change for the same entity)
 
 ### Format
@@ -133,37 +142,20 @@ interface CascadeCache {
 
 ## Comparison with Other Strategies
 
-### Relay Global IDs
-Relay uses base64-encoded global IDs that include type information:
-```
-"User:123" → "VXNlcjoxMjM="
-```
+### Relay
+Cascade uses Relay's Global Object Identification, so a schema that already implements `Node` with globally unique IDs and `node(id:)` satisfies Cascade's identity requirements unchanged. Because Relay keys its store by `id`, the entities in a cascade update the same records Relay's queries read.
 
-**Cascade Approach**: Uses plain `{__typename}:{id}` format
-- **Pros**: Simpler, no encoding/decoding, human-readable
-- **Cons**: Slightly more verbose in JSON
-
-### Apollo typename + id
-Apollo uses the same strategy as Cascade:
-```
-{ __typename: "User", id: "123" }
-```
-
-**Compatibility**: Cascade is fully compatible with Apollo's approach.
+### Apollo and urql
+Apollo and urql key their normalized caches by `__typename` and `id`, which Cascade's `typename` and `id` reproduce, with any ID format.
 
 ## Migration Considerations
 
-### From Relay Global IDs
-If migrating from Relay:
+### IDs Unique Only Within a Type
+Servers whose IDs repeat across types (for example integer primary keys) SHOULD expose a globally unique `id` instead, before 2.0.0 requires it:
 
-1. **Server**: Decode global IDs to extract type and id
-2. **Schema**: Add `__typename` fields to entities
-3. **Client**: Update identification logic
-
-### From Custom ID Schemes
-1. **Ensure ID uniqueness** within each type
-2. **Add `__typename` fields** to all entities
-3. **Update client cache** identification logic
+1. Use UUIDs as public IDs, keeping integer keys internal, or encode the type into the ID (`base64("User:123")`).
+2. Resolve `node(id:)` from that ID.
+3. Keep the old identifier available as another field during the transition, for clients that stored it.
 
 ## Implementation Examples
 
