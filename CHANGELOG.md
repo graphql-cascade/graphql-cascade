@@ -17,6 +17,7 @@ The **specification** is versioned independently: its version lives in
 ### Fixed
 - Removed leaked tool-call transcript text from the tail of 18 files; `compliance-tests/cli.py` and `scripts/publish.py` failed to parse because of it.
 - Reconciled specification version stamps to 1.1.0 (previously 0.1, 1.0.0 and v1.1 in different places).
+- `@graphql-cascade/apollo`: `ALL`, `PREFIX` and `PATTERN` invalidation scopes now evict the matching root query fields; they were no-ops.
 
 ### Changed
 - **Breaking** (`@graphql-cascade/server`): cascades that exceed size limits no longer lose entities. Whole types move into `cascade.typeInvalidations` and `metadata.truncated` is set. `metadata.truncatedUpdated`, `truncatedDeleted`, `truncatedInvalidations` and `truncatedSize` are replaced by `truncated`; tracker results carry an `overflow` map.
