@@ -166,6 +166,11 @@ describe("checkSnippets", () => {
     assert.deepEqual(checkSnippets(REFERENCE, [chapter(snippet)]), []);
   });
 
+  it("ignores operations named like a reference type", () => {
+    const snippet = `query UpdatedEntity { node(id: "1") { id } }`;
+    assert.deepEqual(checkSnippets(REFERENCE, [chapter(snippet)]), []);
+  });
+
   it("ignores root operation types, which implementers own", () => {
     const snippet = `type Query { me: Node }`;
     assert.deepEqual(checkSnippets(REFERENCE, [chapter(snippet)]), []);

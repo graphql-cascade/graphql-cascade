@@ -29,6 +29,7 @@ The **specification** is versioned independently: its version lives in
 - **Breaking** (`@graphql-cascade/server`): cascades that exceed size limits no longer lose entities. Whole types move into `cascade.typeInvalidations` and `metadata.truncated` is set. `metadata.truncatedUpdated`, `truncatedDeleted`, `truncatedInvalidations` and `truncatedSize` are replaced by `truncated`; tracker results carry an `overflow` map.
 
 ### Added
+- Specification 1.5.0: version discovery through a `cascadeInfo: CascadeInfo!` query field, replacing the `__cascade` query that GraphQL's reserved names made impossible. See [release notes](releases/spec-v1.5.0.md).
 - Specification 1.4.0: requirements tagged **[REQ-NNN]** in the specification, each tested by a conformance case (checked by `check:spec`); Cascade Delivery rules for multiple mutation fields and the optional `extensions.cascade` transport; clients SHOULD NOT refetch queries only because they contain an updated entity. See [release notes](releases/spec-v1.4.0.md).
 - Specification 1.3.0: `UpdatedEntity` and `DeletedEntity` carry `typename`; their `__typename` pseudo-field is deprecated, since GraphQL reserves `__` names. `reference/cascade_base.graphql` is valid GraphQL and the normative schema, and `check:spec` checks every specification excerpt against it. See [release notes](releases/spec-v1.3.0.md).
 - Specification 1.2.0: type-level invalidation, `domainCode`, and Appendix G (database-derived tracking). See [release notes](releases/spec-v1.2.0.md).

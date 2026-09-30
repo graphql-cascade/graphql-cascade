@@ -16,7 +16,14 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { buildASTSchema, parse, print, validateSchema, visit } from "graphql";
+import {
+  buildASTSchema,
+  isTypeSystemDefinitionNode,
+  parse,
+  print,
+  validateSchema,
+  visit,
+} from "graphql";
 
 // Built from parts so this file never matches its own pattern.
 const TRANSCRIPT_MARKER = ["xai", "function_call"].join(":");
@@ -140,7 +147,10 @@ export function checkSnippets(sdl, files) {
             );
           }
         }
-        const expected = def.name && reference.get(def.name.value);
+        const expected =
+          isTypeSystemDefinitionNode(def) &&
+          def.name &&
+          reference.get(def.name.value);
         if (expected && print(withoutDescriptions(def)) !== expected) {
           problems.push(
             `${where}: ${def.name.value} differs from ${REFERENCE_PATH}`,
