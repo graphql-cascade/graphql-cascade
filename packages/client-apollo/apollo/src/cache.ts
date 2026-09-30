@@ -18,6 +18,33 @@ function getUniqueFragmentName(typename: string): string {
 }
 
 /**
+ * Match `text` against a glob where `*` matches any run of characters and `?`
+ * matches one, in O(pattern × text) time whatever the pattern.
+ */
+function matchesGlob(pattern: string, text: string): boolean {
+  let p = 0;
+  let t = 0;
+  let starP = -1;
+  let starT = 0;
+  while (t < text.length) {
+    if (p < pattern.length && (pattern[p] === "?" || pattern[p] === text[t])) {
+      p++;
+      t++;
+    } else if (p < pattern.length && pattern[p] === "*") {
+      starP = p++;
+      starT = t;
+    } else if (starP !== -1) {
+      p = starP + 1;
+      t = ++starT;
+    } else {
+      return false;
+    }
+  }
+  while (pattern[p] === "*") p++;
+  return p === pattern.length;
+}
+
+/**
  * Apollo Client cache adapter implementing the CascadeCache interface.
  * Handles entity-level cache operations for cascade updates.
  */
@@ -74,23 +101,7 @@ export class ApolloCascadeCache implements CascadeCache {
   }
 
   invalidate(invalidation: QueryInvalidation): void {
-    switch (invalidation.scope) {
-      case InvalidationScope.EXACT:
-        if (invalidation.queryName) {
-          this.cache.evict({ fieldName: invalidation.queryName });
-          this.cache.gc();
-        }
-        break;
-      case InvalidationScope.PREFIX:
-      case InvalidationScope.PATTERN:
-        console.warn(
-          `Apollo cache does not support ${invalidation.scope} scope invalidation. Only EXACT scope is supported.`,
-        );
-        break;
-      case InvalidationScope.ALL:
-        this.cache.gc();
-        break;
-    }
+    this.evictQueries(invalidation);
   }
 
   /**
@@ -143,26 +154,49 @@ export class ApolloCascadeCache implements CascadeCache {
   }
 
   remove(invalidation: QueryInvalidation): void {
-    switch (invalidation.scope) {
-      case InvalidationScope.EXACT:
-        if (invalidation.queryName) {
-          this.cache.evict({ fieldName: invalidation.queryName });
-          this.cache.gc();
-        }
-        break;
-      case InvalidationScope.PREFIX:
-      case InvalidationScope.PATTERN:
-        console.warn(
-          `Apollo cache does not support ${invalidation.scope} scope removal. Only EXACT scope is supported.`,
-        );
-        break;
-      case InvalidationScope.ALL:
-        this.cache.gc();
-        break;
-    }
+    this.evictQueries(invalidation);
   }
 
   identify(entity: any): string {
     return this.cache.identify(entity) || `${entity.__typename}:${entity.id}`;
+  }
+
+  /**
+   * Evict the root query fields the invalidation's scope selects, with all
+   * their arguments. Queries reading an evicted field refetch on their next read.
+   */
+  private evictQueries(invalidation: QueryInvalidation): void {
+    const { queryName, queryPattern } = invalidation;
+    let matches: (fieldName: string) => boolean;
+    switch (invalidation.scope) {
+      case InvalidationScope.EXACT:
+        matches = (fieldName) => fieldName === queryName;
+        break;
+      case InvalidationScope.PREFIX:
+        matches = (fieldName) =>
+          queryName !== undefined && fieldName.startsWith(queryName);
+        break;
+      case InvalidationScope.PATTERN:
+        matches = (fieldName) =>
+          queryPattern !== undefined && matchesGlob(queryPattern, fieldName);
+        break;
+      case InvalidationScope.ALL:
+        matches = () => true;
+        break;
+    }
+
+    const rootQuery: Record<string, unknown> =
+      this.cache.extract().ROOT_QUERY ?? {};
+    const fieldNames = new Set(
+      Object.keys(rootQuery)
+        .filter((storeFieldName) => storeFieldName !== "__typename")
+        .map(fieldNameFromStoreName),
+    );
+    for (const fieldName of fieldNames) {
+      if (matches(fieldName)) {
+        this.cache.evict({ id: "ROOT_QUERY", fieldName });
+      }
+    }
+    this.cache.gc();
   }
 }
