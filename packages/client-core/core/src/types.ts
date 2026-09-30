@@ -53,7 +53,13 @@ export interface CascadeMetadata {
  * An entity that was updated in the cascade.
  */
 export interface UpdatedEntity<T = Record<string, unknown>> {
-  __typename: string;
+  /** Type name of the entity */
+  typename: string;
+  /**
+   * @deprecated Since specification 1.3.0; servers before 1.3.0 send only
+   * this. Read entries with `cascadeEntryTypename()`.
+   */
+  __typename?: string;
   id: string;
   operation: CascadeOperation;
   entity: T;
@@ -63,7 +69,13 @@ export interface UpdatedEntity<T = Record<string, unknown>> {
  * An entity that was deleted in the cascade.
  */
 export interface DeletedEntity {
-  __typename: string;
+  /** Type name of the entity */
+  typename: string;
+  /**
+   * @deprecated Since specification 1.3.0; servers before 1.3.0 send only
+   * this. Read entries with `cascadeEntryTypename()`.
+   */
+  __typename?: string;
   id: string;
   deletedAt: string;
 }

@@ -8,7 +8,7 @@ mutation CreateUser($input: CreateUserInput!) {
     }
     cascade {
       updated {
-        __typename
+        typename
         id
         operation
       }

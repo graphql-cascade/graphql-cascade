@@ -11,6 +11,7 @@
       "cascade": {
         "updated": [
           {
+            "typename": "User",
             "__typename": "UpdatedEntity",
             "id": "user-1",
             "operation": "CREATED",

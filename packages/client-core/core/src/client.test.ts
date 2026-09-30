@@ -1,4 +1,8 @@
-import { CascadeClient, applyTypeInvalidations } from "./client";
+import {
+  CascadeClient,
+  applyTypeInvalidations,
+  cascadeEntryTypename,
+} from "./client";
 import {
   CascadeCache,
   CascadeResponse,
@@ -91,13 +95,13 @@ describe("CascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "John" },
             },
             {
-              __typename: "Post",
+              typename: "Post",
               id: "2",
               operation: CascadeOperation.CREATED,
               entity: { title: "Hello" },
@@ -131,8 +135,8 @@ describe("CascadeClient", () => {
         cascade: {
           updated: [],
           deleted: [
-            { __typename: "User", id: "1", deletedAt: "2024-01-01" },
-            { __typename: "Post", id: "2", deletedAt: "2024-01-01" },
+            { typename: "User", id: "1", deletedAt: "2024-01-01" },
+            { typename: "Post", id: "2", deletedAt: "2024-01-01" },
           ],
           invalidations: [],
           metadata: { timestamp: "2024-01-01", depth: 1, affectedCount: 2 },
@@ -217,6 +221,35 @@ describe("CascadeClient", () => {
     });
   });
 
+  describe("deprecated __typename on cascade entries", () => {
+    it("applies entries from pre-1.3 servers, which only send __typename", () => {
+      const response = {
+        success: true,
+        data: null,
+        cascade: {
+          updated: [
+            {
+              __typename: "User",
+              id: "1",
+              operation: CascadeOperation.UPDATED,
+              entity: { name: "John" },
+            },
+          ],
+          deleted: [{ __typename: "Post", id: "2", deletedAt: "2024-01-01" }],
+          invalidations: [],
+          metadata: { timestamp: "2024-01-01", depth: 1, affectedCount: 2 },
+        },
+      } as unknown as CascadeResponse;
+
+      client.applyCascade(response);
+
+      expect(cache.written).toEqual([
+        { typename: "User", id: "1", data: { name: "John" } },
+      ]);
+      expect(cache.evicted).toEqual([{ typename: "Post", id: "2" }]);
+    });
+  });
+
   describe("type invalidations", () => {
     const truncatedResponse = (typenames: string[]): CascadeResponse => ({
       success: true,
@@ -224,7 +257,7 @@ describe("CascadeClient", () => {
       cascade: {
         updated: [
           {
-            __typename: "Author",
+            typename: "Author",
             id: "1",
             operation: CascadeOperation.UPDATED,
             entity: { id: "1" },
@@ -341,5 +374,27 @@ describe("CascadeClient", () => {
     it("should return the cache instance", () => {
       expect(client.getCache()).toBe(cache);
     });
+  });
+});
+
+describe("cascadeEntryTypename", () => {
+  it("reads typename", () => {
+    expect(cascadeEntryTypename({ typename: "User" })).toBe("User");
+  });
+
+  it("falls back to the deprecated __typename", () => {
+    expect(cascadeEntryTypename({ __typename: "User" })).toBe("User");
+  });
+
+  it("prefers typename when both are present", () => {
+    expect(
+      cascadeEntryTypename({ typename: "User", __typename: "UpdatedEntity" }),
+    ).toBe("User");
+  });
+
+  it("rejects entries without a type name", () => {
+    expect(() => cascadeEntryTypename({})).toThrow(
+      "Cascade entry has neither typename nor __typename",
+    );
   });
 });

@@ -95,7 +95,7 @@ describe("cascade processing", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "1",
                   operation: "CREATED",
                   entity: { name: "Test" },

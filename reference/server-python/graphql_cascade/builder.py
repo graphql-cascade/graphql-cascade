@@ -259,6 +259,8 @@ class StreamingCascadeBuilder(CascadeBuilder):
                 entity_dict = self._entity_to_dict(entity)
                 cascade_data["updated"].append(
                     {
+                        "typename": self._get_entity_type(entity),
+                        # deprecated since spec 1.3.0
                         "__typename": self._get_entity_type(entity),
                         "id": self._get_entity_id(entity),
                         "operation": operation,
@@ -279,7 +281,8 @@ class StreamingCascadeBuilder(CascadeBuilder):
 
             cascade_data["deleted"].append(
                 {
-                    "__typename": typename,
+                    "typename": typename,
+                    "__typename": typename,  # deprecated since spec 1.3.0
                     "id": entity_id,
                     "deletedAt": datetime.now(timezone.utc).isoformat(),
                 }

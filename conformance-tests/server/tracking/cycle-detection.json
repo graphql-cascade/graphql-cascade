@@ -36,7 +36,7 @@
     "cascade": {
       "updated": [
         {
-          "__typename": "User",
+          "typename": "User",
           "id": "user_123",
           "name": "Updated Name",
           "managerId": "user_456"

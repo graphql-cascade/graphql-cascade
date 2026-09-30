@@ -7,6 +7,7 @@ import {
   QueryInvalidation,
   InvalidationStrategy,
   InvalidationScope,
+  cascadeEntryTypename,
 } from "@graphql-cascade/client";
 import { CascadeStoreUpdater } from "./types";
 
@@ -55,12 +56,13 @@ function applyEntityUpdate(
   store: RecordSourceSelectorProxy,
   entity: UpdatedEntity,
 ): void {
-  const recordId = `${entity.__typename}:${entity.id}`;
+  const typename = cascadeEntryTypename(entity);
+  const recordId = `${typename}:${entity.id}`;
   let record = store.get(recordId);
 
   if (!record) {
     // Create new record if it doesn't exist
-    record = store.create(recordId, entity.__typename);
+    record = store.create(recordId, typename);
   }
 
   // Update record fields
@@ -96,7 +98,7 @@ function applyEntityDeletion(
   store: RecordSourceSelectorProxy,
   entity: DeletedEntity,
 ): void {
-  const recordId = `${entity.__typename}:${entity.id}`;
+  const recordId = `${cascadeEntryTypename(entity)}:${entity.id}`;
   const record = store.get(recordId);
 
   if (record) {

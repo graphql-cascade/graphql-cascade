@@ -399,6 +399,8 @@ interface CascadeTypeInvalidation {
 ```typescript
 interface CascadeUpdatedEntity {
   /** GraphQL type name */
+  typename: string;
+  /** Same value as typename, for pre-1.3 clients; deprecated, removed in spec 2.0 */
   __typename: string;
   /** Entity ID */
   id: string;
@@ -414,6 +416,8 @@ interface CascadeUpdatedEntity {
 ```typescript
 interface CascadeDeletedEntity {
   /** GraphQL type name */
+  typename: string;
+  /** Same value as typename, for pre-1.3 clients; deprecated, removed in spec 2.0 */
   __typename: string;
   /** Entity ID */
   id: string;

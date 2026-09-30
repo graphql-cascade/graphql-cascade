@@ -135,6 +135,20 @@ class TestCascadeTracker:
         assert "timestamp" in metadata
         assert metadata["affected_count"] == 2
 
+    def test_entries_name_type_in_typename_and_deprecated_typename(self):
+        """Entries carry typename, plus __typename for pre-1.3 clients."""
+        tracker = CascadeTracker()
+        with CascadeTransaction(tracker):
+            tracker.track_create(MockEntity("1", "Test Entity"))
+            tracker.track_delete("OtherEntity", "2")
+
+        cascade_data = tracker.end_transaction()
+
+        updated = cascade_data["updated"][0]
+        deleted = cascade_data["deleted"][0]
+        assert (updated["typename"], updated["__typename"]) == ("MockEntity", "MockEntity")
+        assert (deleted["typename"], deleted["__typename"]) == ("OtherEntity", "OtherEntity")
+
     def test_transaction_rollback_on_error(self):
         """Test that transaction is properly cleaned up on error."""
         tracker = CascadeTracker()

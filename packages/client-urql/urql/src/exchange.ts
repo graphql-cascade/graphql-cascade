@@ -9,6 +9,7 @@ import { pipe, tap } from "wonka";
 import type { Exchange, Operation } from "@urql/core";
 import {
   applyTypeInvalidations,
+  cascadeEntryTypename,
   createScopedLogger,
   RetryOptions,
   CascadeError,
@@ -113,13 +114,14 @@ function applyCascadeUpdates(
   // Process updated entities
   for (const update of cascade.updated) {
     try {
+      const typename = cascadeEntryTypename(update);
       if (update.operation === CascadeOperation.DELETED) {
-        cacheAdapter.evict(update.__typename, update.id);
-        options.onCacheDelete?.(update.__typename, update.id);
+        cacheAdapter.evict(typename, update.id);
+        options.onCacheDelete?.(typename, update.id);
         result.deletedCount++;
       } else {
-        cacheAdapter.write(update.__typename, update.id, update.entity);
-        options.onCacheUpdate?.(update.__typename, update.id, update.entity);
+        cacheAdapter.write(typename, update.id, update.entity);
+        options.onCacheUpdate?.(typename, update.id, update.entity);
         result.updatedCount++;
       }
     } catch (error) {
@@ -135,8 +137,9 @@ function applyCascadeUpdates(
   // Process deleted entities
   for (const deleted of cascade.deleted) {
     try {
-      cacheAdapter.evict(deleted.__typename, deleted.id);
-      options.onCacheDelete?.(deleted.__typename, deleted.id);
+      const typename = cascadeEntryTypename(deleted);
+      cacheAdapter.evict(typename, deleted.id);
+      options.onCacheDelete?.(typename, deleted.id);
       result.deletedCount++;
     } catch (error) {
       result.errors.push(

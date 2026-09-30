@@ -15,7 +15,7 @@
       ]
     },
     "cascade": {
-      "updated": [{ "__typename": "User", "id": "1", "name": "Updated" }],
+      "updated": [{ "typename": "User", "id": "1", "name": "Updated" }],
       "invalidations": [
         { "queryName": "getUser", "strategy": "INVALIDATE", "scope": "PREFIX" }
       ],

@@ -84,13 +84,13 @@ const CreateTodoMutation = graphql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity
         }
         deleted {
-          __typename
+          typename
           id
         }
         invalidations {
@@ -226,7 +226,7 @@ Cascade automatically handles connection updates when entities change:
 // Server returns cascade with connection info
 cascade: {
   updated: [{
-    __typename: 'Todo',
+    typename: 'Todo',
     id: '123',
     operation: 'CREATED',
     entity: { ... },
@@ -252,7 +252,7 @@ commit({
       cascade: {
         updated: [
           {
-            __typename: "Todo",
+            typename: "Todo",
             id: "123",
             operation: "UPDATED",
             entity: { completed: true },
@@ -497,7 +497,7 @@ environment.mock.resolveMostRecentOperation((operation) =>
           data: { id: "1", title: "Test", completed: false },
           cascade: {
             updated: [
-              { __typename: "Todo", id: "1", operation: "CREATED", entity: {} },
+              { typename: "Todo", id: "1", operation: "CREATED", entity: {} },
             ],
             deleted: [],
             invalidations: [],

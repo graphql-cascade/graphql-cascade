@@ -93,7 +93,7 @@ mutation UpdateTodo($id: ID!, $version: Int!, $input: UpdateTodoInput!) {
       version
     }
     __cascade {
-      updated { __typename id }
+      updated { typename id }
     }
   }
 }
@@ -175,7 +175,7 @@ mutation UpdateUser($id: ID!, $changes: [FieldChange!]!) {
       }
     }
     __cascade {
-      updated { __typename id }
+      updated { typename id }
     }
   }
 }

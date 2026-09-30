@@ -368,6 +368,22 @@ describe("CascadeTracker", () => {
       });
     });
 
+    it("names each entry's type in typename, and in the deprecated __typename", () => {
+      tracker.startTransaction();
+      tracker.trackUpdate({ id: 1, __typename: "TestEntity" });
+      tracker.trackDelete("Gone", "2");
+
+      const result = tracker.endTransaction();
+      expect(result.updated[0]).toMatchObject({
+        typename: "TestEntity",
+        __typename: "TestEntity",
+      });
+      expect(result.deleted[0]).toMatchObject({
+        typename: "Gone",
+        __typename: "Gone",
+      });
+    });
+
     it("should skip private properties starting with underscore", () => {
       tracker.startTransaction();
 

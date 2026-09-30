@@ -54,8 +54,8 @@ const CREATE_TODO = `
       todo { id title completed }
       __cascade {
         created { __typename id }
-        updated { __typename id }
-        deleted { __typename id }
+        updated { typename id }
+        deleted { typename id }
         invalidated { __typename field }
       }
     }
@@ -313,8 +313,8 @@ const TODOS_SUBSCRIPTION = `
       todo { id title completed }
       __cascade {
         created { __typename id }
-        updated { __typename id }
-        deleted { __typename id }
+        updated { typename id }
+        deleted { typename id }
         invalidated { __typename field }
       }
     }
@@ -517,8 +517,8 @@ const CREATE_TODO: TypedDocumentNode<CreateTodoMutation, CreateTodoVariables> = 
       todo { id title completed }
       __cascade {
         created { __typename id }
-        updated { __typename id }
-        deleted { __typename id }
+        updated { typename id }
+        deleted { typename id }
         invalidated { __typename field }
       }
     }

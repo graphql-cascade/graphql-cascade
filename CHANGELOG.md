@@ -21,6 +21,7 @@ The **specification** is versioned independently: its version lives in
 - `@graphql-cascade/apollo`: `ALL`, `PREFIX` and `PATTERN` invalidation scopes now evict the matching root query fields; they were no-ops.
 
 ### Changed
+- **Breaking** (`@graphql-cascade/client`, for code that builds cascade entries): `UpdatedEntity` and `DeletedEntity` name the entity's type in `typename` (spec 1.3.0); `__typename` is optional and deprecated. The server sends both; clients read entries with the new `cascadeEntryTypename()`, which falls back to `__typename` for pre-1.3 servers. Apollo, urql and Relay adapters, the conformance validators and fixtures, and the Python reference server follow.
 - **Breaking** (`@graphql-cascade/server`): invalidation hints use the specification's `QueryInvalidation` shape (`queryName`, `queryHash`, `arguments`, `queryPattern`, `strategy`, `scope`) instead of `CascadeInvalidation` (`__typename`, `id`, `field`, `reason`), which no client could apply. Hints without a valid `strategy` and `scope` are dropped and reported through `onInvalidationError`.
 - `@graphql-cascade/conformance`: invalidations are checked for `strategy`, `scope` and the name or pattern their scope needs.
 - **Breaking** (`@graphql-cascade/server`): cascades that exceed size limits no longer lose entities. Whole types move into `cascade.typeInvalidations` and `metadata.truncated` is set. `metadata.truncatedUpdated`, `truncatedDeleted`, `truncatedInvalidations` and `truncatedSize` are replaced by `truncated`; tracker results carry an `overflow` map.

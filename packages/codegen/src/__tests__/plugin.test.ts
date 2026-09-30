@@ -43,7 +43,7 @@ describe("GraphQL Cascade Codegen Plugin", () => {
     }
 
     type UpdatedEntity {
-      __typename: String!
+      typename: String!
       id: ID!
       operation: String!
       entity: String
@@ -51,7 +51,7 @@ describe("GraphQL Cascade Codegen Plugin", () => {
     }
 
     type DeletedEntity {
-      __typename: String!
+      typename: String!
       id: ID!
       timestamp: String!
     }
@@ -76,7 +76,7 @@ describe("GraphQL Cascade Codegen Plugin", () => {
           }
           cascade {
             updated {
-              __typename
+              typename
               id
               operation
             }
@@ -99,7 +99,7 @@ describe("GraphQL Cascade Codegen Plugin", () => {
             }
             cascade {
               updated {
-                __typename
+                typename
                 id
               }
             }

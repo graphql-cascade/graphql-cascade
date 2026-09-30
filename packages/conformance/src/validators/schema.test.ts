@@ -27,14 +27,14 @@ describe("validateSchema", () => {
     }
 
     type UpdatedEntity {
-      __typename: String!
+      typename: String!
       id: ID!
       operation: CascadeOperation!
       entity: Node
     }
 
     type DeletedEntity {
-      __typename: String!
+      typename: String!
       id: ID!
       deletedAt: String!
     }
@@ -70,6 +70,24 @@ describe("validateSchema", () => {
     expect(result.level).toBe("standard"); // Has depth in metadata
     expect(result.errors).toHaveLength(0);
   });
+
+  it.each(["UpdatedEntity", "DeletedEntity"])(
+    "schema whose %s lacks typename fails",
+    (typeName) => {
+      const schema = buildSchema(
+        BASIC_SCHEMA.replace(
+          new RegExp(`(type ${typeName} \\{\\s*)typename: String!`),
+          "$1name: String!",
+        ),
+      );
+      const result = validateSchema(schema);
+      expect(result.errors).toContainEqual({
+        code: "MISSING_TYPENAME_FIELD",
+        message: `${typeName} must have a typename: String! field`,
+        path: `${typeName}.typename`,
+      });
+    },
+  );
 
   it("schema missing Node interface fails", () => {
     const schema = buildSchema(`

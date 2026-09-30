@@ -86,6 +86,12 @@ export interface CascadeMetadata {
  */
 export interface CascadeUpdatedEntity {
   /** GraphQL type name */
+  typename: string;
+  /**
+   * Same value as `typename`, for clients written against specification
+   * versions before 1.3.0.
+   * @deprecated Removed in specification 2.0.0; read `typename`.
+   */
   __typename: string;
   /** Entity ID */
   id: string;
@@ -100,6 +106,12 @@ export interface CascadeUpdatedEntity {
  */
 export interface CascadeDeletedEntity {
   /** GraphQL type name */
+  typename: string;
+  /**
+   * Same value as `typename`, for clients written against specification
+   * versions before 1.3.0.
+   * @deprecated Removed in specification 2.0.0; read `typename`.
+   */
   __typename: string;
   /** Entity ID */
   id: string;
@@ -219,6 +231,8 @@ export interface CascadeResponse<T = any> {
 export interface TrackerCascadeData {
   /** List of updated entities */
   updated: Array<{
+    typename: string;
+    /** @deprecated Same value as `typename` */
     __typename: string;
     id: string;
     operation: "CREATED" | "UPDATED" | "DELETED";
@@ -226,6 +240,8 @@ export interface TrackerCascadeData {
   }>;
   /** List of deleted entities */
   deleted: Array<{
+    typename: string;
+    /** @deprecated Same value as `typename` */
     __typename: string;
     id: string;
     deletedAt: string;

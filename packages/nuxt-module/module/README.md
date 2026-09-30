@@ -66,13 +66,13 @@ const { mutate, loading, error, extractedData, isError, errors } =
             }
             cascade {
               updated {
-                __typename
+                typename
                 id
                 operation
                 entity
               }
               deleted {
-                __typename
+                typename
                 id
               }
               invalidations {
@@ -188,13 +188,13 @@ const { mutate, cascadeData } = useCascadeMutation(gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity
         }
         deleted {
-          __typename
+          typename
           id
         }
       }

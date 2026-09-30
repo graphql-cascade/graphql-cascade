@@ -66,9 +66,9 @@ class CascadeInvalidator:
 
         # Collect all affected entity types
         for entity in updated:
-            affected_types.add(entity["__typename"])
+            affected_types.add(entity["typename"])
         for entity in deleted:
-            affected_types.add(entity["__typename"])
+            affected_types.add(entity["typename"])
 
         # Generate invalidations for each type
         for entity_type in affected_types:
@@ -91,7 +91,7 @@ class CascadeInvalidator:
         invalidations = []
 
         for entity in updated:
-            entity_type = entity["__typename"]
+            entity_type = entity["typename"]
 
             # Get changed fields (simplified - would need entity diffing in practice)
             changed_fields = self._get_changed_fields(entity)

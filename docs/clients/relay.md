@@ -158,7 +158,7 @@ const UpdateTodoMutation = graphql`
         completed
       }
       __cascade {
-        updated { __typename id }
+        updated { typename id }
       }
     }
   }
@@ -319,7 +319,7 @@ const ToggleTodoMutation = graphql`
         completed
       }
       __cascade {
-        updated { __typename id }
+        updated { typename id }
       }
     }
   }
@@ -492,8 +492,8 @@ const CreateTodoMutation = graphql`
       }
       __cascade {
         created { __typename id }
-        updated { __typename id }
-        deleted { __typename id }
+        updated { typename id }
+        deleted { typename id }
         invalidated { __typename field }
       }
     }

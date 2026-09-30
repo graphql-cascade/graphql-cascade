@@ -10,6 +10,7 @@ import {
   CascadeResponse,
   CascadeUpdates,
   CascadeConflictResolver,
+  cascadeEntryTypename,
 } from "@graphql-cascade/client";
 import { ApolloCascadeClient } from "./client";
 
@@ -239,13 +240,13 @@ export function useCascadeMutation<
 
     return () => {
       // Rollback function
-      rollbackInfo.forEach(({ __typename, id, previousData }) => {
+      rollbackInfo.forEach(({ typename, id, previousData }) => {
         if (previousData === null) {
           // Entity was created optimistically, remove it
-          cascadeClient.getCache().evict(__typename, id);
+          cascadeClient.getCache().evict(typename, id);
         } else {
           // Entity existed, restore previous state
-          cascadeClient.getCache().write(__typename, id, previousData);
+          cascadeClient.getCache().write(typename, id, previousData);
         }
       });
     };
@@ -254,22 +255,18 @@ export function useCascadeMutation<
   // Helper function to capture rollback state
   const captureRollbackState = (
     cascade: CascadeUpdates,
-  ): Array<{ __typename: string; id: string; previousData: any }> => {
+  ): Array<{ typename: string; id: string; previousData: any }> => {
     const rollbackInfo: Array<{
-      __typename: string;
+      typename: string;
       id: string;
       previousData: any;
     }> = [];
 
-    cascade.updated.forEach(({ __typename, id }) => {
-      const currentData = cascadeClient.getCache().read(__typename, id);
-      rollbackInfo.push({ __typename, id, previousData: currentData });
-    });
-
-    cascade.deleted.forEach(({ __typename, id }) => {
-      const currentData = cascadeClient.getCache().read(__typename, id);
-      rollbackInfo.push({ __typename, id, previousData: currentData });
-    });
+    for (const entry of [...cascade.updated, ...cascade.deleted]) {
+      const typename = cascadeEntryTypename(entry);
+      const currentData = cascadeClient.getCache().read(typename, entry.id);
+      rollbackInfo.push({ typename, id: entry.id, previousData: currentData });
+    }
 
     return rollbackInfo;
   };
@@ -282,7 +279,7 @@ export function useCascadeMutation<
     for (const updated of serverResponse.cascade.updated) {
       const optimisticData = cascadeClient
         .getCache()
-        .read(updated.__typename, updated.id);
+        .read(cascadeEntryTypename(updated), updated.id);
       if (optimisticData) {
         const conflict = conflictResolver.detectConflicts(
           optimisticData,
@@ -311,7 +308,7 @@ export function useCascadeMutation<
       updated: serverResponse.cascade.updated.map((updated) => {
         const optimisticData = cascadeClient
           .getCache()
-          .read(updated.__typename, updated.id);
+          .read(cascadeEntryTypename(updated), updated.id);
         if (optimisticData) {
           const conflict = conflictResolver.detectConflicts(
             optimisticData,

@@ -49,7 +49,7 @@ with tracker:
 
 # Build cascade response
 response = builder.build_response(primary_result=user)
-print(response.cascade.updated)  # [{'__typename': 'User', 'id': '1', ...}]
+print(response.cascade.updated)  # [{'typename': 'User', '__typename': 'User', 'id': '1', ...}]
 ```
 
 ### Ariadne Integration

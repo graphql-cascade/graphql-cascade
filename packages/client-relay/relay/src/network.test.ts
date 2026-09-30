@@ -60,7 +60,7 @@ describe("Network Cascade Detection", () => {
           cascade: {
             updated: [
               {
-                __typename: "Todo",
+                typename: "Todo",
                 id: "1",
                 operation: CascadeOperation.CREATED,
                 entity: {
@@ -146,7 +146,7 @@ describe("Network Cascade Detection", () => {
           cascade: {
             updated: [
               {
-                __typename: "Todo",
+                typename: "Todo",
                 id: "1",
                 operation: CascadeOperation.CREATED,
                 entity: { id: "1", text: "Todo 1" },
@@ -188,7 +188,7 @@ describe("Network Cascade Detection", () => {
           cascade: {
             updated: [
               {
-                __typename: "Todo",
+                typename: "Todo",
                 id: "1",
                 operation: CascadeOperation.CREATED,
                 entity: { id: "1", text: "Test todo" },

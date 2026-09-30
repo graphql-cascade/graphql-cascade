@@ -91,8 +91,8 @@ const result = await cascadeClient.mutate(
       success
       data { id title completed }
       cascade {
-        updated { __typename id operation entity }
-        deleted { __typename id }
+        updated { typename id operation entity }
+        deleted { typename id }
         invalidations { queryName scope }
       }
     }
@@ -182,7 +182,7 @@ const handleUpdate = () => {
           cascade: {
             updated: [
               {
-                __typename: "Todo",
+                typename: "Todo",
                 id: "123",
                 operation: "UPDATED",
                 entity: { completed: true },
@@ -217,7 +217,7 @@ const result = await cascadeClient.mutateOptimistic(
         cascade: {
           updated: [
             {
-              __typename: "Todo",
+              typename: "Todo",
               id: "1",
               operation: "UPDATED",
               entity: { title: "Updated Title" },

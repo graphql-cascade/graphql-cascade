@@ -11,7 +11,7 @@ describe("union-support", () => {
   const mockCascade: CascadeUpdates = {
     updated: [
       {
-        __typename: "User",
+        typename: "User",
         id: "1",
         operation: CascadeOperation.UPDATED,
         entity: { id: "1", name: "John" },
@@ -487,7 +487,7 @@ describe("union-support", () => {
           cascade: {
             updated: [
               {
-                __typename: "PrintServer",
+                typename: "PrintServer",
                 id: "123",
                 operation: CascadeOperation.CREATED,
                 entity: {

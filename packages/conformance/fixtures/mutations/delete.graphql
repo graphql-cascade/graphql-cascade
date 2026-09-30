@@ -8,7 +8,7 @@ mutation DeleteUser($input: DeleteUserInput!) {
     }
     cascade {
       deleted {
-        __typename
+        typename
         id
         deletedAt
       }

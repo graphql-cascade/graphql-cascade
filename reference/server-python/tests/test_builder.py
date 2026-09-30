@@ -186,7 +186,7 @@ class TestCascadeResponse:
     def test_custom_cascade(self):
         """Test CascadeResponse with custom cascade data."""
         custom_cascade = {
-            "updated": [{"__typename": "Test", "id": "1"}],
+            "updated": [{"typename": "Test", "id": "1"}],
             "deleted": [],
             "invalidations": [],
             "metadata": {"count": 1}

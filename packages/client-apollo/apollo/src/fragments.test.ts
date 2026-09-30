@@ -169,13 +169,13 @@ describe("CascadeFragmentGenerator", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.UPDATED,
             entity: { id: "1", name: "John" },
           },
           {
-            __typename: "Post",
+            typename: "Post",
             id: "1",
             operation: CascadeOperation.CREATED,
             entity: { id: "1", title: "Hello" },
@@ -202,13 +202,13 @@ describe("CascadeFragmentGenerator", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.UPDATED,
             entity: { id: "1", name: "John" },
           },
           {
-            __typename: "User",
+            typename: "User",
             id: "2",
             operation: CascadeOperation.UPDATED,
             entity: { id: "2", name: "Jane" },
@@ -228,6 +228,27 @@ describe("CascadeFragmentGenerator", () => {
       expect(fragments.size).toBe(1);
       expect(fragments.has("User")).toBe(true);
     });
+
+    it("reads entries from pre-1.3 servers, which only send __typename", () => {
+      const generator = new CascadeFragmentGenerator();
+      const cascade = {
+        updated: [
+          {
+            __typename: "User",
+            id: "1",
+            operation: CascadeOperation.UPDATED,
+            entity: { id: "1", name: "John" },
+          },
+        ],
+        deleted: [],
+        invalidations: [],
+        metadata: { timestamp: "2024-01-01", depth: 1, affectedCount: 1 },
+      } as unknown as CascadeUpdates;
+
+      const fragments = generator.generateFragmentsForCascade(cascade);
+
+      expect([...fragments.keys()]).toEqual(["User"]);
+    });
   });
 
   describe("generateCombinedFragment", () => {
@@ -236,7 +257,7 @@ describe("CascadeFragmentGenerator", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.UPDATED,
             entity: { id: "1", name: "John" },

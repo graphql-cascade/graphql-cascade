@@ -22,7 +22,7 @@
   },
   "expected": {
     "cascade": {
-      "updated": [{ "__typename": "Author", "id": "author_1" }],
+      "updated": [{ "typename": "Author", "id": "author_1" }],
       "invalidations": [],
       "typeInvalidations": [{ "typename": "Post", "affectedCount": 4 }],
       "metadata": {

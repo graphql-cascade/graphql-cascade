@@ -143,7 +143,7 @@ mutation CreatePost($input: CreatePostInput!) {
     # Everything affected by this mutation (in one response!)
     cascade {
       updated {
-        __typename
+        typename
         # Updated aggregates and relationships
         ... on User {
           id
@@ -319,7 +319,7 @@ const CREATE_POST = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           ... on User {
             id
             postCount
@@ -403,7 +403,7 @@ const CREATE_POST = gql`
       post { id, title, content, authorId }
       cascade {
         updated {
-          __typename
+          typename
           ... on User { id, postCount, lastPostAt }
           ... on Notification { id, message, recipientId, createdAt }
         }

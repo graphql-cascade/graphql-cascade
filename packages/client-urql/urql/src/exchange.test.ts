@@ -27,7 +27,7 @@ describe("extractCascadeData", () => {
     const cascade: CascadeUpdates = {
       updated: [
         {
-          __typename: "User",
+          typename: "User",
           id: "1",
           operation: CascadeOperation.UPDATED,
           entity: { name: "Test" },
@@ -283,7 +283,7 @@ describe("cascadeExchange", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Updated" },
@@ -404,7 +404,7 @@ describe("cascadeExchange", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Updated" },
@@ -451,7 +451,7 @@ describe("cascadeExchange", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Updated1" },
@@ -477,7 +477,7 @@ describe("cascadeExchange", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "2",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Updated2" },

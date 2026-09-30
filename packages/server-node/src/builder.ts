@@ -19,7 +19,7 @@ import {
 } from "./types";
 import type { MetricsCollector } from "./metrics";
 
-type TypedEntry = { __typename: string };
+type TypedEntry = { typename: string };
 
 /**
  * Remove every entry of `typename` from both lists, adding the number removed
@@ -34,7 +34,7 @@ function collapseType(
   let removed = 0;
   for (const list of [updated, deleted]) {
     for (let i = list.length - 1; i >= 0; i--) {
-      if (list[i].__typename === typename) {
+      if (list[i].typename === typename) {
         list.splice(i, 1);
         removed++;
       }
@@ -48,8 +48,8 @@ function collapseType(
  */
 function largestType(entries: TypedEntry[]): string {
   const counts = new Map<string, number>();
-  for (const { __typename } of entries) {
-    counts.set(__typename, (counts.get(__typename) ?? 0) + 1);
+  for (const { typename } of entries) {
+    counts.set(typename, (counts.get(typename) ?? 0) + 1);
   }
   return [...counts].sort(
     ([a, countA], [b, countB]) => countB - countA || a.localeCompare(b),
@@ -302,8 +302,8 @@ export class CascadeBuilder {
 
     // Dropped query hints: invalidating every changed type covers them.
     if (hintsTruncated) {
-      for (const { __typename } of [...updated, ...deleted]) {
-        counts.set(__typename, (counts.get(__typename) ?? 0) + 1);
+      for (const { typename } of [...updated, ...deleted]) {
+        counts.set(typename, (counts.get(typename) ?? 0) + 1);
       }
     }
 
@@ -415,6 +415,7 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
           continue;
         }
         cascadeData.updated.push({
+          typename,
           __typename: typename,
           id: this.getEntityId(entity),
           operation,
@@ -432,6 +433,7 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
         continue;
       }
       cascadeData.deleted.push({
+        typename,
         __typename: typename,
         id: entityId,
         deletedAt: new Date().toISOString(),
@@ -452,11 +454,11 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
       cascadeData.invalidations = invalidations.slice(0, this.maxInvalidations);
       // Dropped query hints: invalidating every changed type covers them.
       if (invalidations.length > this.maxInvalidations) {
-        for (const { __typename } of [
+        for (const { typename } of [
           ...cascadeData.updated,
           ...cascadeData.deleted,
         ]) {
-          counts.set(__typename, (counts.get(__typename) ?? 0) + 1);
+          counts.set(typename, (counts.get(typename) ?? 0) + 1);
         }
       }
     }

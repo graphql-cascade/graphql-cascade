@@ -85,7 +85,7 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Optimistic John" },
@@ -107,7 +107,7 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Server John" },
@@ -191,7 +191,7 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Optimistic" },
@@ -240,7 +240,7 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [],
           deleted: [
-            { __typename: "Post", id: "1", deletedAt: "2024-01-01T00:00:00Z" },
+            { typename: "Post", id: "1", deletedAt: "2024-01-01T00:00:00Z" },
           ],
           invalidations: [],
           metadata: {
@@ -278,7 +278,7 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Optimistic" },
@@ -312,7 +312,7 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "new-1",
               operation: CascadeOperation.CREATED,
               entity: { name: "New User" },
@@ -342,7 +342,7 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "Post",
+              typename: "Post",
               id: "999",
               operation: CascadeOperation.CREATED,
               entity: { title: "New Post" },
@@ -402,7 +402,7 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Optimistic" },
@@ -435,13 +435,13 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Updated" },
             },
             {
-              __typename: "Post",
+              typename: "Post",
               id: "2",
               operation: CascadeOperation.UPDATED,
               entity: { title: "Updated Title" },
@@ -478,7 +478,7 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "First Update" },
@@ -501,7 +501,7 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Second Update" },
@@ -560,7 +560,7 @@ describe("OptimisticCascadeClient", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "1",
               operation: CascadeOperation.UPDATED,
               entity: { name: "Optimistic" },

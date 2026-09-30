@@ -71,7 +71,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "1",
                   operation: "UPDATED",
                   entity: { id: "1" },
@@ -154,7 +154,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "1",
                   operation: "UPDATED",
                   entity: { id: "1" },
@@ -195,13 +195,13 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "1",
                   operation: "UPDATED",
                   entity: { id: "1" },
                 },
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "2",
                   operation: "CREATED",
                   entity: { id: "2" },
@@ -223,8 +223,8 @@ describe("CascadeSubscriptionManager", () => {
       expect(onCascade).toHaveBeenCalledWith(
         expect.objectContaining({
           updated: expect.arrayContaining([
-            expect.objectContaining({ __typename: "User", id: "1" }),
-            expect.objectContaining({ __typename: "User", id: "2" }),
+            expect.objectContaining({ typename: "User", id: "1" }),
+            expect.objectContaining({ typename: "User", id: "2" }),
           ]),
         }),
       );
@@ -332,7 +332,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "1",
                   operation: "UPDATED",
                   entity: { id: "1" },
@@ -400,7 +400,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "1",
                   operation: "UPDATED",
                   entity: { id: "1" },
@@ -513,7 +513,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "1",
                   operation: "UPDATED",
                   entity: { id: "1" },
@@ -545,7 +545,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "2",
                   operation: "UPDATED",
                   entity: { id: "2" },
@@ -587,13 +587,13 @@ describe("CascadeSubscriptionManager", () => {
           cascade: {
             updated: [
               {
-                __typename: "User",
+                typename: "User",
                 id: "1",
                 operation: "UPDATED",
                 entity: { id: "1" },
               },
               {
-                __typename: "User",
+                typename: "User",
                 id: "2",
                 operation: "CREATED",
                 entity: { id: "2" },
@@ -615,8 +615,8 @@ describe("CascadeSubscriptionManager", () => {
     expect(onCascade).toHaveBeenCalledWith(
       expect.objectContaining({
         updated: expect.arrayContaining([
-          expect.objectContaining({ __typename: "User", id: "1" }),
-          expect.objectContaining({ __typename: "User", id: "2" }),
+          expect.objectContaining({ typename: "User", id: "1" }),
+          expect.objectContaining({ typename: "User", id: "2" }),
         ]),
       }),
     );
@@ -682,7 +682,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: `user${i}`,
                   operation: "UPDATED",
                   entity: { id: `user${i}` },
@@ -706,7 +706,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: `user${i + 10}`,
                   operation: "CREATED",
                   entity: { id: `user${i + 10}` },
@@ -759,7 +759,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "1",
                   operation: "UPDATED",
                   entity: { id: "1" },
@@ -790,7 +790,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "2",
                   operation: "UPDATED",
                   entity: { id: "2" },
@@ -832,7 +832,7 @@ describe("CascadeSubscriptionManager", () => {
               updated: [],
               deleted: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "1",
                   operation: "DELETED",
                 },
@@ -875,7 +875,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "other-id",
                   operation: "UPDATED",
                   entity: { id: "other-id" },
@@ -902,7 +902,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "specific-id",
                   operation: "UPDATED",
                   entity: { id: "specific-id" },
@@ -946,7 +946,7 @@ describe("CascadeSubscriptionManager", () => {
               updated: [],
               deleted: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "123",
                   operation: "DELETED",
                 },
@@ -988,7 +988,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "123",
                   operation: "UPDATED",
                   entity: { id: "123" },
@@ -1015,7 +1015,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "123",
                   operation: "UPDATED",
                   entity: { id: "123" },
@@ -1076,7 +1076,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "1",
                   operation: "UPDATED",
                   entity: { id: "1" },
@@ -1100,7 +1100,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "2",
                   operation: "UPDATED",
                   entity: { id: "2" },
@@ -1133,7 +1133,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "3",
                   operation: "UPDATED",
                   entity: { id: "3" },
@@ -1157,7 +1157,7 @@ describe("CascadeSubscriptionManager", () => {
             cascade: {
               updated: [
                 {
-                  __typename: "User",
+                  typename: "User",
                   id: "4",
                   operation: "UPDATED",
                   entity: { id: "4" },

@@ -14,7 +14,10 @@ import {
   CascadeOperation,
   InvalidationStrategy,
 } from "./types";
-import { applyTypeInvalidations } from "@graphql-cascade/client";
+import {
+  applyTypeInvalidations,
+  cascadeEntryTypename,
+} from "@graphql-cascade/client";
 import { extractCascadeData } from "./exchange";
 
 /**
@@ -174,24 +177,26 @@ export class URQLCascadeClient {
   applyCascade(cascade: CascadeUpdates): void {
     // Process updated entities
     for (const update of cascade.updated) {
+      const typename = cascadeEntryTypename(update);
       // Skip excluded types
-      if (this.config.excludeTypes.includes(update.__typename)) {
+      if (this.config.excludeTypes.includes(typename)) {
         continue;
       }
 
       if (update.operation === CascadeOperation.DELETED) {
-        this.cache.evict(update.__typename, update.id);
+        this.cache.evict(typename, update.id);
       } else {
-        this.cache.write(update.__typename, update.id, update.entity);
+        this.cache.write(typename, update.id, update.entity);
       }
     }
 
     // Process deleted entities
     for (const deleted of cascade.deleted) {
-      if (this.config.excludeTypes.includes(deleted.__typename)) {
+      const typename = cascadeEntryTypename(deleted);
+      if (this.config.excludeTypes.includes(typename)) {
         continue;
       }
-      this.cache.evict(deleted.__typename, deleted.id);
+      this.cache.evict(typename, deleted.id);
     }
 
     // Process invalidations
@@ -229,8 +234,9 @@ export class URQLCascadeClient {
     const rollback = new Map<string, Record<string, unknown> | null>();
 
     for (const update of cascade.updated) {
-      const key = `${update.__typename}:${update.id}`;
-      const existing = this.cache.read(update.__typename, update.id);
+      const typename = cascadeEntryTypename(update);
+      const key = `${typename}:${update.id}`;
+      const existing = this.cache.read(typename, update.id);
       rollback.set(key, existing);
     }
 

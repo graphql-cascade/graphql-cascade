@@ -24,12 +24,12 @@ const UPDATE_USER_MUTATION = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           entity
         }
         deleted {
-          __typename
+          typename
           id
         }
       }
@@ -216,7 +216,7 @@ describe("useCascadeMutation", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: variables.id,
               operation: CascadeOperation.UPDATED,
               entity: { id: variables.id, name: variables.name },
@@ -276,7 +276,7 @@ describe("useCascadeMutation", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: variables.id,
               operation: CascadeOperation.UPDATED,
               entity: { id: variables.id, name: variables.name },
@@ -368,7 +368,7 @@ describe("useCascadeMutation", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: variables.id,
               operation: CascadeOperation.UPDATED,
               entity: { id: variables.id, name: "Optimistic Name" },
@@ -429,7 +429,7 @@ describe("useCascadeMutation", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: variables.id,
               operation: CascadeOperation.UPDATED,
               entity: { id: variables.id, name: variables.name },
@@ -713,7 +713,7 @@ describe("useCascadeMutation", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: variables.id,
               operation: CascadeOperation.UPDATED,
               entity: { id: variables.id, name: "Optimistic Name", age: 25 },
@@ -742,7 +742,7 @@ describe("useCascadeMutation", () => {
               cascade: {
                 updated: [
                   {
-                    __typename: "User",
+                    typename: "User",
                     id: "1",
                     operation: CascadeOperation.UPDATED,
                     entity: { id: "1", name: "Server Name", age: 30 },
@@ -790,7 +790,7 @@ describe("useCascadeMutation", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: variables.id,
               operation: CascadeOperation.UPDATED,
               entity: { id: variables.id, name: "Client Name", score: 100 },
@@ -818,7 +818,7 @@ describe("useCascadeMutation", () => {
               cascade: {
                 updated: [
                   {
-                    __typename: "User",
+                    typename: "User",
                     id: "2",
                     operation: CascadeOperation.UPDATED,
                     entity: { id: "2", name: "Server Name", score: 50 },
@@ -865,7 +865,7 @@ describe("useCascadeMutation", () => {
         cascade: {
           updated: [
             {
-              __typename: "User",
+              typename: "User",
               id: "new-id",
               operation: CascadeOperation.CREATED,
               entity: { id: "new-id", name: variables.name },
@@ -922,7 +922,7 @@ describe("useCascadeMutation", () => {
           updated: [],
           deleted: [
             {
-              __typename: "User",
+              typename: "User",
               id: "delete-me",
               operation: CascadeOperation.DELETED,
             },

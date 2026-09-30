@@ -7,7 +7,7 @@
         "updated": [],
         "deleted": [
           {
-            "__typename": "User",
+            "typename": "User",
             "id": "user-1",
             "deletedAt": "2024-01-01T00:00:00.000Z"
           }

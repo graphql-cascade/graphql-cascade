@@ -74,7 +74,7 @@ describe("runBasicTests", () => {
     expect(primaryTracked?.passed).toBe(true);
 
     const correctTypename = entityTracking?.tests.find(
-      (t) => t.name === "Correct __typename",
+      (t) => t.name === "Correct typename",
     );
     expect(correctTypename?.passed).toBe(true);
 

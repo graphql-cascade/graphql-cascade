@@ -76,7 +76,7 @@ mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
     }
     __cascade {
       updated {
-        __typename
+        typename
         id
       }
     }
@@ -98,7 +98,7 @@ mutation DeleteUser($id: ID!) {
     success
     __cascade {
       deleted {
-        __typename
+        typename
         id
       }
     }
@@ -124,7 +124,7 @@ mutation UpdateUserRole($id: ID!, $role: Role!) {
     }
     __cascade {
       updated {
-        __typename
+        typename
         id
       }
       invalidated {
@@ -159,7 +159,7 @@ mutation UpdateProfile {
     user { id bio }
     __cascade {
       updated {
-        __typename
+        typename
         id
       }
     }

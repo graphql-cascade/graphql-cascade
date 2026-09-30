@@ -1,5 +1,5 @@
 import { DocumentNode } from "graphql";
-import { CascadeClient } from "./client";
+import { CascadeClient, cascadeEntryTypename } from "./client";
 import { CascadeResponse, ConflictDetection } from "./types";
 
 /**
@@ -64,9 +64,10 @@ export class OptimisticCascadeClient extends CascadeClient {
     // Capture current state for rollback
     const previousState = new Map<string, any>();
 
-    response.cascade.updated.forEach(({ __typename, id }) => {
-      const current = this.cache.read(__typename, id);
-      previousState.set(`${__typename}:${id}`, current);
+    response.cascade.updated.forEach((entry) => {
+      const typename = cascadeEntryTypename(entry);
+      const current = this.cache.read(typename, entry.id);
+      previousState.set(`${typename}:${entry.id}`, current);
     });
 
     return () => {

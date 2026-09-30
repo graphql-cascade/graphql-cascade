@@ -5,8 +5,8 @@ describe("validateResponse", () => {
     const response = {
       success: true,
       cascade: {
-        updated: [{ __typename: "User", id: "1", operation: "CREATE" }],
-        deleted: [{ __typename: "Post", id: "2" }],
+        updated: [{ typename: "User", id: "1", operation: "CREATE" }],
+        deleted: [{ typename: "Post", id: "2" }],
         invalidations: [
           { queryName: "getUsers", strategy: "INVALIDATE", scope: "EXACT" },
         ],
@@ -54,12 +54,12 @@ describe("validateResponse", () => {
     });
   });
 
-  it("invalid updated entity fails (missing __typename)", () => {
+  it("invalid updated entity fails (missing typename)", () => {
     const response = {
       success: true,
       cascade: {
         updated: [
-          { id: "1", operation: "CREATE" }, // missing __typename
+          { id: "1", operation: "CREATE" }, // missing typename
         ],
         deleted: [],
         invalidations: [],
@@ -71,9 +71,49 @@ describe("validateResponse", () => {
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual({
       code: "MISSING_TYPENAME",
-      message: "UpdatedEntity must have __typename",
-      path: "cascade.updated[0].__typename",
+      message: "UpdatedEntity must have typename",
+      path: "cascade.updated[0].typename",
     });
+  });
+
+  it("does not accept the deprecated __typename in place of typename", () => {
+    const response = {
+      success: true,
+      cascade: {
+        updated: [],
+        deleted: [{ __typename: "Post", id: "2" }],
+        invalidations: [],
+        metadata: { timestamp: Date.now() },
+      },
+    };
+
+    expect(validateResponse(response).errors).toContainEqual({
+      code: "MISSING_TYPENAME",
+      message:
+        "DeletedEntity must have typename (__typename is deprecated since specification 1.3.0)",
+      path: "cascade.deleted[0].typename",
+    });
+  });
+
+  it("ignores __typename next to typename, where GraphQL resolves it to the wrapper type", () => {
+    const response = {
+      success: true,
+      cascade: {
+        updated: [
+          {
+            typename: "User",
+            __typename: "UpdatedEntity",
+            id: "1",
+            operation: "UPDATED",
+          },
+        ],
+        deleted: [],
+        invalidations: [],
+        metadata: { timestamp: Date.now() },
+      },
+    };
+
+    expect(validateResponse(response).errors).toEqual([]);
   });
 
   it("invalid deleted entity fails (missing id)", () => {
@@ -82,7 +122,7 @@ describe("validateResponse", () => {
       cascade: {
         updated: [],
         deleted: [
-          { __typename: "Post" }, // missing id
+          { typename: "Post" }, // missing id
         ],
         invalidations: [],
         metadata: { timestamp: Date.now() },

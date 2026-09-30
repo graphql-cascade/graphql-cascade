@@ -66,6 +66,20 @@ export function validateSchema(schema: GraphQLSchema): SchemaValidationResult {
     }
   }
 
+  // Cascade entries name their entity's type in `typename`
+  for (const typeName of ["UpdatedEntity", "DeletedEntity"]) {
+    const type = typeMap[typeName];
+    if (!type || !isObjectType(type)) continue;
+    const field = type.getFields().typename;
+    if (!field || String(field.type) !== "String!") {
+      errors.push({
+        code: "MISSING_TYPENAME_FIELD",
+        message: `${typeName} must have a typename: String! field`,
+        path: `${typeName}.typename`,
+      });
+    }
+  }
+
   // Check CascadeUpdates structure
   const cascadeUpdatesType = typeMap["CascadeUpdates"];
   if (cascadeUpdatesType && isObjectType(cascadeUpdatesType)) {

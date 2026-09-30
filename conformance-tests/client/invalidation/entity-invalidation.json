@@ -18,7 +18,7 @@
       ]
     },
     "cascade": {
-      "updated": [{ "__typename": "User", "id": "1", "name": "John Updated" }],
+      "updated": [{ "typename": "User", "id": "1", "name": "John Updated" }],
       "invalidations": [],
       "metadata": { "affectedCount": 1, "operationType": "UPDATE" }
     }

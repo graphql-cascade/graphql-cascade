@@ -55,7 +55,7 @@ mutation BatchUpdateTodos($updates: [TodoUpdate!]!) {
     }
     __cascade {
       # Single cascade for all updates
-      updated { __typename id }
+      updated { typename id }
     }
   }
 }
