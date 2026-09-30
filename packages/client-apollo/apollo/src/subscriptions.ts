@@ -1,5 +1,9 @@
 import { ApolloClient, DocumentNode, FetchResult } from "@apollo/client";
-import { CascadeUpdates, CascadeResponse } from "@graphql-cascade/client";
+import {
+  CascadeUpdates,
+  CascadeResponse,
+  cascadeEntryTypename,
+} from "@graphql-cascade/client";
 import { ApolloCascadeClient } from "./client";
 
 /**
@@ -213,10 +217,10 @@ export class CascadeSubscriptionManager {
       ...options,
       filter: (event) => {
         const hasMatchingUpdate = event.cascade.updated.some(
-          (u) => u.__typename === typename,
+          (u) => cascadeEntryTypename(u) === typename,
         );
         const hasMatchingDelete = event.cascade.deleted.some(
-          (d) => d.__typename === typename,
+          (d) => cascadeEntryTypename(d) === typename,
         );
 
         const matches = hasMatchingUpdate || hasMatchingDelete;
@@ -249,10 +253,10 @@ export class CascadeSubscriptionManager {
       ...options,
       filter: (event) => {
         const hasMatchingUpdate = event.cascade.updated.some(
-          (u) => u.__typename === typename && u.id === id,
+          (u) => cascadeEntryTypename(u) === typename && u.id === id,
         );
         const hasMatchingDelete = event.cascade.deleted.some(
-          (d) => d.__typename === typename && d.id === id,
+          (d) => cascadeEntryTypename(d) === typename && d.id === id,
         );
 
         const matches = hasMatchingUpdate || hasMatchingDelete;
@@ -349,7 +353,7 @@ export class CascadeSubscriptionManager {
           cascade: {
             updated: [
               {
-                __typename: entity.__typename as string,
+                typename: entity.__typename as string,
                 id: entity.id as string,
                 operation:
                   CascadeOperation.UPDATED as unknown as import("@graphql-cascade/client").CascadeOperation,

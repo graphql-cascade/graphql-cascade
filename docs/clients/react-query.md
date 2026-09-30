@@ -140,13 +140,13 @@ const CREATE_TODO = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           field
           value
         }
         deleted {
-          __typename
+          typename
           id
         }
         invalidations {

@@ -441,6 +441,23 @@ describe("CascadeBuilder", () => {
       consoleSpy.mockRestore();
     });
 
+    it("names each streamed entry's type in typename and __typename", () => {
+      tracker.startTransaction();
+      tracker.trackUpdate(new MockEntity(1, "Test"));
+      tracker.trackDelete("Gone", "2");
+
+      const response = streamingBuilder.buildStreamingResponse();
+
+      expect(response.cascade.updated[0]).toMatchObject({
+        typename: "MockEntity",
+        __typename: "MockEntity",
+      });
+      expect(response.cascade.deleted[0]).toMatchObject({
+        typename: "Gone",
+        __typename: "Gone",
+      });
+    });
+
     it("should compute invalidations in streaming mode", () => {
       tracker.startTransaction();
       tracker.trackUpdate(new MockEntity(1, "Test"));

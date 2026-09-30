@@ -114,8 +114,8 @@ mutation CreateTodo($input: CreateTodoInput!) {
     }
     __cascade {
       created { __typename id }
-      updated { __typename id }
-      deleted { __typename id }
+      updated { typename id }
+      deleted { typename id }
       invalidated { __typename field }
     }
   }

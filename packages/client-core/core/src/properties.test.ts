@@ -182,7 +182,7 @@ const entityDataArb = fc.oneof(
 
 // Generate updated entities
 const updatedEntityArb: fc.Arbitrary<UpdatedEntity> = fc.record({
-  __typename: entityTypeArb,
+  typename: entityTypeArb,
   id: entityIdArb,
   operation: fc.constantFrom(
     CascadeOperation.CREATED,
@@ -199,7 +199,7 @@ const updatedEntityArb: fc.Arbitrary<UpdatedEntity> = fc.record({
 
 // Generate deleted entities
 const deletedEntityArb: fc.Arbitrary<DeletedEntity> = fc.record({
-  __typename: entityTypeArb,
+  typename: entityTypeArb,
   id: entityIdArb,
   deletedAt: fc.date().map((d) => d.toISOString()),
 });
@@ -240,7 +240,7 @@ const cascadeMetadataArb: fc.Arbitrary<CascadeMetadata> = fc.record({
 function deduplicateEntities(entities: UpdatedEntity[]): UpdatedEntity[] {
   const seen = new Set<string>();
   return entities.filter((e) => {
-    const key = `${e.__typename}:${e.id}`;
+    const key = `${e.typename}:${e.id}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -253,7 +253,7 @@ function deduplicateDeletedEntities(
 ): DeletedEntity[] {
   const seen = new Set<string>();
   return entities.filter((e) => {
-    const key = `${e.__typename}:${e.id}`;
+    const key = `${e.typename}:${e.id}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -414,7 +414,7 @@ describe("Property-based tests for CascadeClient", () => {
 
             // Each entity should only appear once in the final cache state
             const uniqueKeys = new Set(
-              entities.map((e) => `${e.__typename}:${e.id}`),
+              entities.map((e) => `${e.typename}:${e.id}`),
             );
             const finalKeys = Array.from(cache.getStateSnapshot().keys());
 
@@ -441,7 +441,7 @@ describe("Property-based tests for CascadeClient", () => {
 
             // First write some entities
             const entitiesToDelete = deletions.map((d) => ({
-              __typename: d.__typename,
+              typename: d.typename,
               id: d.id,
               operation: CascadeOperation.CREATED as const,
               entity: { id: d.id, name: "test" },
@@ -485,7 +485,7 @@ describe("Property-based tests for CascadeClient", () => {
             // All entities should be deleted (even with duplicate delete operations)
             const remainingKeys = Array.from(cache.getStateSnapshot().keys());
             const expectedDeletedKeys = new Set(
-              deletions.map((d) => `${d.__typename}:${d.id}`),
+              deletions.map((d) => `${d.typename}:${d.id}`),
             );
 
             // None of the deleted entities should remain

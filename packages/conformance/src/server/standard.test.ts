@@ -16,7 +16,7 @@ function createMockServer() {
           success: true,
           data: { id: "1", name: variables.name, email: variables.email },
           cascade: {
-            updated: [{ __typename: "User", id: "1", operation: "CREATED" }],
+            updated: [{ typename: "User", id: "1", operation: "CREATED" }],
             deleted: [],
             invalidations: [],
             metadata: {
@@ -31,12 +31,12 @@ function createMockServer() {
 
       if (mutation === "createUserWithPosts") {
         const effectiveDepth = Math.min(depth, maxDepth);
-        const updated = [{ __typename: "User", id: "1", operation: "CREATED" }];
+        const updated = [{ typename: "User", id: "1", operation: "CREATED" }];
 
         if (effectiveDepth >= 2) {
           variables.posts.forEach((_: any, index: number) => {
             updated.push({
-              __typename: "Post",
+              typename: "Post",
               id: `${index + 1}`,
               operation: "CREATED",
             });
@@ -73,11 +73,11 @@ function createMockServer() {
 
       if (mutation === "createUserWithProfile") {
         const effectiveDepth = Math.min(depth, maxDepth);
-        const updated = [{ __typename: "User", id: "1", operation: "CREATED" }];
+        const updated = [{ typename: "User", id: "1", operation: "CREATED" }];
 
         if (effectiveDepth >= 2) {
           updated.push({
-            __typename: "Profile",
+            typename: "Profile",
             id: "1",
             operation: "CREATED",
           });
@@ -110,12 +110,12 @@ function createMockServer() {
 
       if (mutation === "createUserWithGroups") {
         const effectiveDepth = Math.min(depth, maxDepth);
-        const updated = [{ __typename: "User", id: "1", operation: "CREATED" }];
+        const updated = [{ typename: "User", id: "1", operation: "CREATED" }];
 
         if (effectiveDepth >= 2) {
           variables.groups.forEach((_: any, index: number) => {
             updated.push({
-              __typename: "Group",
+              typename: "Group",
               id: `${index + 1}`,
               operation: "CREATED",
             });
@@ -125,7 +125,7 @@ function createMockServer() {
         if (effectiveDepth >= 3) {
           variables.groups.forEach((_: any, index: number) => {
             updated.push({
-              __typename: "UserGroup",
+              typename: "UserGroup",
               id: `${index + 1}`,
               operation: "CREATED",
             });
@@ -162,8 +162,8 @@ function createMockServer() {
 
       if (mutation === "createUsersWithFriends") {
         const updated = [
-          { __typename: "User", id: "1", operation: "CREATED" },
-          { __typename: "User", id: "2", operation: "CREATED" },
+          { typename: "User", id: "1", operation: "CREATED" },
+          { typename: "User", id: "2", operation: "CREATED" },
         ];
 
         return {
@@ -185,8 +185,8 @@ function createMockServer() {
 
       if (mutation === "createCategoryTree") {
         const updated = [
-          { __typename: "Category", id: "1", operation: "CREATED" },
-          { __typename: "Category", id: "2", operation: "CREATED" },
+          { typename: "Category", id: "1", operation: "CREATED" },
+          { typename: "Category", id: "2", operation: "CREATED" },
         ];
 
         return {
@@ -211,26 +211,26 @@ function createMockServer() {
         const updated = [];
 
         if (effectiveDepth >= 1) {
-          updated.push({ __typename: "Post", id: "1", operation: "CREATED" });
+          updated.push({ typename: "Post", id: "1", operation: "CREATED" });
         }
 
         if (effectiveDepth >= 2) {
-          updated.push({ __typename: "User", id: "1", operation: "CREATED" }); // Author
+          updated.push({ typename: "User", id: "1", operation: "CREATED" }); // Author
         }
 
         if (effectiveDepth >= 3) {
           updated.push({
-            __typename: "Comment",
+            typename: "Comment",
             id: "1",
             operation: "CREATED",
           });
           updated.push({
-            __typename: "Comment",
+            typename: "Comment",
             id: "2",
             operation: "CREATED",
           });
-          updated.push({ __typename: "User", id: "2", operation: "CREATED" }); // Commenter 1
-          updated.push({ __typename: "User", id: "3", operation: "CREATED" }); // Commenter 2
+          updated.push({ typename: "User", id: "2", operation: "CREATED" }); // Commenter 1
+          updated.push({ typename: "User", id: "3", operation: "CREATED" }); // Commenter 2
         }
 
         // Check for partial success (invalid comment)
@@ -243,13 +243,13 @@ function createMockServer() {
           // Remove invalid comment from updates
           updated.splice(
             updated.findIndex(
-              (u: any) => u.__typename === "Comment" && u.id === "2",
+              (u: any) => u.typename === "Comment" && u.id === "2",
             ),
             1,
           );
           updated.splice(
             updated.findIndex(
-              (u: any) => u.__typename === "User" && u.id === "3",
+              (u: any) => u.typename === "User" && u.id === "3",
             ),
             1,
           );
@@ -287,9 +287,9 @@ function createMockServer() {
 
       if (mutation === "updatePostWithComments") {
         const updated = [
-          { __typename: "Post", id: variables.id, operation: "UPDATED" },
-          { __typename: "Comment", id: "comment-1", operation: "UPDATED" },
-          { __typename: "Comment", id: "comment-2", operation: "UPDATED" },
+          { typename: "Post", id: variables.id, operation: "UPDATED" },
+          { typename: "Comment", id: "comment-1", operation: "UPDATED" },
+          { typename: "Comment", id: "comment-2", operation: "UPDATED" },
         ];
 
         return {
@@ -311,15 +311,15 @@ function createMockServer() {
 
       if (mutation === "createDeepNested") {
         const effectiveDepth = Math.min(depth, maxDepth);
-        const updated = [{ __typename: "User", id: "1", operation: "CREATED" }];
+        const updated = [{ typename: "User", id: "1", operation: "CREATED" }];
 
         if (effectiveDepth >= 2) {
-          updated.push({ __typename: "Post", id: "1", operation: "CREATED" });
+          updated.push({ typename: "Post", id: "1", operation: "CREATED" });
         }
 
         if (effectiveDepth >= 3) {
           updated.push({
-            __typename: "Comment",
+            typename: "Comment",
             id: "1",
             operation: "CREATED",
           });
@@ -344,15 +344,15 @@ function createMockServer() {
 
       if (mutation === "createDeepCascade") {
         const effectiveDepth = Math.min(depth, maxDepth);
-        const updated = [{ __typename: "User", id: "1", operation: "CREATED" }];
+        const updated = [{ typename: "User", id: "1", operation: "CREATED" }];
 
         if (effectiveDepth >= 2) {
-          updated.push({ __typename: "Post", id: "1", operation: "CREATED" });
+          updated.push({ typename: "Post", id: "1", operation: "CREATED" });
         }
 
         if (effectiveDepth >= 3) {
           updated.push({
-            __typename: "Comment",
+            typename: "Comment",
             id: "1",
             operation: "CREATED",
           });
@@ -385,7 +385,7 @@ function createMockServer() {
             authorId: variables.authorId,
           },
           cascade: {
-            updated: [{ __typename: "Post", id: "1", operation: "CREATED" }],
+            updated: [{ typename: "Post", id: "1", operation: "CREATED" }],
             deleted: [],
             invalidations: [],
             metadata: {
@@ -410,7 +410,7 @@ function createMockServer() {
             : null,
           cascade: {
             updated: isValid
-              ? [{ __typename: "User", id: "1", operation: "CREATED" }]
+              ? [{ typename: "User", id: "1", operation: "CREATED" }]
               : [],
             deleted: [],
             invalidations: [],
@@ -429,7 +429,7 @@ function createMockServer() {
         success: true,
         data: { id: "1" },
         cascade: {
-          updated: [{ __typename: "Entity", id: "1", operation: "CREATED" }],
+          updated: [{ typename: "Entity", id: "1", operation: "CREATED" }],
           deleted: [],
           invalidations: [],
           metadata: {

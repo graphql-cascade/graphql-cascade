@@ -276,7 +276,8 @@ class CascadeTracker:
                 entity_dict = self._entity_to_dict(change.entity)
                 updated.append(
                     {
-                        "__typename": typename,
+                        "typename": typename,
+                        "__typename": typename,  # deprecated since spec 1.3.0
                         "id": entity_id,
                         "operation": change.operation,
                         "entity": entity_dict,
@@ -296,7 +297,8 @@ class CascadeTracker:
         for typename, entity_id in self.deleted_entities:
             deleted.append(
                 {
-                    "__typename": typename,
+                    "typename": typename,
+                    "__typename": typename,  # deprecated since spec 1.3.0
                     "id": entity_id,
                     "deletedAt": datetime.now(timezone.utc).isoformat(),
                 }

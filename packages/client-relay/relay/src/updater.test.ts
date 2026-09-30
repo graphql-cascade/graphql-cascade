@@ -54,7 +54,7 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.CREATED,
             entity: { name: "John", email: "john@example.com" },
@@ -88,7 +88,7 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "3",
             operation: CascadeOperation.CREATED,
             entity: { name: "Bob", email: "bob@example.com" },
@@ -126,7 +126,7 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "4",
             operation: CascadeOperation.DELETED,
             entity: { name: "Deleted User" },
@@ -159,7 +159,7 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "5",
             operation: CascadeOperation.UPDATED,
             entity: {
@@ -204,13 +204,13 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "6",
             operation: CascadeOperation.UPDATED,
             entity: { name: "User1", email: "user1@example.com" },
           },
           {
-            __typename: "Post",
+            typename: "Post",
             id: "10",
             operation: CascadeOperation.CREATED,
             entity: { title: "Post Title", content: "Post content" },
@@ -255,7 +255,7 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.UPDATED,
             entity: { name: "John", email: "john@example.com" },
@@ -289,7 +289,7 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "2",
             operation: CascadeOperation.UPDATED,
             entity: { name: "Jane", email: "jane@example.com" },
@@ -330,7 +330,7 @@ describe("createCascadeUpdater", () => {
         updated: [],
         deleted: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             deletedAt: "2023-01-01T00:00:00Z",
           },
@@ -363,7 +363,7 @@ describe("createCascadeUpdater", () => {
         updated: [],
         deleted: [
           {
-            __typename: "Post",
+            typename: "Post",
             id: "100",
             deletedAt,
           },
@@ -392,7 +392,7 @@ describe("createCascadeUpdater", () => {
         updated: [],
         deleted: [
           {
-            __typename: "User",
+            typename: "User",
             id: "999",
             deletedAt: "2023-01-01T00:00:00Z",
           },
@@ -419,7 +419,7 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.CREATED,
             entity: { name: "John" },
@@ -468,12 +468,10 @@ describe("createCascadeUpdater", () => {
       expect(mockRecord.setValue).not.toHaveBeenCalled();
     });
 
-    it("should handle malformed entity data - missing __typename gracefully", () => {
-      // This test verifies the current behavior - the code constructs recordId using entity.__typename
-      // If __typename is missing, it would cause issues, but we test that it doesn't crash
+    it("applies entries from pre-1.3 servers, which only send __typename", () => {
       mockStoreProxy.get.mockReturnValueOnce(mockRecord);
 
-      const cascade: CascadeUpdates = {
+      const cascade = {
         updated: [
           {
             __typename: "User",
@@ -490,7 +488,7 @@ describe("createCascadeUpdater", () => {
           depth: 1,
           affectedCount: 1,
         },
-      };
+      } as unknown as CascadeUpdates;
 
       const updater = createCascadeUpdater(cascade);
       expect(() => updater(mockStoreProxy as any)).not.toThrow();
@@ -506,7 +504,7 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "9",
             operation: CascadeOperation.UPDATED,
             entity: { name: "Test User 2" },
@@ -535,7 +533,7 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "missing",
             operation: CascadeOperation.UPDATED,
             entity: { name: "Missing User", status: "active" },
@@ -570,7 +568,7 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "10",
             operation: CascadeOperation.UPDATED,
             entity: {
@@ -608,7 +606,7 @@ describe("createCascadeUpdater", () => {
       const cascade: CascadeUpdates = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "11",
             operation: CascadeOperation.UPDATED,
             entity: {

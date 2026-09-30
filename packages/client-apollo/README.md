@@ -49,13 +49,13 @@ const result = await cascade.mutate(
         }
         cascade {
           updated {
-            __typename
+            typename
             id
             operation
             entity
           }
           deleted {
-            __typename
+            typename
             id
           }
           invalidations {
@@ -96,7 +96,7 @@ const TodoItem: React.FC<{ todo: Todo }> = ({ todo }) => {
           }
           cascade {
             updated {
-              __typename
+              typename
               id
               operation
               entity
@@ -219,7 +219,7 @@ const [updateUser, { loading, error }] = useCascadeMutation(
       cascade: {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: variables.id,
             operation: "UPDATED",
             entity: { name: variables.name },
@@ -308,13 +308,13 @@ const handle = subscriptionManager.subscribeToEntity(
       todoUpdated {
         cascade {
           updated {
-            __typename
+            typename
             id
             operation
             entity
           }
           deleted {
-            __typename
+            typename
             id
           }
           metadata {
@@ -609,7 +609,7 @@ const [updateTodo] = useCascadeMutation(UPDATE_TODO, {
     cascade: {
       updated: [
         {
-          __typename: "Todo",
+          typename: "Todo",
           id: variables.id,
           operation: "UPDATED",
           entity: { completed: !variables.completed },

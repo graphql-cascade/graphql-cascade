@@ -63,7 +63,7 @@ const result = await createTodo({ variables: { title: "New Todo" } });
 
 // Full type safety on cascade data
 result.data?.createTodo.cascade.updated.forEach((entity) => {
-  console.log(`Updated ${entity.__typename} with ID ${entity.id}`);
+  console.log(`Updated ${entity.typename} with ID ${entity.id}`);
 });
 ```
 
@@ -183,14 +183,14 @@ mutation CreateTodo($title: String!) {
     }
     cascade {
       updated {
-        __typename
+        typename
         id
         operation
         entity
         timestamp
       }
       deleted {
-        __typename
+        typename
         id
         timestamp
       }

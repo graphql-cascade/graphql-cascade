@@ -93,7 +93,7 @@ describe("URQLCascadeClient", () => {
       const cascade = createCascadeUpdates({
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.CREATED,
             entity: { name: "John" },
@@ -124,7 +124,7 @@ describe("URQLCascadeClient", () => {
       const cascade = createCascadeUpdates({
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.CREATED,
             entity: { name: "John" },
@@ -157,7 +157,7 @@ describe("URQLCascadeClient", () => {
       const cascade = createCascadeUpdates({
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.CREATED,
             entity: { name: "John" },
@@ -271,7 +271,7 @@ describe("URQLCascadeClient", () => {
           createCascadeUpdates({
             updated: [
               {
-                __typename: "User",
+                typename: "User",
                 id: response.id,
                 operation: CascadeOperation.CREATED,
                 entity: response,
@@ -283,7 +283,7 @@ describe("URQLCascadeClient", () => {
       const serverCascade = createCascadeUpdates({
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.CREATED,
             entity: { id: "1", name: "John" },
@@ -324,7 +324,7 @@ describe("URQLCascadeClient", () => {
           createCascadeUpdates({
             updated: [
               {
-                __typename: "User",
+                typename: "User",
                 id: "1",
                 operation: CascadeOperation.UPDATED,
                 entity: { id: "1", name: "Optimistic" },
@@ -363,7 +363,7 @@ describe("URQLCascadeClient", () => {
           createCascadeUpdates({
             updated: [
               {
-                __typename: "User",
+                typename: "User",
                 id: "new-1",
                 operation: CascadeOperation.CREATED,
                 entity: { id: "new-1", name: "New" },
@@ -394,13 +394,13 @@ describe("URQLCascadeClient", () => {
       const cascade = createCascadeUpdates({
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.CREATED,
             entity: { name: "John" },
           },
           {
-            __typename: "User",
+            typename: "User",
             id: "2",
             operation: CascadeOperation.UPDATED,
             entity: { name: "Jane" },
@@ -414,12 +414,32 @@ describe("URQLCascadeClient", () => {
       expect(cache.read("User", "2")?.name).toBe("Jane");
     });
 
+    it("applies entries from pre-1.3 servers, which only send __typename", () => {
+      cache.write("User", "2", { id: "2", name: "Gone" });
+      const cascade = createCascadeUpdates({
+        updated: [
+          {
+            __typename: "User",
+            id: "1",
+            operation: CascadeOperation.CREATED,
+            entity: { name: "John" },
+          },
+        ],
+        deleted: [{ __typename: "User", id: "2", deletedAt: "2024-01-01" }],
+      } as unknown as Partial<CascadeUpdates>);
+
+      client.applyCascade(cascade);
+
+      expect(cache.read("User", "1")?.name).toBe("John");
+      expect(cache.read("User", "2")).toBeNull();
+    });
+
     it("should evict deleted entities from cache", () => {
       cache.write("User", "1", { id: "1", name: "John" });
 
       const cascade = createCascadeUpdates({
         deleted: [
-          { __typename: "User", id: "1", deletedAt: new Date().toISOString() },
+          { typename: "User", id: "1", deletedAt: new Date().toISOString() },
         ],
       });
 
@@ -434,7 +454,7 @@ describe("URQLCascadeClient", () => {
       const cascade = createCascadeUpdates({
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.DELETED,
             entity: {},
@@ -455,13 +475,13 @@ describe("URQLCascadeClient", () => {
       const cascade = createCascadeUpdates({
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.CREATED,
             entity: { name: "John" },
           },
           {
-            __typename: "AuditLog",
+            typename: "AuditLog",
             id: "1",
             operation: CascadeOperation.CREATED,
             entity: { action: "create" },

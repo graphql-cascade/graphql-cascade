@@ -1,5 +1,5 @@
 import { gql, DocumentNode } from "@apollo/client";
-import { CascadeUpdates } from "@graphql-cascade/client";
+import { CascadeUpdates, cascadeEntryTypename } from "@graphql-cascade/client";
 
 /**
  * Fragment generation options
@@ -241,11 +241,11 @@ export class CascadeFragmentGenerator {
     const fragments = new Map<string, FragmentInfo>();
 
     for (const updated of cascade.updated) {
-      const { __typename, entity } = updated;
+      const typename = cascadeEntryTypename(updated);
 
-      if (!fragments.has(__typename)) {
-        const info = this.generateFragment(__typename, entity);
-        fragments.set(__typename, info);
+      if (!fragments.has(typename)) {
+        const info = this.generateFragment(typename, updated.entity);
+        fragments.set(typename, info);
       }
     }
 

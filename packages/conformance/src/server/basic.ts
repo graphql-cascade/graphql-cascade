@@ -124,7 +124,7 @@ function createEntityTrackingTests(): BasicTestCase[] {
       test: () => {
         const cascade = deleteResponse.data.deleteUser.cascade;
         const deletedEntity = cascade.deleted.find(
-          (entity: any) => entity.__typename === "User",
+          (entity: any) => entity.typename === "User",
         );
         const hasDeletedAt = deletedEntity && deletedEntity.deletedAt;
         return {
@@ -137,21 +137,20 @@ function createEntityTrackingTests(): BasicTestCase[] {
       },
     },
     {
-      name: "Correct __typename",
+      name: "Correct typename",
       category: "Entity Tracking",
       test: () => {
         const cascade = successResponse.data.createUser.cascade;
         const hasCorrectTypename = cascade.updated.every(
           (entity: any) =>
-            entity.__typename === "UpdatedEntity" &&
-            entity.entity.__typename === "User",
+            entity.typename === "User" && entity.entity.__typename === "User",
         );
         return {
-          name: "Correct __typename",
+          name: "Correct typename",
           passed: hasCorrectTypename,
           message: hasCorrectTypename
-            ? "All entities have correct __typename"
-            : "Some entities missing or incorrect __typename",
+            ? "All entries name their entity's type in typename"
+            : "Some entries missing or incorrect typename",
         };
       },
     },

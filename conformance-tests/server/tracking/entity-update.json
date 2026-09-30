@@ -31,7 +31,7 @@
     "cascade": {
       "updated": [
         {
-          "__typename": "User",
+          "typename": "User",
           "id": "user_123",
           "name": "Jane Doe",
           "email": "jane@example.com"

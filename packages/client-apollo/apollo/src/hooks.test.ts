@@ -20,7 +20,7 @@ const mockCascadeResponse: CascadeResponse = {
   cascade: {
     updated: [
       {
-        __typename: "User",
+        typename: "User",
         id: "1",
         operation: CascadeOperation.CREATED,
         entity: {
@@ -169,7 +169,7 @@ describe("ApolloCascadeClient integration with hooks", () => {
         data: null,
         cascade: {
           updated: [],
-          deleted: [{ __typename: "User", id: "1", deletedAt: "2024-01-01" }],
+          deleted: [{ typename: "User", id: "1", deletedAt: "2024-01-01" }],
           invalidations: [],
           metadata: { timestamp: "2024-01-01", depth: 1, affectedCount: 1 },
         },

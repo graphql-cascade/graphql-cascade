@@ -17,7 +17,7 @@
   "expected": {
     "cascade": {
       "updated": [
-        { "__typename": "User", "id": "1", "name": "New Name" }
+        { "typename": "User", "id": "1", "name": "New Name" }
       ],
       "invalidations": [],
       "metadata": {

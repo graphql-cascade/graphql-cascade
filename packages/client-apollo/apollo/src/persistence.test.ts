@@ -264,7 +264,7 @@ describe("CascadeCachePersistence", () => {
       const cascade = {
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.UPDATED,
             entity: { id: "1", name: "John" },
@@ -336,7 +336,7 @@ describe("CascadeCachePersistence", () => {
       persistence.recordCascade({
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "1",
             operation: CascadeOperation.UPDATED,
             entity: { id: "1" },
@@ -354,7 +354,7 @@ describe("CascadeCachePersistence", () => {
       persistence.recordCascade({
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "2",
             operation: CascadeOperation.UPDATED,
             entity: { id: "2" },
@@ -372,7 +372,7 @@ describe("CascadeCachePersistence", () => {
       persistence.recordCascade({
         updated: [
           {
-            __typename: "User",
+            typename: "User",
             id: "3",
             operation: CascadeOperation.UPDATED,
             entity: { id: "3" },

@@ -36,7 +36,7 @@
     "cascade": {
       "updated": [
         {
-          "__typename": "Post",
+          "typename": "Post",
           "id": "post_456",
           "title": "Updated Title",
           "authorId": "user_123"

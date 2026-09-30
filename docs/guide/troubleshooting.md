@@ -329,7 +329,7 @@ const optimisticResponse = {
     success: true,
     data: { id: '1', name: 'Updated', __typename: 'User' },
     cascade: {
-      updated: [{ __typename: 'User', id: '1', operation: 'UPDATED', entity: { name: 'Updated' } }],
+      updated: [{ typename: 'User', id: '1', operation: 'UPDATED', entity: { name: 'Updated' } }],
       deleted: [],
       invalidations: [],
       metadata: { timestamp: new Date().toISOString(), affectedCount: 1 }
@@ -522,7 +522,7 @@ console.log('Construction time:', response.cascade.metadata.constructionTime, 'm
 ```typescript
 // Jest example
 const mockCascade = {
-  updated: [{ __typename: 'User', id: '1', operation: 'UPDATED', entity: { name: 'Test' } }],
+  updated: [{ typename: 'User', id: '1', operation: 'UPDATED', entity: { name: 'Test' } }],
   deleted: [],
   invalidations: [],
   metadata: { timestamp: new Date().toISOString(), affectedCount: 1 }

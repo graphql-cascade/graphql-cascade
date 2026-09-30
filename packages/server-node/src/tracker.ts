@@ -698,6 +698,7 @@ export class CascadeTracker implements EntityChangeIterator {
 
         const entityDict = this.entityToDict(entity);
         updated.push({
+          typename,
           __typename: typename,
           id: entityId,
           operation: change.operation,
@@ -750,6 +751,7 @@ export class CascadeTracker implements EntityChangeIterator {
 
         const entityDict = this.entityToDict(entity);
         updated.push({
+          typename,
           __typename: typename,
           id: entityId,
           operation: change.operation,
@@ -825,6 +827,7 @@ export class CascadeTracker implements EntityChangeIterator {
     for (const key of this.deletedEntities) {
       const [typename, entityId] = key.split(":");
       deleted.push({
+        typename,
         __typename: typename,
         id: entityId,
         deletedAt: new Date().toISOString(),

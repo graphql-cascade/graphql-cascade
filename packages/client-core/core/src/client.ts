@@ -8,6 +8,22 @@ import {
 } from "./types";
 
 /**
+ * Type name of a `cascade.updated` or `cascade.deleted` entry. Reads
+ * `typename`, falling back to the `__typename` that servers before
+ * specification 1.3.0 send instead.
+ */
+export function cascadeEntryTypename(entry: {
+  typename?: string;
+  __typename?: string;
+}): string {
+  const typename = entry.typename ?? entry.__typename;
+  if (typename === undefined) {
+    throw new TypeError("Cascade entry has neither typename nor __typename");
+  }
+  return typename;
+}
+
+/**
  * Apply type invalidations to a cache. Uses the cache's `invalidateType`
  * when available; otherwise invalidates every query once, which is always
  * correct, only less precise.
@@ -57,13 +73,13 @@ export class CascadeClient {
     }
 
     // 2. Apply all updates
-    cascade.updated.forEach(({ __typename, id, entity }) => {
-      this.cache.write(__typename, id, entity);
+    cascade.updated.forEach((entry) => {
+      this.cache.write(cascadeEntryTypename(entry), entry.id, entry.entity);
     });
 
     // 3. Handle deletions
-    cascade.deleted.forEach(({ __typename, id }) => {
-      this.cache.evict(__typename, id);
+    cascade.deleted.forEach((entry) => {
+      this.cache.evict(cascadeEntryTypename(entry), entry.id);
     });
 
     // 4. Process invalidations

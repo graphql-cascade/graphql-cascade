@@ -58,8 +58,8 @@ const CREATE_TODO = gql`
       }
       __cascade {
         created { __typename id }
-        updated { __typename id }
-        deleted { __typename id }
+        updated { typename id }
+        deleted { typename id }
         invalidated { __typename field }
       }
     }
@@ -200,11 +200,11 @@ const [deleteProject] = useMutation(DELETE_PROJECT, {
 
     // Cascade removes the project automatically
     // Manually clean up related data
-    cascade.deleted.forEach(({ __typename, id }) => {
-      if (__typename === 'Project') {
+    cascade.deleted.forEach(({ typename, id }) => {
+      if (typename === 'Project') {
         // Evict all related queries
         cache.evict({
-          id: cache.identify({ __typename, id }),
+          id: cache.identify({ __typename: typename, id }),
           broadcast: false
         });
 
@@ -261,8 +261,8 @@ const CREATE_TODO: TypedDocumentNode<CreateTodoMutation, CreateTodoVariables> = 
       todo { id title completed }
       __cascade {
         created { __typename id }
-        updated { __typename id }
-        deleted { __typename id }
+        updated { typename id }
+        deleted { typename id }
         invalidated { __typename field }
       }
     }

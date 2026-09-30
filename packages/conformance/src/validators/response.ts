@@ -20,6 +20,26 @@ const STANDARD_ERROR_CODES = new Set([
 const DOMAIN_CODE_PATTERN = /^[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*$/;
 
 /**
+ * Cascade entries name their entity's type in `typename`. The `__typename`
+ * that earlier versions used is deprecated, and inside GraphQL execution it
+ * resolves to the wrapper type, so it never stands in for `typename`.
+ */
+function missingTypename(
+  kind: string,
+  path: string,
+  entry: Record<string, unknown>,
+): ValidationError {
+  const hint = entry.__typename
+    ? " (__typename is deprecated since specification 1.3.0)"
+    : "";
+  return {
+    code: "MISSING_TYPENAME",
+    message: `${kind} must have typename${hint}`,
+    path: `${path}.typename`,
+  };
+}
+
+/**
  * A QueryInvalidation needs a known strategy and scope, plus whatever its
  * scope matches on: queryName (or queryHash, for EXACT) or queryPattern.
  */
@@ -211,12 +231,10 @@ export function validateResponse(
       cascade.updated.forEach((entity: unknown, i: number) => {
         if (!entity || typeof entity !== "object") return;
         const e = entity as Record<string, unknown>;
-        if (!e.__typename) {
-          errors.push({
-            code: "MISSING_TYPENAME",
-            message: "UpdatedEntity must have __typename",
-            path: `cascade.updated[${i}].__typename`,
-          });
+        if (!e.typename) {
+          errors.push(
+            missingTypename("UpdatedEntity", `cascade.updated[${i}]`, e),
+          );
         }
         if (!e.id) {
           errors.push({
@@ -246,12 +264,10 @@ export function validateResponse(
       cascade.deleted.forEach((entity: unknown, i: number) => {
         if (!entity || typeof entity !== "object") return;
         const e = entity as Record<string, unknown>;
-        if (!e.__typename) {
-          errors.push({
-            code: "MISSING_TYPENAME",
-            message: "DeletedEntity must have __typename",
-            path: `cascade.deleted[${i}].__typename`,
-          });
+        if (!e.typename) {
+          errors.push(
+            missingTypename("DeletedEntity", `cascade.deleted[${i}]`, e),
+          );
         }
         if (!e.id) {
           errors.push({
