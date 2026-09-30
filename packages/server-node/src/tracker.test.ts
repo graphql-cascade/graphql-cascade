@@ -88,6 +88,46 @@ describe("CascadeTracker", () => {
     });
   });
 
+  describe("Checkpoints", () => {
+    it("restores the tracked changes recorded at a checkpoint", () => {
+      tracker.startTransaction();
+      tracker.trackUpdate({ __typename: "User", id: "1" });
+      const checkpoint = tracker.checkpoint();
+
+      tracker.trackUpdate({ __typename: "User", id: "2" });
+      tracker.trackDelete("User", "1");
+      tracker.restore(checkpoint);
+
+      const result = tracker.endTransaction();
+      expect(result.updated.map((e) => e.id)).toEqual(["1"]);
+      expect(result.deleted).toEqual([]);
+    });
+
+    it("lets an entity be tracked again after restoring", () => {
+      tracker.startTransaction();
+      const checkpoint = tracker.checkpoint();
+      tracker.trackUpdate({ __typename: "User", id: "1", name: "Failed" });
+      tracker.restore(checkpoint);
+
+      tracker.trackUpdate({ __typename: "User", id: "1", name: "Kept" });
+
+      expect(tracker.endTransaction().updated[0].entity).toMatchObject({
+        name: "Kept",
+      });
+    });
+
+    it("restores entities dropped by the entity limit", () => {
+      const limited = new CascadeTracker({ maxEntities: 1 });
+      limited.startTransaction();
+      limited.trackUpdate({ __typename: "User", id: "1" });
+      const checkpoint = limited.checkpoint();
+      limited.trackUpdate({ __typename: "Post", id: "2" });
+      limited.restore(checkpoint);
+
+      expect(limited.endTransaction().overflow).toEqual({});
+    });
+  });
+
   describe("Entity Tracking - Create", () => {
     it("should track entity creation", () => {
       tracker.startTransaction();
