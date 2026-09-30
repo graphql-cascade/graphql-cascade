@@ -1,39 +1,10 @@
-# GraphQL Cascade Documentation
+# Documentation Site
 
-Welcome to the GraphQL Cascade documentation!
+Source of the GraphQL Cascade documentation site, built with [VitePress](https://vitepress.dev).
 
-## Quick Links
+```bash
+pnpm --filter @graphql-cascade/docs run dev     # local preview
+pnpm --filter @graphql-cascade/docs run build   # static build in .vitepress/dist
+```
 
-- [Getting Started](./getting-started/)
-- [Guides](./guides/)
-- [Tutorials](./tutorials/)
-- [Architecture](./architecture/)
-- [API Reference](./api/)
-- [Server Documentation](./server/)
-- [Client Documentation](./clients/)
-- [CLI Tools](./cli/)
-- [Specification](./specification/)
-
-## About
-
-GraphQL Cascade provides automatic, intelligent cache invalidation that cascades through your entire data graph. When you mutate data, related cache entries are automatically invalidated and refetched, ensuring your UI stays consistent without manual cache management.
-
-## Documentation Structure
-
-- **Getting Started**: Quick start guides and installation instructions
-- **Guides**: In-depth guides for various use cases
-- **Tutorials**: Step-by-step tutorials with examples
-- **Architecture**: Technical design and implementation details
-- **API Reference**: Complete API documentation for all packages
-- **Server**: Server-side implementation guides
-- **Clients**: Client library documentation (Apollo, React Query, Relay, urQL)
-- **CLI**: Command-line tools documentation
-- **Specification**: Technical specification (version in `specification/VERSION`)
-
-## Contributing
-
-See our [contribution guide](../CONTRIBUTING.md) for information on how to contribute to GraphQL Cascade.
-
-## License
-
-MIT License - see [LICENSE](../LICENSE) for details.
+`pnpm run check:spec` checks the code in these pages against the packages and the reference schema.

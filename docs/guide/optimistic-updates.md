@@ -1,262 +1,71 @@
 # Optimistic Updates
 
-Provide instant UI feedback while mutations are in flight.
+An optimistic update shows a mutation's result before the server answers. With Cascade, you describe it as a cascade: the same `CascadeResponse` the server will send, built on the client from the mutation's variables. The client library applies it at once, replaces it with the server's cascade when the response arrives, and restores the previous data if the mutation fails.
 
-## Overview
+The specification's [Optimistic Updates](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/14_optimistic_updates.md) chapter defines the protocol.
 
-Optimistic updates let you update the UI immediately when a user performs an action, before waiting for the server response. GraphQL Cascade makes optimistic updates simple by predicting what the cascade will be.
+## Building an Optimistic Cascade
 
-## Basic Optimistic Updates
+List what you expect the server to change. For toggling a todo:
 
 ```typescript
-const [createTodo] = useMutation(CREATE_TODO, {
-  optimisticResponse: ({ title }) => ({
-    createTodo: {
-      __typename: 'TodoMutationResponse',
-      todo: {
-        __typename: 'Todo',
-        id: 'temp-' + Date.now(),
-        title,
-        completed: false,
-      },
-      __cascade: {
-        created: [{ __typename: 'Todo', id: 'temp-' + Date.now() }],
-        updated: [],
-        deleted: [],
-        invalidated: []
-      }
-    }
-  })
-});
-```
+import {
+  CascadeOperation,
+  type CascadeResponse,
+} from "@graphql-cascade/client";
 
-When the user creates a todo:
-1. UI updates instantly with the optimistic data
-2. Server processes the mutation
-3. Real response replaces the optimistic data
-4. UI reconciles (usually no visible change)
-
-## Optimistic Cascade Prediction
-
-The key to successful optimistic updates is predicting the cascade accurately:
-
-### Create Operations
-```typescript
-{
-  created: [{ __typename: 'Todo', id: 'temp-id' }],
-  updated: [],
-  deleted: [],
-  invalidated: []
+function toggleTodoOptimistic(todo: { id: string; completed: boolean }): CascadeResponse {
+  const entity = { __typename: "Todo", id: todo.id, completed: !todo.completed };
+  return {
+    success: true,
+    data: entity,
+    cascade: {
+      updated: [
+        { typename: "Todo", id: todo.id, operation: CascadeOperation.UPDATED, entity },
+      ],
+      deleted: [],
+      invalidations: [],
+      metadata: { timestamp: new Date().toISOString(), depth: 1, affectedCount: 1 },
+    },
+  };
 }
 ```
 
-### Update Operations
-```typescript
-{
-  created: [],
-  updated: [{ __typename: 'Todo', id: '123' }],
-  deleted: [],
-  invalidated: []
-}
-```
+Predict only what the client can know: the fields the user changed, and the entities they obviously affect, such as a counter on the owner. The server's cascade corrects anything else when it arrives.
 
-### Delete Operations
-```typescript
-{
-  created: [],
-  updated: [],
-  deleted: [{ __typename: 'Todo', id: '123' }],
-  invalidated: []
-}
-```
+## Creating Entities
 
-## Complex Optimistic Updates
+A created entity needs an ID before the server assigns one. Two approaches:
 
-For mutations that affect multiple entities:
+- **Client-generated IDs.** If your API accepts an ID in the create input, generate a UUID on the client and use it in both the optimistic cascade and the mutation. The optimistic entity and the server's are then the same record, and nothing needs replacing. This fits schemas whose public IDs are UUIDs.
+- **Temporary IDs.** Use a placeholder such as `temp-1`. Apollo drops the placeholder with its optimistic layer when the response arrives; with React Query, urql and `OptimisticCascadeClient`, the placeholder entity stays in the cache until evicted, so evict it yourself after the mutation succeeds.
 
-```typescript
-const [assignTask] = useMutation(ASSIGN_TASK, {
-  optimisticResponse: ({ taskId, userId }) => ({
-    assignTask: {
-      __typename: 'AssignTaskResponse',
-      task: {
-        __typename: 'Task',
-        id: taskId,
-        assignee: {
-          __typename: 'User',
-          id: userId,
-        }
-      },
-      __cascade: {
-        created: [],
-        updated: [
-          { __typename: 'Task', id: taskId },
-          { __typename: 'User', id: userId }
-        ],
-        deleted: [],
-        invalidated: [
-          { __typename: 'Query', field: 'unassignedTasks' }
-        ]
-      }
-    }
-  })
+## In Each Library
+
+| Library | Optimistic API | Rollback |
+|---------|----------------|----------|
+| [Apollo](/clients/apollo#optimistic-cascades) | `useCascadeMutation(mutation, { optimistic: true, optimisticCascadeResponse })` | The cascade lives in its own optimistic layer, removed when the mutation settles |
+| [React Query](/clients/react-query#mutations) | `useOptimisticCascadeMutation(client, mutation, variables => response)` | The entities' previous fields are written back if the mutation throws |
+| [urql](/clients/urql#urqlcascadeclient) | `cascadeClient.mutateOptimistic(mutation, variables, { optimisticResponse, optimisticCascade })` | The entities' previous state is restored unless the mutation succeeds |
+| [Relay](/clients/relay) | Relay's own `optimisticResponse` / `optimisticUpdater` | Relay discards optimistic updates when the mutation settles |
+| Any `CascadeCache` | `OptimisticCascadeClient.mutateOptimistic(mutation, variables, response)` | The entities' previous state is restored if the mutation throws |
+
+For example, with Apollo:
+
+```tsx
+import { useCascadeMutation } from "@graphql-cascade/apollo";
+
+const [toggleTodo] = useCascadeMutation(TOGGLE_TODO, {
+  optimistic: true,
+  optimisticCascadeResponse: () => toggleTodoOptimistic(todo),
 });
 ```
 
-## Rollback on Error
+## When Server Data Differs
 
-If the mutation fails, Cascade automatically rolls back the optimistic update:
-
-```typescript
-try {
-  await createTodo({ variables: { title: 'New todo' } });
-} catch (error) {
-  // Optimistic update is automatically rolled back
-  // UI returns to pre-mutation state
-  console.error('Failed to create todo:', error);
-}
-```
-
-## Best Practices
-
-### 1. Keep Optimistic Data Minimal
-Only include fields that are displayed in the UI:
-
-```typescript
-// Good: Only what's shown
-optimisticResponse: {
-  createTodo: {
-    todo: {
-      id: 'temp-id',
-      title: 'New todo',
-      completed: false,
-    }
-  }
-}
-
-// Avoid: Extra fields not used
-optimisticResponse: {
-  createTodo: {
-    todo: {
-      id: 'temp-id',
-      title: 'New todo',
-      completed: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      metadata: { /* ... */ }
-    }
-  }
-}
-```
-
-### 2. Use Temporary IDs
-Generate unique temporary IDs for created entities:
-
-```typescript
-id: 'temp-' + Date.now() + '-' + Math.random()
-```
-
-### 3. Predict Cascades Accurately
-If your optimistic cascade doesn't match the real cascade, the UI may flicker:
-
-```typescript
-// If server also updates related entities, include them:
-__cascade: {
-  created: [{ __typename: 'Todo', id: 'temp-id' }],
-  updated: [
-    { __typename: 'TodoList', id: listId },
-    { __typename: 'User', id: userId }
-  ],
-  deleted: [],
-  invalidated: []
-}
-```
-
-### 4. Handle Loading States
-Show loading indicators for complex operations:
-
-```typescript
-const [createTodo, { loading }] = useMutation(CREATE_TODO);
-
-return (
-  <button onClick={handleCreate} disabled={loading}>
-    {loading ? 'Creating...' : 'Create Todo'}
-  </button>
-);
-```
-
-## Framework-Specific Examples
-
-### Apollo Client
-```typescript
-import { useMutation } from '@apollo/client';
-
-const [createTodo] = useMutation(CREATE_TODO, {
-  optimisticResponse: /* ... */
-});
-```
-
-### React Query
-```typescript
-import { useMutation } from '@tanstack/react-query';
-
-const mutation = useMutation({
-  mutationFn: createTodo,
-  optimisticUpdate: /* ... */
-});
-```
-
-### Relay
-```typescript
-import { useMutation } from 'react-relay';
-
-const [commit] = useMutation(CREATE_TODO);
-
-commit({
-  variables: { title: 'New todo' },
-  optimisticResponse: /* ... */
-});
-```
-
-## Testing Optimistic Updates
-
-Test both success and failure scenarios:
-
-```typescript
-test('optimistic update shows immediately', async () => {
-  const { getByText, getByPlaceholderText } = render(<TodoApp />);
-
-  // User creates a todo
-  const input = getByPlaceholderText('New todo...');
-  fireEvent.change(input, { target: { value: 'Test todo' } });
-  fireEvent.submit(input.closest('form'));
-
-  // Should appear immediately (optimistic)
-  expect(getByText('Test todo')).toBeInTheDocument();
-});
-
-test('optimistic update rolls back on error', async () => {
-  // Mock server error
-  server.use(
-    graphql.mutation('CreateTodo', (req, res, ctx) => {
-      return res(ctx.errors([{ message: 'Server error' }]));
-    })
-  );
-
-  const { getByText, queryByText } = render(<TodoApp />);
-
-  // Create todo
-  // ... trigger mutation ...
-
-  // Wait for error
-  await waitFor(() => {
-    expect(queryByText('Test todo')).not.toBeInTheDocument();
-  });
-});
-```
+If the server's entity differs from the optimistic one, for example because another user changed it meanwhile, the server's data wins by default. Apollo's `useCascadeMutation` takes a `conflictResolution` option to choose otherwise; see [Conflict Resolution](/guide/conflict-resolution).
 
 ## Next Steps
 
-- **[Conflict Resolution](/guide/conflict-resolution)** - Handle concurrent updates
-- **[Performance](/guide/performance)** - Optimize cascade processing
-- **[Client Integration](/clients/)** - Framework-specific patterns
+- **[Conflict Resolution](/guide/conflict-resolution)**
+- **[Client Libraries](/clients/)**

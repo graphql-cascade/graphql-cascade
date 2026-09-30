@@ -1,198 +1,111 @@
-# GraphQL Cascade Operations Runbook
+# Operations Runbook
 
-## Overview
+Running `@graphql-cascade/server` in production.
 
-This runbook provides guidance for operating GraphQL Cascade in production environments.
+## Metrics
 
-## Monitoring
+Give trackers a `DefaultMetricsCollector` and expose `exportPrometheusMetrics(metrics)` on a metrics endpoint (see [Observability](/server/node#observability)). It exports:
 
-### Key Metrics
+| Metric | Type | Watch for |
+|--------|------|-----------|
+| `cascade_transactions_started_total`, `_completed_total`, `_failed_total` | Counters | Failures: tracking or building errors |
+| `cascade_entities_tracked_total` | Counter | Growth out of line with traffic |
+| `cascade_entities_truncated_total` | Counter | Frequent truncation: limits too low, or traversal too wide |
+| `cascade_active_transactions` | Gauge | A value that keeps rising: transactions started and never ended |
+| `cascade_tracking_duration_ms`, `cascade_construction_duration_ms` | Summaries (p50, p95, p99) | Slow tracking: deep or wide relationship traversal |
+| `cascade_response_size` | Summary | Payloads approaching `maxResponseSizeMb` |
 
-| Metric | Warning | Critical | Action |
-|--------|---------|----------|--------|
-| `cascade_tracking_duration_ms{quantile="0.99"}` | >100ms | >500ms | Review maxDepth, check for complex entity graphs |
-| `cascade_response_size{quantile="0.99"}` | >100KB | >1MB | Enable truncation, review maxEntities limits |
-| `cascade_transactions_failed_total` (rate) | >1% | >5% | Check error logs, review entity serialization |
-| `cascade_entities_truncated_total` (rate) | >10% | >25% | Increase limits or optimize queries |
-| `cascade_active_transactions` | >100 | >500 | Check for transaction leaks, review concurrency |
-
-### Example Prometheus Alert Rules
+Example alerts:
 
 ```yaml
-# prometheus/alerts/cascade.yml
 groups:
   - name: graphql-cascade
     rules:
-      - alert: CascadeHighLatency
-        expr: |
-          histogram_quantile(0.99,
-            rate(cascade_tracking_duration_ms_bucket[5m])
-          ) > 500
+      - alert: CascadeSlowTracking
+        expr: cascade_tracking_duration_ms{quantile="0.99"} > 500
         for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High cascade tracking latency (p99 > 500ms)"
-          runbook_url: "https://docs.example.com/runbook#high-latency"
-
-      - alert: CascadeHighErrorRate
-        expr: |
-          rate(cascade_transactions_failed_total[5m]) /
-          rate(cascade_transactions_started_total[5m]) > 0.05
+      - alert: CascadeFailures
+        expr: rate(cascade_transactions_failed_total[5m]) / rate(cascade_transactions_started_total[5m]) > 0.05
         for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Cascade error rate > 5%"
-
       - alert: CascadeTransactionLeak
         expr: cascade_active_transactions > 100
         for: 10m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Possible transaction leak - active transactions stuck high"
 ```
 
-### Grafana Dashboard
+`createHealthCheck(metrics)` returns `healthy`, `degraded` or `unhealthy` from the same metrics, for a health endpoint.
 
-See `examples/grafana-dashboard.json` for a pre-built dashboard including:
-- Transaction rate and error rate
-- Latency percentiles (p50, p95, p99)
-- Entity counts and truncation rate
-- Active transactions gauge
+## Symptoms
 
-## Troubleshooting
+### Slow Mutations
 
-### Symptom: Cascade responses are slow
+Tracking time grows with relationship traversal. Lower `maxDepth` or `maxRelatedPerEntity`, exclude types no query reads with `excludeTypes`, or turn off `enableRelationshipTracking` for bulk mutations and hint their lists instead.
 
-**Diagnosis:**
-1. Check `cascade.metadata.trackingTime` in responses
-2. Review `maxDepth` configuration - deep traversals are expensive
-3. Look for entities with many relationships
+### Active Transactions Keep Rising
 
-**Resolution:**
+A transaction was started and never ended, usually on an error path. Build a response on every path, `buildErrorResponse` included, or call `resetTransactionState()`:
+
 ```typescript
-// Reduce depth for faster responses
-const tracker = new CascadeTracker({
-  maxDepth: 2,  // Reduce from default 3
-  maxRelatedPerEntity: 50  // Limit breadth
-});
-```
+import { CascadeErrorCode } from "@graphql-cascade/server";
 
-### Symptom: Memory usage increasing over time
-
-**Diagnosis:**
-1. Check for transaction leaks (transactions started but never ended)
-2. Review entity limits - large entities consume memory
-3. Check for circular references in entity graphs
-
-**Resolution:**
-```typescript
-// Ensure transactions are always ended
+tracker.startTransaction();
 try {
-  tracker.startTransaction();
-  // ... mutations
+  const result = await runMutation(tracker);
   return builder.buildResponse(result);
 } catch (error) {
-  tracker.resetTransactionState();  // Clean up on error
-  throw error;
+  logger.error(error);
+  return builder.buildErrorResponse([
+    { message: "Internal error", code: CascadeErrorCode.INTERNAL_ERROR },
+  ]);
 }
 ```
 
-### Symptom: Entities missing from cascade
+Use one tracker per mutation; the integrations create one per request.
 
-**Diagnosis:**
-1. Check if type is in `excludeTypes`
-2. Verify entity has `id` and `__typename`
-3. Check if entity limit was reached (`metadata.truncatedUpdated`)
-4. Enable debug logging
+### Truncation Is Frequent
 
-**Resolution:**
+`metadata.truncated` is `true` and `cascade_entities_truncated_total` climbs. Clients stay correct, invalidating the truncated types, but refetch more. Raise the builder limits if payload size allows, or reduce what is tracked.
+
+### Clients Show Stale Data
+
+See [Troubleshooting](/guide/troubleshooting#the-cache-doesn-t-update): usually fields missing from the mutation's `entity` selection, or lists without invalidation hints.
+
+## Emergency Measures
+
+### Shed Tracking Load
+
+Read limits from the environment so they can be lowered without a release:
+
 ```typescript
 const tracker = new CascadeTracker({
-  debug: true,  // Enable logging
-  maxEntities: 2000  // Increase if needed
+  maxDepth: Number(process.env.CASCADE_MAX_DEPTH ?? 3),
+  maxEntities: Number(process.env.CASCADE_MAX_ENTITIES ?? 1000),
+  enableRelationshipTracking: process.env.CASCADE_RELATIONSHIPS !== "off",
 });
 ```
 
-### Symptom: Client cache not updating
+Lower limits produce more truncation, which clients handle by invalidating types.
 
-**Diagnosis:**
-1. Verify cascade data in network response
-2. Check entity `__typename` matches schema exactly
-3. Check entity `id` format matches cache key
-4. Enable client debug logging
+### Turn Tracking Off
 
-**Resolution:**
-- Ensure `__typename` is consistent between queries and cascade
-- Verify ID serialization (string vs number)
-
-## Emergency Procedures
-
-### Disable Cascade (Feature Flag)
+Never answer with an empty cascade to save work: an empty cascade tells clients nothing changed, and their caches go stale. To stop tracking entirely, tell clients to invalidate everything:
 
 ```typescript
-const ENABLE_CASCADE = process.env.ENABLE_CASCADE !== 'false';
+import { InvalidationScope, InvalidationStrategy } from "@graphql-cascade/server";
 
-// In your middleware/resolver
-if (!ENABLE_CASCADE) {
+if (process.env.CASCADE_TRACKING === "off") {
   return {
     success: true,
+    errors: [],
     data: result,
     cascade: {
       updated: [],
       deleted: [],
-      invalidations: [],
-      metadata: { timestamp: new Date().toISOString(), depth: 0, affectedCount: 0 }
-    }
+      invalidations: [{ strategy: InvalidationStrategy.INVALIDATE, scope: InvalidationScope.ALL }],
+      typeInvalidations: [],
+      metadata: { timestamp: new Date().toISOString(), depth: 0, affectedCount: 0, truncated: true },
+    },
   };
 }
 ```
 
-### Reduce Cascade Scope (Runtime)
-
-```bash
-# Environment variables for emergency throttling
-export CASCADE_MAX_DEPTH=1
-export CASCADE_MAX_ENTITIES=50
-export CASCADE_DISABLE_RELATIONSHIPS=true
-```
-
-```typescript
-// Read from environment
-const tracker = new CascadeTracker({
-  maxDepth: parseInt(process.env.CASCADE_MAX_DEPTH ?? '3'),
-  maxEntities: parseInt(process.env.CASCADE_MAX_ENTITIES ?? '1000'),
-  enableRelationshipTracking: process.env.CASCADE_DISABLE_RELATIONSHIPS !== 'true'
-});
-```
-
-### Graceful Degradation
-
-Cascade is backward compatible. Clients receiving empty or minimal cascade data will:
-- Continue to function normally
-- Fall back to refetching queries if cache is stale
-- Not experience errors (cascade is additive optimization)
-
-## Capacity Planning
-
-### Memory Usage
-
-Approximate memory per tracked entity: ~2KB (varies with entity size)
-
-| Max Entities | Peak Memory (approx) |
-|-------------|---------------------|
-| 100 | ~200KB |
-| 500 | ~1MB |
-| 1000 | ~2MB |
-| 5000 | ~10MB |
-
-### Response Size
-
-Approximate response size per entity: ~500 bytes - 2KB
-
-Configure `maxResponseSizeMb` based on:
-- Network bandwidth constraints
-- Client parsing performance
-- CDN/proxy body size limits
+Clients then refetch queries as they are read: correct, and costlier than tracking.

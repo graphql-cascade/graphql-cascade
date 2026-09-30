@@ -38,7 +38,12 @@ export default defineConfig({
           items: [
             { text: 'Optimistic Updates', link: '/guide/optimistic-updates' },
             { text: 'Conflict Resolution', link: '/guide/conflict-resolution' },
-            { text: 'Performance', link: '/guide/performance' }
+            { text: 'Performance', link: '/guide/performance' },
+            { text: 'Security', link: '/guide/security' },
+            { text: 'Troubleshooting', link: '/guide/troubleshooting' },
+            { text: 'Compatibility', link: '/guide/compatibility' },
+            { text: 'Operations Runbook', link: '/operations/runbook' },
+            { text: 'Migrating from v0.2', link: '/migration/v0.2-to-v0.3' }
           ]
         }
       ],
@@ -83,7 +88,8 @@ export default defineConfig({
             { text: 'Overview', link: '/cli/' },
             { text: 'cascade init', link: '/cli/init' },
             { text: 'cascade validate', link: '/cli/validate' },
-            { text: 'cascade doctor', link: '/cli/doctor' }
+            { text: 'cascade doctor', link: '/cli/doctor' },
+            { text: 'cascade codegen', link: '/cli/codegen' }
           ]
         }
       ],

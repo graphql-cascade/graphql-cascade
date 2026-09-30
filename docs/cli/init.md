@@ -1,73 +1,30 @@
 # cascade init
 
-Initialize a new GraphQL Cascade project.
-
-## Usage
+Writes `cascade.config.ts`, recording the GraphQL client and schema the project uses. `cascade doctor` reads it.
 
 ```bash
-cascade init <project-name> [options]
+npx cascade init
 ```
+
+Run it in a directory with a `package.json`. It asks for the client and the schema path, proposing a schema file it finds in the project, then writes:
+
+```typescript
+import type { CascadeConfig } from "@graphql-cascade/cli";
+
+const config: CascadeConfig = {
+  client: "apollo",
+  schema: "./schema.graphql",
+};
+
+export default config;
+```
+
+If the file exists, it asks before overwriting it.
 
 ## Options
 
-- `--client <apollo|react-query|relay|urql>` - Choose client library (default: apollo)
-- `--server <node|apollo-server|nestjs>` - Choose server platform (default: node)
-- `--typescript` - Use TypeScript (default: true)
-- `--example <todo|blog|ecommerce>` - Start with an example project
-- `--skip-install` - Don't run npm install
-
-## Examples
-
-Create a project with Apollo Client and Node.js server:
-
-```bash
-cascade init my-project --client apollo --server node
-```
-
-Create a NestJS project with TypeScript:
-
-```bash
-cascade init api --server nestjs --typescript
-```
-
-Start with the todo example:
-
-```bash
-cascade init todo-app --example todo
-```
-
-## Project Structure
-
-The CLI creates:
-
-```
-my-project/
-├── client/
-│   ├── src/
-│   │   ├── App.tsx
-│   │   ├── client.ts
-│   │   └── graphql/
-│   └── package.json
-├── server/
-│   ├── src/
-│   │   ├── schema.ts
-│   │   ├── resolvers.ts
-│   │   └── server.ts
-│   └── package.json
-└── package.json
-```
-
-## Next Steps
-
-After initialization:
-
-```bash
-cd my-project
-npm install
-npm run dev
-```
-
-Then:
-- **[Quick Start](/guide/quick-start)** - Build your first feature
-- **[Client Guide](/clients/)** - Configure your client
-- **[Server Guide](/server/)** - Set up your server
+| Option | Description |
+|--------|-------------|
+| `--client <type>` | `apollo`, `react-query`, `relay` or `urql` |
+| `--schema <path>` | Path to the GraphQL schema |
+| `-y, --yes` | Use the options given and defaults for the rest, without prompting; overwrites an existing file |
