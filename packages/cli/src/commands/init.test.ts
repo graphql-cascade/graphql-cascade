@@ -299,6 +299,22 @@ export default config;
       );
     });
 
+    it("displays next steps after creating the file interactively", async () => {
+      mockPrompt.mockResolvedValue({
+        client: "apollo",
+        schemaPath: "./schema.graphql",
+      });
+      mockFs.writeFileSync.mockImplementation();
+      // Commander keeps option values between parses of the same command
+      initCommand.setOptionValue("yes", undefined);
+
+      await initCommand.parseAsync(["node", "test", "init"]);
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Next steps"),
+      );
+    });
+
     it("should suggest installing client package if not present", async () => {
       mockFs.readFileSync.mockReturnValue(
         JSON.stringify({

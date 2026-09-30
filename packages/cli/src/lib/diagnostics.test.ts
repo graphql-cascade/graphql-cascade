@@ -42,19 +42,28 @@ describe("diagnostics", () => {
       );
     });
 
-    it("should warn when only some cascade packages installed", async () => {
+    it.each([
+      "@graphql-cascade/server",
+      "@graphql-cascade/apollo",
+      "@graphql-cascade/relay",
+      "@graphql-cascade/react-query",
+      "@graphql-cascade/urql",
+    ])("detects %s alone, without warnings", async (pkg) => {
       mockFs.readFileSync.mockReturnValue(
-        JSON.stringify({
-          dependencies: {
-            "@graphql-cascade/apollo": "^0.1.0",
-          },
-        }),
+        JSON.stringify({ dependencies: { [pkg]: "^0.3.0" } }),
       );
 
       const result = await runDiagnostics();
-      expect(result.warnings).toContain(
-        "Only some GraphQL Cascade packages installed - consider installing all client packages",
+
+      expect(result.checks).toContain(`${pkg} is installed`);
+      expect(result.errors).not.toContain(
+        "No GraphQL Cascade packages found in dependencies",
       );
+      expect(
+        result.warnings.filter((warning) =>
+          warning.includes("packages installed"),
+        ),
+      ).toEqual([]);
     });
 
     it("should handle package.json read error", async () => {

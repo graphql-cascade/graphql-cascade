@@ -130,7 +130,8 @@ export const initCommand = new Command("init")
             encoding: "utf-8",
           });
           console.log("\nConfiguration file created: cascade.config.ts ✓");
-          return; // Success - file created
+          displayNextSteps(client, packageJson);
+          return;
         } catch (err: any) {
           // Handle file already exists
           if (err.code === "EEXIST") {

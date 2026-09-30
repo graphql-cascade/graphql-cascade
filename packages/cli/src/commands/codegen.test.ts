@@ -250,6 +250,19 @@ describe("codegenInitCommand", () => {
       expect(consoleLogSpy).toHaveBeenCalledWith("✅ Created codegen.yml");
     });
 
+    it("enables the CascadeEntity fragment", async () => {
+      mockFs.existsSync.mockReturnValue(false);
+      mockFs.writeFileSync.mockImplementation();
+
+      await codegenInitCommand.parseAsync(["node", "test", "init"]);
+
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        expect.stringContaining("codegen.yml"),
+        expect.stringContaining("cascadeEntityFragment: true"),
+        "utf-8",
+      );
+    });
+
     it("should create codegen.yml with custom schema path", async () => {
       mockFs.existsSync.mockReturnValue(false);
       mockFs.writeFileSync.mockImplementation();
