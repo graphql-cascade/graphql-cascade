@@ -2,7 +2,7 @@ import { Exchange } from '@urql/vue';
 import { pipe, map } from 'wonka';
 
 interface CascadeEntity {
-  __typename: string;
+  typename: string;
   id: string;
 }
 

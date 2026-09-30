@@ -7,6 +7,7 @@ import {
   checkReferenceSchema,
   checkSnippets,
   checkRequirements,
+  checkExampleSchemas,
 } from "./check-spec.mjs";
 
 // Built from parts so this file never matches the pattern it tests.
@@ -242,5 +243,38 @@ describe("checkRequirements", () => {
     assert.deepEqual(checkRequirements(twice, cases), [
       "specification/99_test.md:1: REQ-001 is already defined at specification/99_test.md:1",
     ]);
+  });
+});
+
+describe("checkExampleSchemas", () => {
+  const example = (content) => ({ path: "examples/schema.graphql", content });
+
+  it("accepts schemas without reserved field names", () => {
+    assert.deepEqual(
+      checkExampleSchemas([
+        example("type UpdatedEntity { typename: String! }"),
+      ]),
+      [],
+    );
+  });
+
+  it("reports reserved __ field names", () => {
+    assert.deepEqual(
+      checkExampleSchemas([
+        example(
+          "type A { id: ID }\ntype UpdatedEntity {\n  __typename: String!\n}",
+        ),
+      ]),
+      [
+        'examples/schema.graphql:3: UpdatedEntity.__typename: names beginning with "__" are reserved by GraphQL',
+      ],
+    );
+  });
+
+  it("reports schemas that do not parse", () => {
+    assert.match(
+      checkExampleSchemas([example("type {")])[0],
+      /^examples\/schema\.graphql: Syntax Error/,
+    );
   });
 });

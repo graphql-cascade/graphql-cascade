@@ -29,14 +29,14 @@ type CascadeUpdates {
 }
 
 type UpdatedEntity {
-  __typename: String!
+  typename: String!
   id: ID!
   operation: CascadeOperation!
   entity: Node!
 }
 
 type DeletedEntity {
-  __typename: String!
+  typename: String!
   id: ID!
   deletedAt: DateTime!
 }

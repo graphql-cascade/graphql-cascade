@@ -42,14 +42,14 @@ class CascadeMetadata:
 
 @strawberry.type
 class UpdatedEntity:
-    __typename: str
+    typename: str
     id: strawberry.ID
     operation: 'CascadeOperation'
     entity: Node
 
 @strawberry.type
 class DeletedEntity:
-    __typename: str
+    typename: str
     id: strawberry.ID
     deleted_at: str
 
@@ -504,7 +504,7 @@ schema = strawberry.Schema(
 #     success
 #     data { id name email }
 #     cascade {
-#       updated { __typename id operation }
+#       updated { typename id operation }
 #       invalidations { queryName strategy scope }
 #       metadata { affectedCount depth }
 #     }
@@ -517,7 +517,7 @@ schema = strawberry.Schema(
 #     success
 #     data { id name }
 #     cascade {
-#       updated { __typename id operation }
+#       updated { typename id operation }
 #       invalidations { queryName strategy scope }
 #     }
 #   }
@@ -532,7 +532,7 @@ schema = strawberry.Schema(
 #     success
 #     data { id name address { street city } }
 #     cascade {
-#       updated { __typename id operation }
+#       updated { typename id operation }
 #       metadata { affectedCount }
 #     }
 #   }

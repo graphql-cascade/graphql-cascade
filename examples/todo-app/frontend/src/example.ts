@@ -29,13 +29,13 @@ const CREATE_TODO = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity
         }
         deleted {
-          __typename
+          typename
           id
           deletedAt
         }
@@ -66,7 +66,7 @@ const UPDATE_TODO = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity
@@ -96,7 +96,7 @@ const DELETE_TODO = gql`
       }
       cascade {
         deleted {
-          __typename
+          typename
           id
           deletedAt
         }

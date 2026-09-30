@@ -49,7 +49,7 @@ export const resolvers = {
       success: true,
       data: metric,
       cascade: {
-        updated: [{ __typename: 'Metric', id: metric.id }],
+        updated: [{ typename: 'Metric', id: metric.id }],
         deleted: [],
         invalidations: [],
       },

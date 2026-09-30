@@ -201,7 +201,7 @@ export async function graphqlRequest<T>(
     "cascade": {
       "updated": [
         {
-          "__typename": "Todo",
+          "typename": "Todo",
           "id": "123",
           "operation": "CREATE",
           "entity": { "id": "123", "title": "New Todo" }
@@ -353,14 +353,14 @@ interface CascadeData {
 }
 
 interface UpdatedEntity {
-  __typename: string;
+  typename: string;
   id: string;
   operation: 'CREATE' | 'UPDATE';
   entity: any;
 }
 
 interface DeletedEntity {
-  __typename: string;
+  typename: string;
   id: string;
   deletedAt: string;
 }

@@ -42,14 +42,14 @@ export interface CascadeData {
 }
 
 export interface UpdatedEntity {
-  __typename: string;
+  typename: string;
   id: string;
   operation: 'CREATE' | 'UPDATE';
   entity: any;
 }
 
 export interface DeletedEntity {
-  __typename: string;
+  typename: string;
   id: string;
   deletedAt: string;
 }

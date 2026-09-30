@@ -57,14 +57,14 @@ export const typeDefs = gql`
   }
 
   type UpdatedEntity {
-    __typename: String!
+    typename: String!
     id: ID!
     operation: CascadeOperation!
     entity: Todo!
   }
 
   type DeletedEntity {
-    __typename: String!
+    typename: String!
     id: ID!
     deletedAt: String!
   }

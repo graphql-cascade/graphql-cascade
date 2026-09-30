@@ -44,7 +44,7 @@ export const typeDefs = `
   }
 
   type CascadeEntity {
-    __typename: String!
+    typename: String!
     id: ID!
   }
 

@@ -444,7 +444,7 @@ async def main():
                 success
                 data { id name email }
                 cascade {
-                    updated { __typename id operation }
+                    updated { typename id operation }
                     metadata { affectedCount }
                 }
             }

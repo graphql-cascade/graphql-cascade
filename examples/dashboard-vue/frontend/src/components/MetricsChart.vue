@@ -27,7 +27,7 @@ const UPDATE_METRIC_MUTATION = `
       }
       cascade {
         updated {
-          __typename
+          typename
           id
         }
         invalidations

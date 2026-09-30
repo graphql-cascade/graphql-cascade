@@ -50,13 +50,13 @@ const CHECKOUT = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity
         }
         deleted {
-          __typename
+          typename
           id
         }
         invalidations {

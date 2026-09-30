@@ -46,13 +46,13 @@ export function generateAddToCartOptimisticResponse(
   const cascade: CascadeUpdates = {
     updated: [
       {
-        __typename: 'CartItem',
+        typename: 'CartItem',
         id: cartItemId,
         operation: 'CREATED',
         entity: optimisticCartItem,
       },
       {
-        __typename: 'Product',
+        typename: 'Product',
         id: productId,
         operation: 'UPDATED',
         entity: {
@@ -109,13 +109,13 @@ export function generateUpdateCartItemOptimisticResponse(
   const cascade: CascadeUpdates = {
     updated: [
       {
-        __typename: 'CartItem',
+        typename: 'CartItem',
         id: cartItemId,
         operation: 'UPDATED',
         entity: optimisticCartItem,
       },
       {
-        __typename: 'Product',
+        typename: 'Product',
         id: existingCartItem.productId,
         operation: 'UPDATED',
         entity: {
@@ -160,7 +160,7 @@ export function generateRemoveFromCartOptimisticResponse(
   const cascade: CascadeUpdates = {
     updated: [
       {
-        __typename: 'Product',
+        typename: 'Product',
         id: cartItem.productId,
         operation: 'UPDATED',
         entity: {
@@ -171,7 +171,7 @@ export function generateRemoveFromCartOptimisticResponse(
     ],
     deleted: [
       {
-        __typename: 'CartItem',
+        typename: 'CartItem',
         id: cartItemId,
         deletedAt: new Date().toISOString(),
       },
@@ -239,7 +239,7 @@ export function generateCheckoutOptimisticResponse(
 
   // Create updated entities for products (inventory reduction)
   const updatedEntities: UpdatedEntity[] = cartItems.map(item => ({
-    __typename: 'Product',
+    typename: 'Product',
     id: item.productId,
     operation: 'UPDATED',
     entity: {
@@ -250,7 +250,7 @@ export function generateCheckoutOptimisticResponse(
 
   // Create deleted entities for cart items
   const deletedEntities: DeletedEntity[] = cartItems.map(item => ({
-    __typename: 'CartItem',
+    typename: 'CartItem',
     id: item.id,
     deletedAt: new Date().toISOString(),
   }));
@@ -259,7 +259,7 @@ export function generateCheckoutOptimisticResponse(
     updated: [
       ...updatedEntities,
       {
-        __typename: 'Order',
+        typename: 'Order',
         id: orderId,
         operation: 'CREATED',
         entity: optimisticOrder,

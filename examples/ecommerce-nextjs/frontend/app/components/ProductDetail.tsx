@@ -38,13 +38,13 @@ const ADD_TO_CART = gql`
       }
       cascade {
         updated {
-          __typename
+          typename
           id
           operation
           entity
         }
         deleted {
-          __typename
+          typename
           id
         }
         invalidations {
