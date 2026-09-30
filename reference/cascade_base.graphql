@@ -372,6 +372,24 @@ enum EventSource {
   SYSTEM       # System-generated event
 }
 
+"""
+Cascade capabilities of a server, for version discovery. Servers expose it
+as a `cascadeInfo: CascadeInfo!` field on their Query type.
+"""
+type CascadeInfo {
+  """Specification version the server implements, e.g. "1.5.0"."""
+  version: String!
+
+  """Specification versions whose responses the server can produce."""
+  supportedVersions: [String!]!
+
+  """Experimental features the server has enabled."""
+  experimentalFeatures: [String!]!
+
+  """Deprecated features the server still provides."""
+  deprecatedFeatures: [String!]!
+}
+
 # Custom scalars
 """
 Custom scalar for date/time values.

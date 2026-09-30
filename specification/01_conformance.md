@@ -170,18 +170,7 @@ Version compatibility is defined in detail in [VERSIONING.md](VERSIONING.md).
 
 ### Version Discovery
 
-Implementations MUST support version discovery through the `__cascade` introspection query:
-
-```graphql
-query {
-  __cascade {
-    version              # Server implementation version
-    supportedVersions    # Supported specification versions
-    experimentalFeatures # Enabled experimental features
-    deprecatedFeatures   # Deprecated features in use
-  }
-}
-```
+Servers SHOULD support version discovery through a `cascadeInfo: CascadeInfo!` field on their `Query` type, defined in the [reference schema](../reference/cascade_base.graphql). See [Version Discovery](VERSIONING.md#version-discovery).
 
 ### Compatibility Levels
 

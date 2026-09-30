@@ -126,26 +126,54 @@ Clients and servers negotiate the Cascade version to ensure compatibility.
 
 ### Version Discovery
 
-Clients discover server capabilities through the `__cascade` introspection query:
+Servers SHOULD expose their capabilities through a `cascadeInfo` field on their `Query` type:
 
 ```graphql
-query {
-  __cascade {
-    version                    # Current server implementation version
-    supportedVersions         # Array of supported spec versions
-    experimentalFeatures      # Array of enabled experimental features
-    deprecatedFeatures        # Array of deprecated features in use
+"""
+Cascade capabilities of a server, for version discovery. Servers expose it
+as a `cascadeInfo: CascadeInfo!` field on their Query type.
+"""
+type CascadeInfo {
+  """Specification version the server implements, e.g. "1.5.0"."""
+  version: String!
+
+  """Specification versions whose responses the server can produce."""
+  supportedVersions: [String!]!
+
+  """Experimental features the server has enabled."""
+  experimentalFeatures: [String!]!
+
+  """Deprecated features the server still provides."""
+  deprecatedFeatures: [String!]!
+}
+
+type Query {
+  cascadeInfo: CascadeInfo!
+}
+```
+
+Clients query it like any other field:
+
+```graphql
+query CascadeInfo {
+  cascadeInfo {
+    version
+    supportedVersions
+    experimentalFeatures
+    deprecatedFeatures
   }
 }
 ```
+
+Specifications before 1.5.0 named this query `__cascade`. GraphQL reserves names beginning with `__` for introspection, so no schema could define it.
 
 **Response Example:**
 ```json
 {
   "data": {
-    "__cascade": {
-      "version": "1.2.3",
-      "supportedVersions": ["1.0", "1.1", "1.2"],
+    "cascadeInfo": {
+      "version": "1.5.0",
+      "supportedVersions": ["1.3.0", "1.4.0", "1.5.0"],
       "experimentalFeatures": ["optimistic-updates"],
       "deprecatedFeatures": []
     }
@@ -275,6 +303,19 @@ All specification changes MUST be documented in CHANGELOG.md following this form
 3. **Compatibility Checking**: Warn about version incompatibilities
 
 ## Appendix: Version History
+
+### v1.5.0 (2026-09-30)
+
+#### Changes
+- Version discovery uses a `cascadeInfo: CascadeInfo!` field on `Query`, with `CascadeInfo` defined in the reference schema. The former `__cascade` query used a name GraphQL reserves for introspection, so no server could provide it
+- Version discovery is RECOMMENDED (SHOULD) rather than required, since no conforming server could have implemented the former requirement
+
+#### Backward Compatibility
+Backward compatible: `__cascade` could not exist in any schema, so no client depends on it.
+
+#### Migration
+- Servers: add `cascadeInfo: CascadeInfo!` to `Query`.
+- Clients: query `cascadeInfo` instead of `__cascade`.
 
 ### v1.4.0 (2026-09-30)
 
