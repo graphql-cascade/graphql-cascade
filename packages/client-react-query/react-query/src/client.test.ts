@@ -1,4 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
+import { CascadeOperation } from "@graphql-cascade/client";
 import { ReactQueryCascadeClient } from "./client";
 
 describe("ReactQueryCascadeClient", () => {
@@ -84,6 +85,48 @@ describe("ReactQueryCascadeClient", () => {
 
       expect(mockExecutor).toHaveBeenCalled();
       expect(result).toEqual({ __typename: "User", id: "1", name: "John" });
+    });
+  });
+
+  describe("mutateOptimistic", () => {
+    it("restores query data when the mutation fails", async () => {
+      queryClient.setQueryData(
+        ["users"],
+        [
+          { __typename: "User", id: "1", name: "John" },
+          { __typename: "User", id: "2", name: "Jane" },
+        ],
+      );
+      mockExecutor.mockRejectedValue(new Error("network down"));
+
+      await expect(
+        client.mutateOptimistic(
+          {} as any,
+          {},
+          {
+            success: true,
+            data: null,
+            cascade: {
+              updated: [
+                {
+                  typename: "User",
+                  id: "1",
+                  operation: CascadeOperation.UPDATED,
+                  entity: { __typename: "User", id: "1", name: "Johnny" },
+                },
+              ],
+              deleted: [],
+              invalidations: [],
+              metadata: { timestamp: "t", depth: 1, affectedCount: 1 },
+            },
+          },
+        ),
+      ).rejects.toThrow("network down");
+
+      expect(queryClient.getQueryData(["users"])).toEqual([
+        { __typename: "User", id: "1", name: "John" },
+        { __typename: "User", id: "2", name: "Jane" },
+      ]);
     });
   });
 

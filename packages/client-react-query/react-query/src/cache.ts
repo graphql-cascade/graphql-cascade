@@ -23,9 +23,27 @@ export class ReactQueryCascadeCache implements CascadeCache {
     );
   }
 
-  read(_typename: string, _id: string): any | null {
-    // Can't directly read entities from React Query
-    return null;
+  /**
+   * The entity's fields, gathered from every cached query result holding
+   * it; null if none does.
+   */
+  read(typename: string, id: string): any | null {
+    let entity: Record<string, unknown> | null = null;
+    const collect = (data: unknown): void => {
+      if (Array.isArray(data)) {
+        data.forEach(collect);
+      } else if (data !== null && typeof data === "object") {
+        const object = data as Record<string, unknown>;
+        if (object.__typename === typename && object.id === id) {
+          entity = { ...entity, ...object };
+        }
+        Object.values(object).forEach(collect);
+      }
+    };
+    for (const [, data] of this.queryClient.getQueriesData({})) {
+      collect(data);
+    }
+    return entity;
   }
 
   evict(typename: string, id: string): void {
