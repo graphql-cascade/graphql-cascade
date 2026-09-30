@@ -124,23 +124,39 @@ const response = builder.buildResponse(mutationResult, true);
 const errorResponse = builder.buildErrorResponse(errors, partialResult);
 ```
 
-### CascadeInvalidator
+### Invalidators
 
-The `CascadeInvalidator` (optional) computes which queries should be invalidated based on entity changes.
+An invalidator (optional) computes which cached queries clients should invalidate, as spec `QueryInvalidation` hints. Implement the `Invalidator` interface and pass it to the builder:
 
 ```typescript
-import { CascadeInvalidator } from "@graphql-cascade/server";
+import {
+  CascadeBuilder,
+  InvalidationScope,
+  InvalidationStrategy,
+  type Invalidator,
+} from "@graphql-cascade/server";
 
-const invalidator = new CascadeInvalidator(schema, {
-  // Configuration options
-});
+const invalidator: Invalidator = {
+  computeInvalidations(updated, deleted) {
+    const touchedTodos = [...updated, ...deleted].some(
+      (entry) => entry.typename === "Todo",
+    );
+    return touchedTodos
+      ? [
+          {
+            queryName: "listTodos",
+            strategy: InvalidationStrategy.INVALIDATE,
+            scope: InvalidationScope.PREFIX,
+          },
+        ]
+      : [];
+  },
+};
 
-const invalidations = invalidator.computeInvalidations(
-  updatedEntities,
-  deletedEntities,
-  primaryResult,
-);
+const builder = new CascadeBuilder(tracker, invalidator);
 ```
+
+The builder drops hints without a valid `strategy` and `scope` and reports them through `onInvalidationError`.
 
 ## Framework Integrations
 
@@ -484,9 +500,9 @@ npm run dev
 ## Related Packages
 
 - **[@graphql-cascade/client-core](../client-core/)** - Core client functionality
-- **[@graphql-cascade/client-apollo](../client-apollo/)** - Apollo Client integration
-- **[@graphql-cascade/client-react-query](../client-react-query/)** - React Query integration
-- **[@graphql-cascade/client-relay](../client-relay/)** - Relay integration
+- **[@graphql-cascade/apollo](../client-apollo/)** - Apollo Client integration
+- **[@graphql-cascade/react-query](../client-react-query/)** - React Query integration
+- **[@graphql-cascade/relay](../client-relay/)** - Relay integration
 
 ## License
 

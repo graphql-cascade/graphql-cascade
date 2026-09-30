@@ -5,7 +5,7 @@ Seamless integration with Apollo Client's normalized cache for automatic cascade
 ## Installation
 
 ```bash
-npm install @graphql-cascade/client-apollo @apollo/client
+npm install @graphql-cascade/apollo @apollo/client
 ```
 
 ### Peer Dependencies
@@ -23,7 +23,7 @@ This package requires the following peer dependencies:
 
 ```typescript
 import { ApolloClient, InMemoryCache } from "@apollo/client";
-import { ApolloCascadeClient } from "@graphql-cascade/client-apollo";
+import { ApolloCascadeClient } from "@graphql-cascade/apollo";
 
 const client = new ApolloClient({
   uri: "http://localhost:4000/graphql",
@@ -82,7 +82,7 @@ console.log(result); // { id: '1', title: 'Learn GraphQL Cascade', completed: fa
 ```tsx
 import React from "react";
 import { ApolloProvider } from "@apollo/client";
-import { useCascadeMutation } from "@graphql-cascade/client-apollo";
+import { useCascadeMutation } from "@graphql-cascade/apollo";
 
 const TodoItem: React.FC<{ todo: Todo }> = ({ todo }) => {
   const [toggleTodo, { loading }] = useCascadeMutation(
@@ -688,7 +688,7 @@ import type {
   CascadeErrorSeverity,
   RecoveryAction,
   ErrorRecoveryOptions,
-} from "@graphql-cascade/client-apollo";
+} from "@graphql-cascade/apollo";
 ```
 
 ### Example Type Usage

@@ -8,6 +8,8 @@ import {
   checkSnippets,
   checkRequirements,
   checkExampleSchemas,
+  checkDocImports,
+  exportedNames,
 } from "./check-spec.mjs";
 
 // Built from parts so this file never matches the pattern it tests.
@@ -201,6 +203,13 @@ describe("checkSnippets", () => {
     ]);
   });
 
+  it("reports selections of reserved __ fields other than introspection", () => {
+    const snippet = `mutation { createTodo { __typename __cascade { updated { typename } } } }`;
+    assert.deepEqual(checkSnippets(REFERENCE, [chapter(snippet)]), [
+      'specification/99_test.md:5: selection __cascade: names beginning with "__" are reserved by GraphQL',
+    ]);
+  });
+
   it("reports definitions that differ from the reference", () => {
     const snippet = `enum Color {
   RED
@@ -304,5 +313,76 @@ describe("checkExampleSchemas", () => {
       checkExampleSchemas(REFERENCE, [example("type {")])[0],
       /^examples\/schema\.graphql: Syntax Error/,
     );
+  });
+});
+
+describe("exportedNames", () => {
+  const tree = {
+    "src/index.ts": [
+      'export * from "./types";',
+      'export { CascadeClient, applyCascade as apply } from "./client";',
+      'export type { Options } from "./options";',
+      "export const VERSION = '1';",
+      "export default function main() {}",
+    ].join("\n"),
+    "src/types.ts": [
+      "export interface UpdatedEntity {}",
+      "export enum CascadeOperation { CREATED }",
+      "export async function load() {}",
+      "export abstract class Base {}",
+      "export type Id = string;",
+    ].join("\n"),
+  };
+
+  it("collects declarations, re-exports and export-star modules", () => {
+    const names = exportedNames(reader(tree), "src/index.ts");
+    assert.deepEqual([...names].sort(), [
+      "Base",
+      "CascadeClient",
+      "CascadeOperation",
+      "Id",
+      "Options",
+      "UpdatedEntity",
+      "VERSION",
+      "apply",
+      "load",
+    ]);
+  });
+});
+
+describe("checkDocImports", () => {
+  const packages = new Map([
+    ["@graphql-cascade/client", new Set(["CascadeClient", "UpdatedEntity"])],
+  ]);
+  const doc = (code, lang = "typescript") => ({
+    path: "docs/page.md",
+    content: `# Page\n\n\`\`\`${lang}\n${code}\n\`\`\`\n`,
+  });
+
+  it("accepts imports of real exports", () => {
+    const code = `import { CascadeClient, type UpdatedEntity as U } from "@graphql-cascade/client";`;
+    assert.deepEqual(checkDocImports([doc(code)], packages), []);
+  });
+
+  it("ignores other packages and non-code text", () => {
+    const code = `import { gql } from "@apollo/client";`;
+    assert.deepEqual(
+      checkDocImports([doc(code), doc(code, "text")], packages),
+      [],
+    );
+  });
+
+  it("reports names a package does not export", () => {
+    const code = `const x = 1;\nimport {\n  CascadeClient,\n  getCascade,\n} from "@graphql-cascade/client";`;
+    assert.deepEqual(checkDocImports([doc(code, "tsx")], packages), [
+      "docs/page.md:5: @graphql-cascade/client does not export getCascade",
+    ]);
+  });
+
+  it("reports packages that do not exist", () => {
+    const code = `import { X } from '@graphql-cascade/client-apollo';`;
+    assert.deepEqual(checkDocImports([doc(code, "js")], packages), [
+      "docs/page.md:4: @graphql-cascade/client-apollo is not a package in this repository",
+    ]);
   });
 });

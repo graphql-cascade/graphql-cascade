@@ -114,20 +114,11 @@ Health Score: 100/100
 The `cascade.config.ts` file controls how GraphQL Cascade works in your project:
 
 ```typescript
-import { CascadeConfig } from "@graphql-cascade/core";
+import type { CascadeConfig } from "@graphql-cascade/cli";
 
 const config: CascadeConfig = {
-  client: "apollo", // GraphQL client type
-  schema: "./schema.graphql", // Path to schema
-  output: {
-    directory: "./src/generated",
-    typescript: true,
-  },
-  features: {
-    dataFetching: true,
-    caching: true,
-    optimisticUpdates: true,
-  },
+  client: "apollo", // apollo, react-query, relay or urql
+  schema: "./schema.graphql", // Path to your GraphQL schema
 };
 
 export default config;
@@ -186,7 +177,7 @@ pnpm dev
 ## Related Packages
 
 - [@graphql-cascade/server](../server-node) - Server implementation
-- [@graphql-cascade/client-apollo](../client-apollo) - Apollo Client integration
+- [@graphql-cascade/apollo](../client-apollo) - Apollo Client integration
 - [@graphql-cascade/conformance](../conformance) - Conformance test suite
 
 ## License

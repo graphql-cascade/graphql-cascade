@@ -5,7 +5,7 @@ Relay Modern integration for GraphQL Cascade. Automatically applies cascade upda
 ## Installation
 
 ```bash
-npm install @graphql-cascade/client-relay relay-runtime react-relay
+npm install @graphql-cascade/relay relay-runtime react-relay
 ```
 
 ### Peer Dependencies
@@ -28,7 +28,7 @@ npm install @graphql-cascade/client-relay relay-runtime react-relay
 ### Basic Setup
 
 ```typescript
-import { createCascadeRelayEnvironment } from "@graphql-cascade/client-relay";
+import { createCascadeRelayEnvironment } from "@graphql-cascade/relay";
 import { Network, Store, RecordSource } from "relay-runtime";
 
 // Your fetch function
@@ -57,7 +57,7 @@ const environment = createCascadeRelayEnvironment(network, store);
 
 ```tsx
 import { RelayEnvironmentProvider } from "react-relay";
-import { createCascadeRelayEnvironment } from "@graphql-cascade/client-relay";
+import { createCascadeRelayEnvironment } from "@graphql-cascade/relay";
 
 function App() {
   return (
@@ -130,7 +130,7 @@ function CreateTodoButton() {
 Creates a Relay Environment that automatically processes cascade responses.
 
 ```typescript
-import { createCascadeRelayEnvironment } from "@graphql-cascade/client-relay";
+import { createCascadeRelayEnvironment } from "@graphql-cascade/relay";
 
 const environment = createCascadeRelayEnvironment(network, store, {
   // Enable debug logging
@@ -347,7 +347,7 @@ function createCascadeRelayEnvironment(
 Creates a store updater function from cascade data:
 
 ```typescript
-import { createCascadeUpdater } from "@graphql-cascade/client-relay";
+import { createCascadeUpdater } from "@graphql-cascade/relay";
 
 const updater = createCascadeUpdater(cascadeData);
 
@@ -364,20 +364,16 @@ commit({
 });
 ```
 
-### processCascadeResponse
+### applyCascadeToStore
 
-Manually process a cascade response:
+Apply a cascade you received outside a mutation, for example from a subscription:
 
 ```typescript
-import { processCascadeResponse } from "@graphql-cascade/client-relay";
+import { commitLocalUpdate } from "relay-runtime";
+import { applyCascadeToStore } from "@graphql-cascade/relay";
 
-processCascadeResponse(environment, cascadeData, {
-  onEntityUpdated: (typename, id, data) => {
-    console.log("Updated:", typename, id);
-  },
-  onEntityDeleted: (typename, id) => {
-    console.log("Deleted:", typename, id);
-  },
+commitLocalUpdate(environment, (store) => {
+  applyCascadeToStore(store, cascade);
 });
 ```
 
@@ -402,14 +398,16 @@ commit({
 ### Generic Types
 
 ```typescript
-import type {
-  CascadeData,
-  CascadeUpdatedEntity,
-} from "@graphql-cascade/client-relay";
+import {
+  cascadeEntryTypename,
+  type CascadeUpdates,
+  type UpdatedEntity,
+} from "@graphql-cascade/client";
 
-function handleCascade(cascade: CascadeData) {
-  cascade.updated.forEach((entity: CascadeUpdatedEntity) => {
-    console.log(entity.__typename, entity.id, entity.operation);
+function handleCascade(cascade: CascadeUpdates) {
+  cascade.updated.forEach((entry: UpdatedEntity) => {
+    // cascadeEntryTypename also reads pre-1.3 servers' __typename
+    console.log(cascadeEntryTypename(entry), entry.id, entry.operation);
   });
 }
 ```

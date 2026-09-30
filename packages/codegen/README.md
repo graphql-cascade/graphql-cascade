@@ -44,7 +44,7 @@ pnpm graphql-codegen
 ### 3. Use generated types
 
 ```typescript
-import { useCascadeMutation } from "@graphql-cascade/client-apollo";
+import { useCascadeMutation } from "@graphql-cascade/apollo";
 import {
   CreateTodoDocument,
   CreateTodoMutation,

@@ -15,6 +15,8 @@ The **specification** is versioned independently: its version lives in
 ## [Unreleased]
 
 ### Fixed
+- `@graphql-cascade/cli`: generated `cascade.config.ts` imported `CascadeConfig` from a package that does not exist; it is now exported by `@graphql-cascade/cli`. `@graphql-cascade/server` exports `Invalidator`.
+- READMEs import only real package exports under the real package names; `check:spec` enforces it.
 - `@graphql-cascade/server`: the Apollo Server plugin no longer puts changes from failed mutation fields into `extensions.cascade`; new `CascadeTracker.checkpoint()` / `restore()`.
 - `@graphql-cascade/apollo`: a failed optimistic `useCascadeMutation` restores existing entities completely (optimistic writes live in an Apollo optimistic layer), rejects with the real Apollo error, and `ApolloCascadeCache.read()` returns all stored fields.
 - `@graphql-cascade/server`: `cascade.updated[].entity` keeps the entity's `__typename`; it was dropped along with private `_`-prefixed fields.

@@ -184,20 +184,11 @@ function detectSchemaFiles(dir: string): string[] {
 }
 
 function generateConfigFile(client: string, schemaPath: string): string {
-  return `import { CascadeConfig } from '@graphql-cascade/core';
+  return `import type { CascadeConfig } from '@graphql-cascade/cli';
 
 const config: CascadeConfig = {
   client: '${client}',
   schema: '${schemaPath}',
-  output: {
-    directory: './src/generated',
-    typescript: true
-  },
-  features: {
-    dataFetching: true,
-    caching: true,
-    optimisticUpdates: true
-  }
 };
 
 export default config;
