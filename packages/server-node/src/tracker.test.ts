@@ -384,6 +384,19 @@ describe("CascadeTracker", () => {
       expect(result.updated[0].entity.publicField).toBe("public");
       expect(result.updated[0].entity._privateField).toBeUndefined();
     });
+
+    it("keeps __typename in the serialized entity", () => {
+      tracker.startTransaction();
+
+      tracker.trackUpdate({ id: 1, __typename: "TestEntity", name: "x" });
+
+      const result = tracker.endTransaction();
+      expect(result.updated[0].entity).toEqual({
+        id: 1,
+        __typename: "TestEntity",
+        name: "x",
+      });
+    });
   });
 
   describe("Iterator Methods", () => {

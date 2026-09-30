@@ -1,10 +1,5 @@
 import { CascadeTracker, CascadeBuilder } from "@graphql-cascade/server";
 import {
-  CascadeResponse,
-  CascadeOperation,
-  InvalidationStrategy,
-} from "@graphql-cascade/client";
-import {
   createTestTracker,
   createTestBuilder,
   createUser,
@@ -12,9 +7,6 @@ import {
   createComment,
   linkEntities,
   assertValidCascadeResponse,
-  User,
-  Post,
-  Comment,
 } from "./setup";
 
 describe("End-to-End Cascade Flow", () => {

@@ -19,6 +19,7 @@ exports[`Cascade Response Snapshots Create Response should match create response
       {
         "__typename": "User",
         "entity": {
+          "__typename": "User",
           "email": "test@example.com",
           "id": "1",
           "name": "Test User",
@@ -56,6 +57,7 @@ exports[`Cascade Response Snapshots Create Response should match multiple create
       {
         "__typename": "User",
         "entity": {
+          "__typename": "User",
           "id": "1",
           "name": "User 1",
         },
@@ -65,6 +67,7 @@ exports[`Cascade Response Snapshots Create Response should match multiple create
       {
         "__typename": "Post",
         "entity": {
+          "__typename": "Post",
           "authorId": "1",
           "id": "101",
           "title": "Post 1",
@@ -75,6 +78,7 @@ exports[`Cascade Response Snapshots Create Response should match multiple create
       {
         "__typename": "Comment",
         "entity": {
+          "__typename": "Comment",
           "id": "1001",
           "postId": "101",
           "text": "Comment",
@@ -273,6 +277,7 @@ exports[`Cascade Response Snapshots Mixed Operations Response should match mixed
       {
         "__typename": "User",
         "entity": {
+          "__typename": "User",
           "id": "2",
           "name": "New User",
         },
@@ -282,6 +287,7 @@ exports[`Cascade Response Snapshots Mixed Operations Response should match mixed
       {
         "__typename": "User",
         "entity": {
+          "__typename": "User",
           "id": "1",
           "name": "Updated User",
         },
@@ -388,6 +394,7 @@ exports[`Cascade Response Snapshots Update Response should match update response
       {
         "__typename": "User",
         "entity": {
+          "__typename": "User",
           "email": "updated@example.com",
           "id": "1",
           "name": "Updated Name",
