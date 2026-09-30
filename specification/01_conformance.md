@@ -43,10 +43,11 @@ All Cascade-compliant GraphQL schemas MUST:
    interface CascadeResponse {
      success: Boolean!
      errors: [CascadeError!]
-     data: MutationPayload
      cascade: CascadeUpdates!
    }
    ```
+
+   Payload types SHOULD also expose the mutation's result as a typed `data` field ([The `data` Field](04_mutation_responses.md#the-data-field)).
 
 2. **Use Standardized Mutation Response Types**
    - All mutations MUST return types implementing `CascadeResponse`

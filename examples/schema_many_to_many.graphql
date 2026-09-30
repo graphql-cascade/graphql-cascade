@@ -1,137 +1,8 @@
 # GraphQL Cascade Example: Many-to-Many Relationships
 # Order with Products through OrderItem - demonstrates complex cascading through junction entities
 
-"""
-Base schema imports - all Cascade schemas must include these
-"""
-interface Node {
-  id: ID!
-}
-
-interface Timestamped {
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  version: Int
-}
-
-interface CascadeResponse {
-  success: Boolean!
-  errors: [CascadeError!]
-  data: MutationPayload
-  cascade: CascadeUpdates!
-}
-
-type CascadeUpdates {
-  updated: [UpdatedEntity!]!
-  deleted: [DeletedEntity!]!
-  invalidations: [QueryInvalidation!]!
-  metadata: CascadeMetadata!
-}
-
-type UpdatedEntity {
-  typename: String!
-  id: ID!
-  operation: CascadeOperation!
-  entity: Node!
-}
-
-type DeletedEntity {
-  typename: String!
-  id: ID!
-  deletedAt: DateTime!
-}
-
-type QueryInvalidation {
-  queryName: String
-  queryPattern: String
-  strategy: InvalidationStrategy!
-  scope: InvalidationScope!
-}
-
-enum CascadeOperation {
-  CREATED
-  UPDATED
-  DELETED
-}
-
-enum InvalidationStrategy {
-  INVALIDATE
-  REFETCH
-  REMOVE
-}
-
-enum InvalidationScope {
-  EXACT
-  PREFIX
-  PATTERN
-  ALL
-}
-
-type CascadeMetadata {
-  timestamp: DateTime!
-  depth: Int!
-  affectedCount: Int!
-}
-
-type CascadeError {
-  message: String!
-  code: CascadeErrorCode!
-  field: String
-  path: [String!]
-  extensions: JSON
-}
-
-enum CascadeErrorCode {
-  VALIDATION_ERROR
-  NOT_FOUND
-  UNAUTHORIZED
-  FORBIDDEN
-  CONFLICT
-  INTERNAL_ERROR
-  TRANSACTION_FAILED
-}
-
-scalar DateTime
-scalar JSON
-scalar MutationPayload
-
-# Directives
-directive @cascade(
-  maxDepth: Int = 3
-  includeRelated: Boolean = true
-  autoInvalidate: Boolean = true
-  excludeTypes: [String!]
-) on FIELD_DEFINITION
-
-directive @cascadeInvalidates(
-  queries: [String!]!
-  strategy: InvalidationStrategy = INVALIDATE
-) on FIELD_DEFINITION
-
-# Pagination types
-interface Connection {
-  pageInfo: PageInfo!
-  totalCount: Int
-}
-
-type PageInfo {
-  hasNextPage: Boolean!
-  hasPreviousPage: Boolean!
-  startCursor: String
-  endCursor: String
-}
-
-interface Edge {
-  cursor: String!
-  node: Node!
-}
-
-input PaginationArgs {
-  first: Int
-  last: Int
-  after: String
-  before: String
-}
+# Core Cascade types, directives and scalars come from reference/cascade_base.graphql;
+# this file adds the application's own types.
 
 # Domain entities
 
@@ -142,9 +13,12 @@ type Order implements Node & Timestamped {
   id: ID!
   orderNumber: String!
   customer: User!
+    @cascadeInvalidates(queries: ["listOrders", "getUser"])
   items: [OrderItem!]!
-  total: Float! @cascadeInvalidates(queries: ["listOrders", "getOrder"])
-  status: OrderStatus! @cascadeInvalidates(queries: ["listOrders", "getOrder"])
+  total: Float!
+    @cascadeInvalidates(queries: ["listOrders", "getOrder"])
+  status: OrderStatus!
+    @cascadeInvalidates(queries: ["listOrders", "getOrder"])
   shippingAddress: Address!
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -156,6 +30,7 @@ type OrderItem {
   order: Order!
   product: Product!
   quantity: Int!
+    @cascadeInvalidates(queries: ["getOrder"])
   unitPrice: Float!
   totalPrice: Float!
 }
@@ -163,17 +38,24 @@ type OrderItem {
 type Product implements Node {
   id: ID!
   name: String!
+    @cascadeInvalidates(queries: ["listProducts", "searchProducts"])
   description: String
   price: Float!
+    @cascadeInvalidates(queries: ["listProducts", "getProduct"])
   category: ProductCategory!
+    @cascadeInvalidates(queries: ["listProducts"])
   inventory: Int!
+    @cascadeInvalidates(queries: ["listProducts"])
   isActive: Boolean!
+    @cascadeInvalidates(queries: ["listProducts"])
 }
 
 type User implements Node & Timestamped {
   id: ID!
   email: String!
+    @cascadeInvalidates(queries: ["listUsers"])
   name: String!
+    @cascadeInvalidates(queries: ["listUsers"])
   orders: [Order!]!
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -358,13 +240,6 @@ type UserEdge {
   cursor: String!
 }
 
-type PageInfo {
-  hasNextPage: Boolean!
-  hasPreviousPage: Boolean!
-  startCursor: String
-  endCursor: String
-}
-
 input OrderFilter {
   customerId: ID
   status: OrderStatus
@@ -435,57 +310,3 @@ type Mutation {
     @cascade(maxDepth: 2)
 }
 
-# Cascade directives on fields
-
-type Order {
-  orderNumber: String!
-  customer: User!
-    @cascadeInvalidates(queries: ["listOrders", "getUser"])
-
-  items: [OrderItem!]!
-  total: Float!
-    @cascadeInvalidates(queries: ["listOrders"])
-
-  status: OrderStatus!
-    @cascadeInvalidates(queries: ["listOrders"])
-
-  shippingAddress: Address!
-}
-
-type OrderItem {
-  order: Order!
-  product: Product!
-  quantity: Int!
-    @cascadeInvalidates(queries: ["getOrder"])
-
-  unitPrice: Float!
-  totalPrice: Float!
-}
-
-type Product {
-  name: String!
-    @cascadeInvalidates(queries: ["listProducts", "searchProducts"])
-
-  description: String
-  price: Float!
-    @cascadeInvalidates(queries: ["listProducts", "getProduct"])
-
-  category: ProductCategory!
-    @cascadeInvalidates(queries: ["listProducts"])
-
-  inventory: Int!
-    @cascadeInvalidates(queries: ["listProducts"])
-
-  isActive: Boolean!
-    @cascadeInvalidates(queries: ["listProducts"])
-}
-
-type User {
-  email: String!
-    @cascadeInvalidates(queries: ["listUsers"])
-
-  name: String!
-    @cascadeInvalidates(queries: ["listUsers"])
-
-  orders: [Order!]!
-}

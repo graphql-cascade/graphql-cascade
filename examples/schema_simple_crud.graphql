@@ -2,112 +2,8 @@
 # This schema demonstrates basic CRUD operations with Cascade compliance
 # Convention: All mutations return CascadeResponse, queries follow naming conventions
 
-"""
-Base schema imports - all Cascade schemas must include these
-"""
-interface Node {
-  id: ID!
-}
-
-interface Timestamped {
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  version: Int
-}
-
-interface CascadeResponse {
-  success: Boolean!
-  errors: [CascadeError!]
-  data: MutationPayload
-  cascade: CascadeUpdates!
-}
-
-type CascadeUpdates {
-  updated: [UpdatedEntity!]!
-  deleted: [DeletedEntity!]!
-  invalidations: [QueryInvalidation!]!
-  metadata: CascadeMetadata!
-}
-
-type UpdatedEntity {
-  typename: String!
-  id: ID!
-  operation: CascadeOperation!
-  entity: Node!
-}
-
-type DeletedEntity {
-  typename: String!
-  id: ID!
-  deletedAt: DateTime!
-}
-
-type QueryInvalidation {
-  queryName: String
-  queryPattern: String
-  strategy: InvalidationStrategy!
-  scope: InvalidationScope!
-}
-
-enum CascadeOperation {
-  CREATED
-  UPDATED
-  DELETED
-}
-
-enum InvalidationStrategy {
-  INVALIDATE
-  REFETCH
-  REMOVE
-}
-
-enum InvalidationScope {
-  EXACT
-  PREFIX
-  PATTERN
-  ALL
-}
-
-type CascadeMetadata {
-  timestamp: DateTime!
-  depth: Int!
-  affectedCount: Int!
-}
-
-type CascadeError {
-  message: String!
-  code: CascadeErrorCode!
-  field: String
-  path: [String!]
-  extensions: JSON
-}
-
-enum CascadeErrorCode {
-  VALIDATION_ERROR
-  NOT_FOUND
-  UNAUTHORIZED
-  FORBIDDEN
-  CONFLICT
-  INTERNAL_ERROR
-  TRANSACTION_FAILED
-}
-
-scalar DateTime
-scalar JSON
-scalar MutationPayload
-
-# Directives
-directive @cascade(
-  maxDepth: Int = 3
-  includeRelated: Boolean = true
-  autoInvalidate: Boolean = true
-  excludeTypes: [String!]
-) on FIELD_DEFINITION
-
-directive @cascadeInvalidates(
-  queries: [String!]!
-  strategy: InvalidationStrategy = INVALIDATE
-) on FIELD_DEFINITION
+# Core Cascade types, directives and scalars come from reference/cascade_base.graphql;
+# this file adds the application's own types.
 
 # Domain entities
 
@@ -199,20 +95,6 @@ type UserConnection {
 type UserEdge {
   node: User!
   cursor: String!
-}
-
-type PageInfo {
-  hasNextPage: Boolean!
-  hasPreviousPage: Boolean!
-  startCursor: String
-  endCursor: String
-}
-
-input PaginationArgs {
-  first: Int
-  last: Int
-  after: String
-  before: String
 }
 
 input UserFilter {

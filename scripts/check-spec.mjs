@@ -7,8 +7,8 @@
  * - reference/cascade_base.graphql is a valid GraphQL schema, and is the
  *   normative source: every graphql block in the specification parses, and
  *   any definition of a reference type matches it (descriptions aside).
- * - Example schemas under examples/ parse and use no reserved `__` field
- *   names.
+ * - Example schemas under examples/, merged with the reference, are valid
+ *   GraphQL schemas and repeat reference types unchanged.
  * - Every requirement tagged **[REQ-NNN]** in the specification is defined
  *   once and tested by a conformance case, and every case cites a defined
  *   requirement.
@@ -19,6 +19,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
+  Kind,
   buildASTSchema,
   isTypeSystemDefinitionNode,
   parse,
@@ -133,15 +134,71 @@ function reservedFields(document) {
 }
 
 /**
- * @param {{ path: string, content: string }[]} files example GraphQL schemas
- * @returns {string[]} one message per unparseable schema or reserved name
+ * Printed structure (descriptions aside) of each reference definition that
+ * examples and excerpts must reproduce exactly; root types are exempt.
  */
-export function checkExampleSchemas(files) {
+function referenceShapes(document) {
+  const shapes = new Map();
+  for (const def of document.definitions) {
+    if (def.name && !ROOT_TYPES.has(def.name.value)) {
+      shapes.set(def.name.value, print(withoutDescriptions(def)));
+    }
+  }
+  return shapes;
+}
+
+/**
+ * Examples are validated the way implementers build schemas: merged with the
+ * reference, whose types they may repeat but not change.
+ *
+ * @param {string} sdl the reference schema
+ * @param {{ path: string, content: string }[]} files example GraphQL schemas
+ * @returns {string[]} one message per reserved name, drift or schema error
+ */
+export function checkExampleSchemas(sdl, files) {
+  const reference = parse(sdl);
+  const shapes = referenceShapes(reference);
   return files.flatMap(({ path, content }) => {
+    let document;
     try {
-      return reservedFields(parse(content)).map(
+      document = parse(content);
+    } catch (e) {
+      return [`${path}: ${e.message}`];
+    }
+    const reserved = reservedFields(document);
+    if (reserved.length > 0) {
+      return reserved.map(
         ({ name, line }) => `${path}:${line}: ${name}: ${RESERVED_NAME}`,
       );
+    }
+
+    const own = new Set();
+    const drift = [];
+    for (const def of document.definitions) {
+      if (!isTypeSystemDefinitionNode(def) || !def.name) continue;
+      own.add(def.name.value);
+      const expected = shapes.get(def.name.value);
+      if (expected && print(withoutDescriptions(def)) !== expected) {
+        drift.push(
+          `${path}:${def.loc.startToken.line}: ${def.name.value} differs from ${REFERENCE_PATH}`,
+        );
+      }
+    }
+    if (drift.length > 0) return drift;
+
+    const merged = {
+      kind: Kind.DOCUMENT,
+      definitions: [
+        ...reference.definitions.filter(
+          (def) => !(def.name && own.has(def.name.value)),
+        ),
+        ...document.definitions,
+      ],
+    };
+    try {
+      return validateSchema(
+        buildASTSchema(merged, { assumeValidSDL: false }),
+      ).map((e) => `${path}: ${e.message}`);
     } catch (e) {
       return [`${path}: ${e.message}`];
     }
@@ -154,11 +211,7 @@ export function checkExampleSchemas(files) {
  * @returns {string[]} one message per unparseable block or drifted definition
  */
 export function checkSnippets(sdl, files) {
-  const reference = new Map();
-  for (const def of parse(sdl).definitions) {
-    if (def.name && !ROOT_TYPES.has(def.name.value))
-      reference.set(def.name.value, print(withoutDescriptions(def)));
-  }
+  const reference = referenceShapes(parse(sdl));
 
   const problems = [];
   for (const { path, content } of files) {
@@ -276,6 +329,7 @@ function main() {
     ...(schemaProblems.length > 0 ? [] : checkSnippets(sdl, specFiles)),
     ...checkRequirements(specFiles, caseFiles),
     ...checkExampleSchemas(
+      sdl,
       files.filter(
         ({ path }) => path.startsWith("examples/") && path.endsWith(".graphql"),
       ),

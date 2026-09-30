@@ -20,7 +20,7 @@ The root structure for all Cascade-compliant mutation responses.
 CascadeResponse ::= '{'
     '"success"' ':' Boolean ','
     '"errors"' ':' CascadeErrorArray ','
-    '"data"' ':' ( MutationPayload | 'null' ) ','
+    ( '"data"' ':' ( MutationPayload | 'null' ) ',' )?   # by convention; typed per payload
     '"cascade"' ':' CascadeUpdates
 '}'
 ```
@@ -450,7 +450,7 @@ Where Element is the appropriate element type (UpdatedEntity, DeletedEntity, etc
 ### Schema Compliance
 
 The grammar assumes:
-- `MutationPayload` is defined by the GraphQL schema
+- `MutationPayload` is the JSON of the payload's own `data` field, whose type each payload declares
 - `Node` is the entity interface defined by the schema
 - All `typename` and `__typename` values correspond to schema types
 - All field names exist in their respective types

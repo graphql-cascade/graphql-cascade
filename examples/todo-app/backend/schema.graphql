@@ -1,18 +1,8 @@
-"""
-GraphQL Cascade TODO App Schema
-
-Demonstrates basic CRUD operations with GraphQL Cascade.
-"""
-
-interface Node {
-  id: ID!
-}
-
-interface Timestamped {
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  version: Int
-}
+# GraphQL Cascade TODO App Schema
+# Demonstrates basic CRUD operations with GraphQL Cascade.
+#
+# Core Cascade types, directives and scalars come from reference/cascade_base.graphql;
+# this file adds the application's own types.
 
 type User implements Node & Timestamped {
   id: ID!
@@ -33,87 +23,6 @@ type Todo implements Node & Timestamped {
   createdAt: DateTime!
   updatedAt: DateTime!
   version: Int
-}
-
-# Cascade Response Types
-interface CascadeResponse {
-  success: Boolean!
-  errors: [CascadeError!]
-  data: MutationPayload
-  cascade: CascadeUpdates!
-}
-
-type CascadeUpdates {
-  updated: [UpdatedEntity!]!
-  deleted: [DeletedEntity!]!
-  invalidations: [QueryInvalidation!]!
-  metadata: CascadeMetadata!
-}
-
-type CascadeMetadata {
-  timestamp: DateTime!
-  transactionId: ID
-  depth: Int!
-  affectedCount: Int!
-}
-
-type UpdatedEntity {
-  typename: String!
-  id: ID!
-  operation: CascadeOperation!
-  entity: Node!
-}
-
-type DeletedEntity {
-  typename: String!
-  id: ID!
-  deletedAt: DateTime!
-}
-
-enum CascadeOperation {
-  CREATED
-  UPDATED
-  DELETED
-}
-
-type CascadeError {
-  message: String!
-  code: CascadeErrorCode!
-  field: String
-  path: [String!]
-  extensions: JSON
-}
-
-enum CascadeErrorCode {
-  VALIDATION_ERROR
-  NOT_FOUND
-  UNAUTHORIZED
-  FORBIDDEN
-  CONFLICT
-  INTERNAL_ERROR
-  TRANSACTION_FAILED
-}
-
-type QueryInvalidation {
-  queryName: String
-  queryHash: String
-  arguments: JSON
-  queryPattern: String
-  strategy: InvalidationStrategy!
-  scope: InvalidationScope!
-}
-
-enum InvalidationStrategy {
-  INVALIDATE
-  REFETCH
-  REMOVE
-}
-
-enum InvalidationScope {
-  EXACT
-  PREFIX
-  PATTERN
-  ALL
 }
 
 # Mutation Response Types
@@ -219,7 +128,3 @@ type Mutation {
   deleteTodo(id: ID!): DeleteTodoCascade!
     @cascade(maxDepth: 1)
 }
-
-# Custom Scalars
-scalar DateTime
-scalar JSON

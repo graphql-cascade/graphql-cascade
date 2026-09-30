@@ -304,6 +304,19 @@ All specification changes MUST be documented in CHANGELOG.md following this form
 
 ## Appendix: Version History
 
+### v1.6.0 (2026-09-30)
+
+#### Changes
+- `CascadeResponse` no longer declares `data`. GraphQL lets an implementing field only narrow an interface field's type, so `data: MutationPayload` (a scalar) could not be implemented by any payload with a typed result
+- Payload types SHOULD expose the mutation's result as a `data` field of its own type, e.g. `data: User`
+- Removed the `MutationPayload` placeholder scalar from the reference schema
+
+#### Backward Compatibility
+Backward compatible: payload types keep their `data` fields, and queries select `data` on the payload type as before. Only a fragment on the `CascadeResponse` interface that selects `data` changes, and no schema with typed results could have supported it.
+
+#### Migration
+- Schemas: remove `data` from your copy of `CascadeResponse` and the `MutationPayload` scalar; keep `data: <ResultType>` on each payload type.
+
 ### v1.5.0 (2026-09-30)
 
 #### Changes

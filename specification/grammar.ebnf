@@ -6,7 +6,7 @@
 CascadeResponse ::= '{'
     '"success"' ':' Boolean ','
     '"errors"' ':' CascadeErrorArray ','
-    '"data"' ':' ( MutationPayload | 'null' ) ','
+    ( '"data"' ':' ( MutationPayload | 'null' ) ',' )?   # by convention; typed per payload
     '"cascade"' ':' CascadeUpdates
 '}'
 

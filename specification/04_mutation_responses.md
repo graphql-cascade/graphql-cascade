@@ -12,6 +12,9 @@ All Cascade-compliant mutations MUST return a type that implements the `CascadeR
 """
 Standard GraphQL Cascade mutation response.
 All Cascade-compliant mutations MUST return this interface.
+Payload types SHOULD also expose the mutation's primary result as a `data`
+field of its own type, e.g. `data: User`; the interface leaves `data` out
+because GraphQL cannot express "any result type" as a field type.
 """
 interface CascadeResponse {
   """Whether the mutation succeeded."""
@@ -20,13 +23,25 @@ interface CascadeResponse {
   """List of errors if mutation failed or partially succeeded."""
   errors: [CascadeError!]
 
-  """The primary result of the mutation."""
-  data: MutationPayload
-
   """The cascade of updates triggered by this mutation."""
   cascade: CascadeUpdates!
 }
 ```
+
+### The `data` Field
+
+Payload types SHOULD expose the mutation's primary result as a `data` field typed as that result, so clients get a precisely typed result next to the cascade:
+
+```graphql
+type UpdateUserCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+```
+
+The interface does not declare `data`. An implementing field may only narrow an interface field's type, so no single declared type could admit `User` in one payload, `[Order!]!` in another and `Boolean` in a third. Specifications before 1.6.0 declared `data: MutationPayload`, a scalar, which no typed payload could implement.
 
 ## Response Structure
 

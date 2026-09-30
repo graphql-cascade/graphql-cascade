@@ -30,6 +30,9 @@ interface Node {
 """
 Standard GraphQL Cascade mutation response.
 All Cascade-compliant mutations MUST return this interface.
+Payload types SHOULD also expose the mutation's primary result as a `data`
+field of its own type, e.g. `data: User`; the interface leaves `data` out
+because GraphQL cannot express "any result type" as a field type.
 """
 interface CascadeResponse {
   """Whether the mutation succeeded."""
@@ -37,9 +40,6 @@ interface CascadeResponse {
 
   """List of errors if mutation failed or partially succeeded."""
   errors: [CascadeError!]
-
-  """The primary result of the mutation."""
-  data: MutationPayload
 
   """The cascade of updates triggered by this mutation."""
   cascade: CascadeUpdates!
