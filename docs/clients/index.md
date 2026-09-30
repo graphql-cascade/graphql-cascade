@@ -1,253 +1,82 @@
 # Client Libraries
 
-GraphQL Cascade provides official integrations for all major GraphQL clients.
+A Cascade client reads the `cascade` of each mutation response and applies it to the client's cache: it writes updated entities, evicts deleted ones, and acts on invalidation hints. Components reading the cache re-render with the new data, with no `refetchQueries` or manual `update` functions.
 
-## Supported Clients
+## Packages
 
-### Apollo Client
-The most popular GraphQL client for React applications.
+| Package | For | Applies cascades |
+|---------|-----|------------------|
+| [`@graphql-cascade/apollo`](/clients/apollo) | Apollo Client | To Apollo's normalized cache, from `useCascadeMutation` or `ApolloCascadeClient` |
+| [`@graphql-cascade/relay`](/clients/relay) | Relay | To the Relay store, from every mutation of a cascade environment |
+| [`@graphql-cascade/react-query`](/clients/react-query) | TanStack Query | To query data holding the entities, and to query keys named by hints |
+| [`@graphql-cascade/urql`](/clients/urql) | urql | To a `CascadeCache` you provide |
+| [`@graphql-cascade/client`](/api/client-core) | Any client | The shared types, `CascadeClient`, and the `CascadeCache` interface for other caches |
 
-- **Package**: `@graphql-cascade/client-apollo`
-- **Setup time**: 5 minutes
-- **Features**: Full cascade support, optimistic updates, cache persistence
-- **[Get Started →](/clients/apollo)**
+## Selecting the Cascade
 
-### React Query (TanStack Query)
-Modern data fetching for React with built-in caching.
-
-- **Package**: `@graphql-cascade/client-react-query`
-- **Setup time**: 5 minutes
-- **Features**: Integration with React Query's mutation system
-- **[Get Started →](/clients/react-query)**
-
-### Relay
-Facebook's GraphQL client optimized for performance.
-
-- **Package**: `@graphql-cascade/client-relay`
-- **Setup time**: 10 minutes
-- **Features**: Works with Relay's store and updater functions
-- **[Get Started →](/clients/relay)**
-
-### URQL
-Lightweight and extensible GraphQL client.
-
-- **Package**: `@graphql-cascade/client-urql`
-- **Setup time**: 5 minutes
-- **Features**: Custom exchange for cascade processing
-- **[Get Started →](/clients/urql)**
-
-## Common Features
-
-All client libraries provide:
-
-- **Automatic cache updates** from cascade metadata
-- **Optimistic update support** with rollback on errors
-- **TypeScript support** with full type inference
-- **Framework agnostic core** with React hooks
-- **Conflict resolution** for concurrent updates
-- **Performance optimization** with batching and deduplication
-
-## Quick Comparison
-
-| Feature | Apollo | React Query | Relay | URQL |
-|---------|--------|-------------|-------|------|
-| Normalized Cache | ✅ | ⚠️ (optional) | ✅ | ⚠️ (optional) |
-| Optimistic Updates | ✅ | ✅ | ✅ | ✅ |
-| Subscriptions | ✅ | ⚠️ (via plugin) | ✅ | ✅ |
-| Bundle Size | 33KB | 12KB | 50KB | 5KB |
-| React Native | ✅ | ✅ | ✅ | ✅ |
-| Server-Side Rendering | ✅ | ✅ | ✅ | ✅ |
-| Cascade Support | ✅ | ✅ | ✅ | ✅ |
-
-## Installation
-
-Each client library is installed separately:
-
-```bash
-# Apollo Client
-npm install @graphql-cascade/client-apollo
-
-# React Query
-npm install @graphql-cascade/client-react-query
-
-# Relay
-npm install @graphql-cascade/client-relay
-
-# URQL
-npm install @graphql-cascade/client-urql
-```
-
-## Basic Usage Pattern
-
-All clients follow a similar pattern:
-
-### 1. Wrap Your Client
-
-```typescript
-import { createCascadeLink } from '@graphql-cascade/client-apollo';
-
-const cascadeLink = createCascadeLink();
-const client = new ApolloClient({
-  link: cascadeLink.concat(httpLink),
-  cache: new InMemoryCache()
-});
-```
-
-### 2. Use Mutations Normally
-
-```typescript
-const [createTodo] = useMutation(CREATE_TODO);
-
-// Cascade is processed automatically
-await createTodo({ variables: { title: 'New todo' } });
-```
-
-### 3. Include Cascade in Queries
+Clients apply what the mutation selects, so select `cascade` in every mutation. Select the entity fields your queries read under `entity`:
 
 ```graphql
-mutation CreateTodo($input: CreateTodoInput!) {
-  createTodo(input: $input) {
-    todo {
-      id
-      title
-      completed
-    }
-    __cascade {
-      created { __typename id }
-      updated { typename id }
+mutation UpdateTodo($id: ID!, $input: UpdateTodoInput!) {
+  updateTodo(id: $id, input: $input) {
+    success
+    errors { code message field }
+    data { id title completed }
+    cascade {
+      updated {
+        typename
+        id
+        operation
+        entity {
+          __typename
+          id
+          ... on Todo { title completed }
+          ... on User { todoCount }
+        }
+      }
       deleted { typename id }
-      invalidated { __typename field }
+      invalidations { queryName strategy scope }
+      typeInvalidations { typename }
+      metadata { timestamp affectedCount truncated }
     }
   }
 }
 ```
 
-## Framework Support
+In a real project, generate the `entity` selection: [`@graphql-cascade/codegen`](https://github.com/graphql-cascade/graphql-cascade/tree/main/packages/codegen#cascadeentityfragment) builds a `CascadeEntity` fragment from the fields your queries read, and mutations select `entity { ...CascadeEntity }`.
 
-### React
+## What Clients Do With a Cascade
 
-All client libraries provide React hooks:
+| Cascade field | Client action |
+|---------------|---------------|
+| `updated` | Write each entity into the cache under its type name and `id` |
+| `deleted` | Evict each entity |
+| `invalidations` | `INVALIDATE` marks matching queries stale, `REFETCH` refetches them, `REMOVE` drops them |
+| `typeInvalidations` | Treat every cached entity of the type, and every query that may contain one, as stale |
+
+Each library maps these onto its cache; the library pages say where a cache cannot follow a hint exactly and what it does instead.
+
+## Response Forms
+
+Every library reads both mutation response forms: a `CascadeResponse` payload (`success`, `errors`, `data`, `cascade`) and a result union of a `CascadePayload` and `CascadeFailure`. `toCascadeResponse()` from `@graphql-cascade/client` normalizes either one:
 
 ```typescript
-import { useMutation, useQuery } from '@apollo/client';
+import { toCascadeResponse } from "@graphql-cascade/client";
 
-function TodoApp() {
-  const { data } = useQuery(GET_TODOS);
-  const [createTodo] = useMutation(CREATE_TODO);
-  // ...
+const response = toCascadeResponse(result.data.updateTodo);
+if (response && !response.success) {
+  showErrors(response.errors);
 }
 ```
 
-### Vue
+## Errors
 
-Use with Vue's composition API:
-
-```typescript
-import { useQuery, useMutation } from '@vue/apollo-composable';
-
-export default {
-  setup() {
-    const { result } = useQuery(GET_TODOS);
-    const { mutate } = useMutation(CREATE_TODO);
-    // ...
-  }
-};
-```
-
-### Svelte
-
-Works with Svelte stores:
-
-```typescript
-import { query, mutation } from 'svelte-apollo';
-
-const todos = query(GET_TODOS);
-const createTodo = mutation(CREATE_TODO);
-```
-
-### React Native
-
-Full support for mobile apps:
-
-```typescript
-import { useQuery, useMutation } from '@apollo/client';
-// Same API as React web
-```
-
-## Advanced Features
-
-### Custom Cache Updates
-
-Override automatic updates when needed:
-
-```typescript
-const [createTodo] = useMutation(CREATE_TODO, {
-  update(cache, { data }) {
-    // Cascade is applied automatically
-    // Add custom logic if needed
-    const cascade = data.createTodo.__cascade;
-    console.log('Cascade processed:', cascade);
-  }
-});
-```
-
-### Cascade Filtering
-
-Filter which cascades are processed:
-
-```typescript
-const cascadeLink = createCascadeLink({
-  shouldProcessCascade: (cascade) => {
-    // Skip cascades with too many updates
-    return cascade.updated.length < 100;
-  }
-});
-```
-
-### Error Handling
-
-Handle cascade processing errors:
-
-```typescript
-const cascadeLink = createCascadeLink({
-  onError: (error) => {
-    console.error('Cascade processing failed:', error);
-    analytics.track('Cascade Error', { error: error.message });
-  }
-});
-```
-
-## Debugging
-
-Enable debug logging:
-
-```typescript
-const cascadeLink = createCascadeLink({
-  debug: true // Logs all cascade operations
-});
-```
-
-View cascade metadata in browser DevTools:
-
-```typescript
-// Available in window.__CASCADE__
-window.__CASCADE__.getLastCascade();
-window.__CASCADE__.getCascadeHistory();
-```
-
-## Migration Guides
-
-Migrating from manual cache updates:
-
-- **[From Apollo Manual Updates](/clients/apollo#migration)** - Remove `update` functions
-- **[From Relay Updaters](/clients/relay#migration)** - Replace `updater` functions
-- **[From React Query Manual Invalidation](/clients/react-query#migration)** - Remove `invalidateQueries` calls
+Cascade errors carry a standard `code`. `@graphql-cascade/client` exports helpers that act on it: `isRetryableError`, `isAuthError`, `isClientError`, `shouldRetry` and `calculateRetryDelay`. See [Client Core](/api/client-core#errors).
 
 ## Next Steps
 
-Choose your client library:
-
-- **[Apollo Client](/clients/apollo)** - Most popular, best for React
-- **[React Query](/clients/react-query)** - Modern, flexible data fetching
-- **[Relay](/clients/relay)** - Performance-optimized, best for large apps
-- **[URQL](/clients/urql)** - Lightweight, highly extensible
+- **[Apollo Client](/clients/apollo)**
+- **[Relay](/clients/relay)**
+- **[React Query](/clients/react-query)**
+- **[urql](/clients/urql)**
+- **[Client Core API](/api/client-core)**: types and the cache interface

@@ -562,7 +562,8 @@ const CHECKED_DOCS = [
   /^docs\/index\.md$/,
   /^docs\/guide\/(index|installation|quick-start|concepts)\.md$/,
   /^docs\/server\/[^/]+\.md$/,
-  /^docs\/api\/server-node\.md$/,
+  /^docs\/clients\/[^/]+\.md$/,
+  /^docs\/api\/[^/]+\.md$/,
 ];
 
 /** Exported names of every package, keyed by package name. */
