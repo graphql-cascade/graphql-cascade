@@ -29,7 +29,13 @@ const tracker = new CascadeTracker(config?: CascadeTrackerConfig);
 | `enableRelationshipTracking` | `boolean` | `true` | Whether to automatically traverse and track related entities |
 | `maxEntities` | `number` | `1000` | Maximum total entities to track (prevents memory exhaustion) |
 | `maxRelatedPerEntity` | `number` | `100` | Maximum related entities to traverse per entity (breadth limit) |
-| `onSerializationError` | `(entity: unknown, error: Error) =&gt; void` | `undefined` | Handler called when entity serialization fails |
+| `onSerializationError` | `(entity: unknown, error: Error) => void` | `undefined` | Handler called when entity serialization fails |
+| `fieldFilter` | `(typename, fieldName, value) => boolean` | `undefined` | Leave fields out of entity data |
+| `entityFilter` | `(entity, context) => boolean \| Promise<boolean>` | `undefined` | Leave out entities the viewer may not see; when async, build with `buildResponseAsync` |
+| `validateEntity` | `(entity) => void` | `undefined` | Throw to reject an entity before tracking |
+| `transformEntity` | `(entity) => entity` | `undefined` | Mask or reshape entity data |
+| `metrics` | `MetricsCollector` | `undefined` | Collector for tracking metrics |
+| `logger`, `debug` | | `undefined` | Log output |
 
 ```typescript
 const tracker = new CascadeTracker({
@@ -38,7 +44,7 @@ const tracker = new CascadeTracker({
   enableRelationshipTracking: true,
   maxEntities: 500,
   maxRelatedPerEntity: 50,
-  onSerializationError: (entity, error) =&gt; {
+  onSerializationError: (entity, error) => {
     console.warn('Failed to serialize entity:', entity, error);
   }
 });
@@ -103,20 +109,20 @@ tracker.trackCreate({
 });
 ```
 
-#### trackUpdate(entity: TrackedEntity): void
+#### trackUpdate(entity: TrackedEntity, options?: { updatedFields?: string[] }): void
 
-Tracks an entity update. The entity is added to the cascade's `updated` array with operation `UPDATED`.
+Tracks an entity update. The entity is added to the cascade's `updated` array with operation `UPDATED`, and with `updatedFields` when given. Repeated updates of one entity merge their fields.
 
 - **Parameters:**
   - `entity` - Entity object with at least `id` and optionally `__typename`
+  - `options.updatedFields` - Fields the update changed
 - **Throws:** `Error` if no transaction is in progress
 
 ```typescript
-tracker.trackUpdate({
-  __typename: 'User',
-  id: '123',
-  name: 'John Smith' // Updated name
-});
+tracker.trackUpdate(
+  { __typename: 'User', id: '123', name: 'John Smith' },
+  { updatedFields: ['name'] }
+);
 ```
 
 #### trackDelete(typename: string, entityId: string | number): void
@@ -131,6 +137,27 @@ Tracks an entity deletion. The entity is added to the cascade's `deleted` array.
 ```typescript
 tracker.trackDelete('User', '123');
 ```
+
+#### checkpoint(): TrackerCheckpoint / restore(checkpoint): void
+
+`checkpoint()` records the tracked changes; `restore(checkpoint)` undoes everything tracked since. Use them to drop the changes of a step whose database changes were rolled back.
+
+```typescript
+const checkpoint = tracker.checkpoint();
+try {
+  await applyDiscount(order, tracker);
+} catch {
+  tracker.restore(checkpoint);
+}
+```
+
+#### setContext(context: unknown): void
+
+Sets the context passed to `entityFilter`, such as the viewer.
+
+#### getUpdatedChanges(): IterableIterator&lt;EntityChange&gt;
+
+Iterates the tracked changes, including each update's `updatedFields`.
 
 #### resetTransactionState(): void
 
@@ -208,7 +235,7 @@ const builder = new CascadeBuilder(
 | `maxUpdatedEntities` | `number` | `500` | Maximum updated entities in response |
 | `maxDeletedEntities` | `number` | `100` | Maximum deleted entities in response |
 | `maxInvalidations` | `number` | `50` | Maximum invalidation entries in response |
-| `onInvalidationError` | `(error: Error) =&gt; void` | `undefined` | Handler for invalidator errors and dropped invalid hints |
+| `onInvalidationError` | `(error: Error) => void` | `undefined` | Handler for invalidator errors and dropped invalid hints |
 
 When a limit is exceeded, the builder never drops entities silently. It moves whole types, largest first, from `updated`/`deleted` into `typeInvalidations` and sets `metadata.truncated`. Entities dropped by the tracker's `maxEntities` limit are covered the same way. When invalidation hints exceed `maxInvalidations`, every type in the cascade gets a type invalidation.
 
@@ -217,7 +244,7 @@ const builder = new CascadeBuilder(tracker, invalidator, {
   maxUpdatedEntities: 200,
   maxDeletedEntities: 50,
   maxInvalidations: 20,
-  onInvalidationError: (error) =&gt; {
+  onInvalidationError: (error) => {
     console.warn('Invalidation error:', error);
   }
 });
@@ -243,6 +270,14 @@ const response = builder.buildResponse(createdUser, true);
 //   cascade: { updated: [...], deleted: [], invalidations: [], metadata: {...} },
 //   errors: []
 // }
+```
+
+#### buildResponseAsync&lt;T&gt;(primaryResult, success, errors): Promise&lt;CascadeResponse&gt;
+
+Like `buildResponse`, but awaits an async `entityFilter`. `buildResponse` throws `AsyncEntityFilterError` rather than skip an async filter, since skipping it would send entities the filter never checked.
+
+```typescript
+const response = await builder.buildResponseAsync(createdUser);
 ```
 
 #### buildErrorResponse(errors, primaryResult): CascadeResponse
@@ -349,6 +384,31 @@ const transaction = trackCascade(config?: CascadeTrackerConfig): CascadeTransact
 
 ---
 
+## Integrations
+
+### AsyncEntityFilterError
+
+Thrown by `buildResponse` and `endTransaction` when `entityFilter` returns a promise. Build with `buildResponseAsync` instead.
+
+### createCascadePlugin(options?: CascadePluginOptions)
+
+Apollo Server plugin that sends each operation's cascade in `extensions.cascade`. Accepts the `CascadeBuilderConfig` options and:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `invalidator` | `Invalidator` | `undefined` | Computes the invalidation hints of each cascade |
+| `contextKey` | `string` | `'cascadeTracker'` | Context key holding the request's tracker |
+| `autoInject` | `boolean` | `true` | Whether to add the cascade to response extensions |
+| `onInjectionError` | `(error: Error) => void` | `undefined` | Called when building the cascade fails |
+
+### cascadeMiddleware(options?: CascadeMiddlewareOptions)
+
+Express middleware that puts a `CascadeTracker` and `CascadeBuilder` on each request. Accepts the `CascadeTrackerConfig` and `CascadeBuilderConfig` options and an `invalidator`. `getCascadeData(req)` and `buildCascadeResponse(req, data)` read them back.
+
+### CascadeModule.forRoot(options?: CascadeModuleOptions)
+
+NestJS module providing the request-scoped `CascadeService`. Accepts the same options as `cascadeMiddleware`. See [NestJS](/server/nestjs).
+
 ## Types
 
 ### CascadeResponse
@@ -407,7 +467,9 @@ interface CascadeUpdatedEntity {
   /** Operation performed: 'CREATED' | 'UPDATED' | 'DELETED' */
   operation: 'CREATED' | 'UPDATED' | 'DELETED';
   /** The entity data */
-  entity: Record&lt;string, any&gt;;
+  entity: Record<string, any>;
+  /** Fields the update changed; absent when unknown or for created entities */
+  updatedFields?: string[];
 }
 ```
 
@@ -437,7 +499,7 @@ interface QueryInvalidation {
   /** Hash of the query, for EXACT matching */
   queryHash?: string;
   /** Arguments identifying the query, e.g. { companyId: "123" } */
-  arguments?: Record&lt;string, unknown&gt;;
+  arguments?: Record<string, unknown>;
   /** Glob such as "list*"; required for PATTERN scope */
   queryPattern?: string;
   /** INVALIDATE | REFETCH | REMOVE */
@@ -489,7 +551,7 @@ interface CascadeError {
   /** Path to the error */
   path?: string[];
   /** Additional error extensions */
-  extensions?: Record&lt;string, any&gt;;
+  extensions?: Record<string, any>;
 }
 ```
 
@@ -504,9 +566,9 @@ interface TrackedEntity {
   /** Alternative typename field */
   _typename?: string;
   /** Custom serialization method */
-  toDict?: () =&gt; Record&lt;string, unknown&gt;;
+  toDict?: () => Record<string, unknown>;
   /** Custom method to get related entities */
-  getRelatedEntities?: () =&gt; TrackedEntity[];
+  getRelatedEntities?: () => TrackedEntity[];
   /** Additional properties */
   [key: string]: unknown;
 }
@@ -538,7 +600,7 @@ import { CascadeTracker, CascadeBuilder } from '@graphql-cascade/server';
 
 const resolvers = {
   Mutation: {
-    createTodo: async (_, { input }, context) =&gt; {
+    createTodo: async (_, { input }, context) => {
       const tracker = new CascadeTracker();
       tracker.startTransaction();
 
@@ -576,7 +638,7 @@ const invalidator = {
     const invalidations = [];
 
     // Invalidate list queries when todos change
-    const affectedTypes = new Set(updated.map(e =&gt; e.__typename));
+    const affectedTypes = new Set(updated.map(e => e.__typename));
     if (affectedTypes.has('Todo')) {
       invalidations.push({
         queryName: 'listTodos',

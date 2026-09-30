@@ -1,373 +1,97 @@
 # Server Implementation
 
-Implement GraphQL Cascade in your server to provide automatic cache updates to clients.
+A Cascade server does three things for each mutation: it records the entities the mutation changes, computes hints about stale queries, and returns both in the payload's `cascade` field. `@graphql-cascade/server` provides the pieces for Node.js servers.
 
-## Overview
+## The Model
 
-GraphQL Cascade servers track entity changes during mutation execution and include cascade metadata in responses. This enables clients to automatically update their caches without manual code.
-
-## Supported Servers
-
-### Node.js/TypeScript
-Pure Node.js implementation for any GraphQL server.
-
-- **Package**: `@graphql-cascade/server`
-- **Setup time**: 10 minutes
-- **Features**: Complete cascade tracking, transaction support
-- **[Get Started →](/server/node)**
-
-### Apollo Server Plugin
-Drop-in plugin for Apollo Server.
-
-- **Package**: `@graphql-cascade/server`
-- **Setup time**: 5 minutes
-- **Features**: Automatic context injection, schema extension
-- **[Get Started →](/server/apollo-server)**
-
-### NestJS Module
-First-class NestJS integration.
-
-- **Package**: `@graphql-cascade/nestjs`
-- **Setup time**: 10 minutes
-- **Features**: Decorator-based tracking, dependency injection
-- **[Get Started →](/server/nestjs)**
-
-## Quick Start
-
-### 1. Install Package
-
-```bash
-npm install @graphql-cascade/server
-```
-
-### 2. Add to Your Server
+- **`CascadeTracker`** records what a mutation changes: `trackCreate`, `trackUpdate`, `trackDelete`. With relationship tracking on, tracking an entity also walks the entities it references, up to `maxDepth`.
+- **`Invalidator`** (optional) turns the tracked changes into invalidation hints, for queries that entity updates alone cannot fix, such as lists.
+- **`CascadeBuilder`** builds the payload: `success`, `errors`, `data` and `cascade`. It enforces size limits by moving whole types into `typeInvalidations` rather than dropping entities.
 
 ```typescript
-import { createCascadeContext, CascadePlugin } from '@graphql-cascade/server';
-import { ApolloServer } from '@apollo/server';
+import { CascadeBuilder, CascadeTracker } from "@graphql-cascade/server";
 
-const server = new ApolloServer({
-  typeDefs,
-  resolvers,
-  plugins: [new CascadePlugin()]
-});
+async function updateUser(_: unknown, { id, input }, { db }) {
+  const tracker = new CascadeTracker();
+  tracker.startTransaction();
 
-startStandaloneServer(server, {
-  context: async () => ({
-    cascade: createCascadeContext()
-  })
-});
-```
+  const user = await db.users.update(id, input);
+  tracker.trackUpdate(
+    { __typename: "User", ...user },
+    { updatedFields: Object.keys(input) },
+  );
 
-### 3. Track Changes in Resolvers
-
-```typescript
-const resolvers = {
-  Mutation: {
-    createTodo: async (_, { input }, { cascade }) => {
-      const todo = await db.createTodo(input);
-
-      // Track the creation
-      cascade.trackCreated('Todo', todo.id);
-
-      return {
-        todo,
-        __cascade: cascade.getCascade()
-      };
-    },
-
-    updateTodo: async (_, { id, input }, { cascade }) => {
-      const todo = await db.updateTodo(id, input);
-
-      // Track the update
-      cascade.trackUpdated('Todo', todo.id);
-
-      return {
-        todo,
-        __cascade: cascade.getCascade()
-      };
-    }
-  }
-};
-```
-
-### 4. Extend Your Schema
-
-```graphql
-type TodoMutationResponse {
-  todo: Todo
-  __cascade: Cascade!
-}
-
-type Cascade {
-  created: [EntityRef!]!
-  updated: [EntityRef!]!
-  deleted: [EntityRef!]!
-  invalidated: [InvalidationRef!]!
-}
-
-type EntityRef {
-  __typename: String!
-  id: ID!
-}
-
-type InvalidationRef {
-  __typename: String!
-  field: String
+  return new CascadeBuilder(tracker, invalidator).buildResponse(user);
 }
 ```
 
-## Core Concepts
+## Integrations
 
-### Cascade Context
+Pick how trackers reach your resolvers:
 
-The cascade context tracks all entity changes during a request:
+| Setup | What it does | Page |
+|-------|--------------|------|
+| Per resolver | Create a tracker and builder in each mutation resolver, as above | [Node.js](/server/node) |
+| Express | `cascadeMiddleware()` puts a tracker and builder on each request | [Node.js](/server/node#express) |
+| NestJS | `CascadeModule` provides a request-scoped `CascadeService` | [NestJS](/server/nestjs) |
+| Apollo Server | `createCascadePlugin()` sends one cascade per operation in `extensions.cascade` | [Apollo Server](/server/apollo-server) |
 
-```typescript
-const cascade = createCascadeContext();
+The payload `cascade` field is the normative place for a cascade. The Apollo Server plugin's `extensions.cascade` delivery is an optional alternative for schemas whose payload types cannot carry a `cascade` field.
 
-// Track operations
-cascade.trackCreated('Todo', '123');
-cascade.trackUpdated('User', '456');
-cascade.trackDeleted('Comment', '789');
-cascade.invalidate('Query', 'searchResults');
+## Schema
 
-// Get the cascade
-const result = cascade.getCascade();
-```
+Add the core types from the [reference schema](https://github.com/graphql-cascade/graphql-cascade/blob/main/reference/cascade_base.graphql) to your schema, and give each mutation a payload that implements `CascadeResponse`, or a result union with `CascadePayload`. See [Schema Conventions](/server/schema-conventions).
 
-### Entity Tracking
+## Invalidation Hints
 
-Track entities that are created, updated, or deleted:
+An `Invalidator` receives the tracked entries and returns spec `QueryInvalidation` hints:
 
 ```typescript
-// Creation
-cascade.trackCreated('Todo', todo.id);
+import {
+  InvalidationScope,
+  InvalidationStrategy,
+  type Invalidator,
+} from "@graphql-cascade/server";
 
-// Update
-cascade.trackUpdated('Todo', todo.id);
-
-// Deletion
-cascade.trackDeleted('Todo', todo.id);
-
-// Batch tracking
-cascade.trackCreatedMany('Todo', todoIds);
-```
-
-### Query Invalidation
-
-Mark queries that need to be refetched:
-
-```typescript
-// Invalidate specific query
-cascade.invalidate('Query', 'todos');
-
-// Invalidate all queries for a type
-cascade.invalidateType('Query');
-
-// Conditional invalidation
-if (shouldInvalidateSearch(update)) {
-  cascade.invalidate('Query', 'searchTodos');
-}
-```
-
-### Relationship Propagation
-
-Automatically track related entities:
-
-```typescript
-cascade.trackUpdated('Todo', todo.id, {
-  propagate: true, // Track related entities
-  depth: 2 // How many levels to traverse
-});
-
-// Tracks:
-// - Todo:123 (directly updated)
-// - TodoList:456 (parent)
-// - User:789 (owner)
-```
-
-## Best Practices
-
-### 1. Track at the Right Level
-
-Track changes where they happen, typically in resolvers:
-
-```typescript
-// Good: Track in resolver
-const createTodo = async (_, { input }, { cascade, db }) => {
-  const todo = await db.createTodo(input);
-  cascade.trackCreated('Todo', todo.id);
-  return { todo, __cascade: cascade.getCascade() };
-};
-
-// Avoid: Tracking in database layer
-// (harder to test, couples DB to GraphQL)
-```
-
-### 2. Use Transactions
-
-Ensure cascade tracking is atomic with database operations:
-
-```typescript
-const createProject = async (_, { input }, { cascade, db }) => {
-  return db.transaction(async (trx) => {
-    const project = await trx.createProject(input);
-    const tasks = await trx.createTasks(project.id, input.tasks);
-
-    cascade.trackCreated('Project', project.id);
-    cascade.trackCreatedMany('Task', tasks.map(t => t.id));
-
-    return { project, __cascade: cascade.getCascade() };
-  });
-};
-```
-
-### 3. Invalidate Carefully
-
-Only invalidate queries that are actually affected:
-
-```typescript
-// Good: Selective invalidation
-if (todo.status === 'completed') {
-  cascade.invalidate('Query', 'activeTodos');
-} else {
-  cascade.invalidate('Query', 'completedTodos');
-}
-
-// Avoid: Over-invalidation
-cascade.invalidateType('Query'); // Refetches ALL queries
-```
-
-### 4. Handle Errors Properly
-
-Don't return cascades on errors:
-
-```typescript
-const updateTodo = async (_, { id, input }, { cascade }) => {
-  try {
-    const todo = await db.updateTodo(id, input);
-    cascade.trackUpdated('Todo', todo.id);
-
-    return { todo, __cascade: cascade.getCascade() };
-  } catch (error) {
-    // Don't include cascade on error
-    throw error;
-  }
-};
-```
-
-## Schema Design
-
-### Response Types
-
-All mutations should return a response type with cascade:
-
-```graphql
-type Mutation {
-  createTodo(input: CreateTodoInput!): TodoMutationResponse!
-  updateTodo(id: ID!, input: UpdateTodoInput!): TodoMutationResponse!
-  deleteTodo(id: ID!): TodoMutationResponse!
-}
-
-type TodoMutationResponse {
-  # The mutation result
-  todo: Todo
-
-  # Cascade metadata (required)
-  __cascade: Cascade!
-
-  # Optional fields
-  errors: [Error!]
-}
-```
-
-### Standardized Cascade Type
-
-Use the standard cascade type across all mutations:
-
-```graphql
-type Cascade {
-  created: [EntityRef!]!
-  updated: [EntityRef!]!
-  deleted: [EntityRef!]!
-  invalidated: [InvalidationRef!]!
-}
-
-type EntityRef {
-  __typename: String!
-  id: ID!
-}
-
-type InvalidationRef {
-  __typename: String!
-  field: String
-}
-```
-
-## Testing
-
-Test cascade tracking in your resolvers:
-
-```typescript
-describe('createTodo resolver', () => {
-  test('tracks created entity', async () => {
-    const cascade = createCascadeContext();
-    const context = { cascade, db: mockDb };
-
-    const result = await resolvers.Mutation.createTodo(
-      null,
-      { input: { title: 'Test' } },
-      context
+const invalidator: Invalidator = {
+  computeInvalidations(updated, deleted) {
+    const created = updated.some(
+      (e) => e.typename === "Todo" && e.operation === "CREATED",
     );
-
-    expect(result.__cascade.created).toEqual([
-      { __typename: 'Todo', id: result.todo.id }
-    ]);
-  });
-});
+    const removed = deleted.some((e) => e.typename === "Todo");
+    return created || removed
+      ? [
+          {
+            queryName: "todos",
+            strategy: InvalidationStrategy.INVALIDATE,
+            scope: InvalidationScope.PREFIX,
+          },
+        ]
+      : [];
+  },
+};
 ```
 
-## Performance
+Hint what entity updates cannot fix: lists that gained or lost members, counts, search results. Updated entities themselves need no hint; clients write them into the cache.
 
-### Optimize Entity Tracking
+## Limits and Completeness
 
-Use efficient data structures:
+The builder never drops an affected entity silently. Past a limit (`maxUpdatedEntities`, default 500; `maxDeletedEntities`, 100; `maxResponseSizeMb`, 5), it moves whole types into `typeInvalidations`, largest first, and sets `metadata.truncated`. The tracker's `maxEntities` limit (default 1000) is covered the same way.
 
-```typescript
-// Built-in optimization
-const cascade = createCascadeContext({
-  maxDepth: 2, // Limit relationship traversal
-  maxEntities: 1000 // Limit cascade size
-});
-```
+## Errors
 
-### Database Query Optimization
-
-Minimize queries for relationship tracking:
+`buildErrorResponse(errors)` returns `success: false` and an empty cascade. Error helpers (`validationError`, `notFoundError`, `unauthorizedError`, `forbiddenError`, `conflictError`, `timeoutError`, `rateLimitedError`, `serviceUnavailableError`) build errors with standard codes, and `withDomainCode` adds an application-specific code:
 
 ```typescript
-// Bad: N+1 queries
-for (const todo of todos) {
-  const list = await db.getTodoList(todo.listId);
-  cascade.trackUpdated('TodoList', list.id);
-}
+import { conflictError, withDomainCode } from "@graphql-cascade/server";
 
-// Good: Single query
-const listIds = new Set(todos.map(t => t.listId));
-listIds.forEach(id => cascade.trackUpdated('TodoList', id));
+return builder.buildErrorResponse([
+  withDomainCode(conflictError("Balance too low", "amount"), "INSUFFICIENT_FUNDS"),
+]);
 ```
 
 ## Next Steps
 
-Choose your server platform:
-
-- **[Node.js/TypeScript](/server/node)** - Pure Node.js implementation
-- **[Apollo Server](/server/apollo-server)** - Plugin-based integration
-- **[NestJS](/server/nestjs)** - Decorator-based approach
-
-Learn more:
-
-- **[Schema Conventions](/server/schema-conventions)** - Schema design patterns
-- **[Directives](/server/directives)** - Custom cascade directives
-- **[Entity Identification](/server/entity-identification)** - ID strategies
+- **[Node.js](/server/node)**: the tracker in depth, Express, security filters, observability
+- **[Schema Conventions](/server/schema-conventions)**: payload types and naming
+- **[API Reference](/api/server-node)**: every class and option

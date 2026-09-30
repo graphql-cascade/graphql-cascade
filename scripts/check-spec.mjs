@@ -561,6 +561,8 @@ const CHECKED_DOCS = [
   /^packages\/.+\/README\.md$/,
   /^docs\/index\.md$/,
   /^docs\/guide\/(index|installation|quick-start|concepts)\.md$/,
+  /^docs\/server\/[^/]+\.md$/,
+  /^docs\/api\/server-node\.md$/,
 ];
 
 /** Exported names of every package, keyed by package name. */

@@ -1,86 +1,88 @@
 # NestJS Integration
 
-First-class NestJS integration with decorators and dependency injection.
+`@graphql-cascade/server` includes a NestJS module. `CascadeModule` provides `CascadeService`, a request-scoped service holding a tracker and a builder for each request.
 
 ## Installation
 
 ```bash
-npm install @graphql-cascade/nestjs @nestjs/graphql
+npm install @graphql-cascade/server @nestjs/common @nestjs/graphql
 ```
 
 ## Module Setup
 
 ```typescript
-import { Module } from '@nestjs/common';
-import { GraphQLModule } from '@nestjs/graphql';
-import { CascadeModule } from '@graphql-cascade/nestjs';
+import { Module } from "@nestjs/common";
+import { CascadeModule } from "@graphql-cascade/server";
 
 @Module({
   imports: [
-    GraphQLModule.forRoot({
-      autoSchemaFile: true
-    }),
     CascadeModule.forRoot({
-      debug: true,
-      maxDepth: 2
-    })
-  ]
+      maxDepth: 2,
+      maxUpdatedEntities: 500,
+      invalidator,
+    }),
+  ],
 })
 export class AppModule {}
 ```
 
-## Decorator-Based Tracking
+`forRoot` accepts the tracker options (`maxDepth`, `excludeTypes`, `enableRelationshipTracking`), the builder's size limits (`maxUpdatedEntities`, `maxDeletedEntities`, `maxResponseSizeMb`, `maxInvalidations`) and an `invalidator`.
+
+## Tracking in Resolvers
+
+Inject `CascadeService` and use it the way you would use a tracker and a builder:
 
 ```typescript
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { Cascade, TrackCreated } from '@graphql-cascade/nestjs';
+import { Args, Mutation, Resolver } from "@nestjs/graphql";
+import { CascadeService } from "@graphql-cascade/server";
 
 @Resolver()
 export class TodoResolver {
-  constructor(private todoService: TodoService) {}
+  constructor(
+    private readonly todos: TodoService,
+    private readonly cascade: CascadeService,
+  ) {}
 
-  @Mutation(() => TodoMutationResponse)
-  @TrackCreated('Todo') // Automatic tracking
-  async createTodo(
-    @Args('input') input: CreateTodoInput,
-    @Cascade() cascade: CascadeContext
-  ) {
-    const todo = await this.todoService.create(input);
+  @Mutation(() => UpdateTodoCascade)
+  async updateTodo(@Args("id") id: string, @Args("input") input: UpdateTodoInput) {
+    this.cascade.startTransaction();
 
-    return {
-      todo,
-      __cascade: cascade.getCascade()
-    };
+    const todo = await this.todos.update(id, input);
+    this.cascade.trackUpdate(
+      { __typename: "Todo", ...todo },
+      { updatedFields: Object.keys(input) },
+    );
+
+    return this.cascade.buildResponse(todo);
+  }
+
+  @Mutation(() => DeleteTodoCascade)
+  async deleteTodo(@Args("id") id: string) {
+    this.cascade.startTransaction();
+    await this.todos.delete(id);
+    this.cascade.trackDelete("Todo", id);
+    return this.cascade.buildResponse(null);
   }
 }
 ```
 
-## Manual Tracking
+`UpdateTodoCascade` and `DeleteTodoCascade` are your payload types implementing `CascadeResponse`; see [Schema Conventions](/server/schema-conventions).
 
-```typescript
-@Mutation(() => TodoMutationResponse)
-async updateTodo(
-  @Args('id') id: string,
-  @Args('input') input: UpdateTodoInput,
-  @Cascade() cascade: CascadeContext
-) {
-  const todo = await this.todoService.update(id, input);
+## CascadeService
 
-  // Manual tracking for complex logic
-  cascade.trackUpdated('Todo', id);
+| Method | Description |
+|--------|-------------|
+| `startTransaction()` | Start tracking the mutation's changes |
+| `trackCreate(entity)` | Record a created entity |
+| `trackUpdate(entity, { updatedFields? })` | Record an updated entity |
+| `trackDelete(typename, id)` | Record a deleted entity |
+| `buildResponse(data, success?, errors?)` | Build the payload and end the transaction |
+| `buildErrorResponse(errors, data?)` | Build a failed payload with an empty cascade |
+| `getTracker()`, `getBuilder()` | The underlying `CascadeTracker` and `CascadeBuilder` |
 
-  if (input.completed) {
-    cascade.invalidate('Query', 'activeTodos');
-  }
-
-  return {
-    todo,
-    __cascade: cascade.getCascade()
-  };
-}
-```
+With an async `entityFilter`, build through the builder so the filter is awaited: `await this.cascade.getBuilder().buildResponseAsync(todo)`.
 
 ## Next Steps
 
-- **[Schema Conventions](/server/schema-conventions)** - Best practices
-- **[Directives](/server/directives)** - Custom cascade control
+- **[Node.js](/server/node)**: tracking in depth
+- **[Schema Conventions](/server/schema-conventions)**: payload types

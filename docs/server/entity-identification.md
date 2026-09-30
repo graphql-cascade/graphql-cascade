@@ -1,67 +1,47 @@
 # Entity Identification
 
-Strategies for uniquely identifying entities in GraphQL Cascade.
+Cascades identify entities the way GraphQL clients do: by type name and `id`. The specification follows Relay's Global Object Identification; see its [Entity Identification](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/03_entity_identification.md) chapter.
 
-## Global Object Identification
+## IDs Unique Across Types
 
-Use globally unique IDs across all types:
-
-```graphql
-type Todo {
-  id: ID! # "Todo:123"
-}
-
-type User {
-  id: ID! # "User:456"
-}
-```
-
-## Type Prefix Strategy
-
-Prefix IDs with typename:
-
-```typescript
-function createGlobalId(typename: string, localId: string): string {
-  return `${typename}:${localId}`;
-}
-
-// Usage
-const globalId = createGlobalId('Todo', '123'); // "Todo:123"
-```
-
-## UUID Strategy
-
-Use UUIDs for natural global uniqueness:
-
-```typescript
-import { v4 as uuid } from 'uuid';
-
-const todo = {
-  id: uuid(), // "a1b2c3d4-..."
-  title: 'Todo'
-};
-```
-
-## Composite Keys
-
-For entities without single IDs:
+Entities implement `Node`, and their `id` should be unique across all types. It becomes a requirement in specification 2.0.0.
 
 ```graphql
-type EntityRef {
-  __typename: String!
+interface Node {
   id: ID!
-  compositeKey: String # "userId:projectId"
 }
 ```
 
-## Best Practices
+Two ways to get there:
 
-1. Choose one strategy consistently
-2. Make IDs globally unique
-3. Include typename in cache keys
-4. Document your ID format
+- **UUIDs as public IDs.** Keep integer primary keys internal for join performance, and expose a UUID as `id`. UUIDs are unique across types as they are.
+- **Encoded IDs.** Encode the type into the ID, for example `base64("User:123")`, and decode it where you look entities up.
+
+Relay keys its store by `id` alone, so unique IDs are what let Relay clients use cascades without extra configuration. Apollo and urql key their caches by type name and `id`, which works with either form.
+
+## Refetching by ID
+
+Provide Relay's `node` field so clients can refetch any entity:
+
+```graphql
+type Query {
+  node(id: ID!): Node
+}
+```
+
+It must accept exactly the IDs your objects return: `node(id: x.id)` returns `x`.
+
+## How the Tracker Identifies Entities
+
+`CascadeTracker` reads an entity's type from `__typename`, then `_typename`, then its class name, and its ID from `id`. Pass plain objects with `__typename` to be explicit:
+
+```typescript
+tracker.trackUpdate({ __typename: "User", ...user });
+```
+
+Cascade entries carry the type in `typename` and the ID in `id`; clients build cache keys from them.
 
 ## Next Steps
 
-- **[Client Integration](/clients/)** - How clients use entity IDs
-- **[Specification](/specification/)** - Full entity identification spec
+- **[Schema Conventions](/server/schema-conventions)**: entity and payload types
+- **[Node.js](/server/node)**: tracking entities
