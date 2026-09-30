@@ -24,6 +24,8 @@ import { fileURLToPath } from "node:url";
 import {
   Kind,
   buildASTSchema,
+  getNamedType,
+  isLeafType,
   isTypeSystemDefinitionNode,
   parse,
   print,
@@ -238,6 +240,7 @@ export function checkExampleSchemas(sdl, files) {
  */
 export function checkSnippets(sdl, files) {
   const reference = referenceShapes(parse(sdl));
+  const schema = buildASTSchema(parse(sdl), { assumeValidSDL: true });
 
   const problems = [];
   for (const { path, content } of files) {
@@ -267,8 +270,114 @@ export function checkSnippets(sdl, files) {
           );
         }
       }
+      problems.push(...checkCascadeSelections(schema, document, where));
+    }
+    for (const block of content.matchAll(CODE_BLOCK)) {
+      const codeStart = block.index + block[0].indexOf("\n") + 1;
+      for (const template of block[1].matchAll(GQL_TEMPLATE)) {
+        const line = content
+          .slice(0, codeStart + template.index)
+          .split("\n").length;
+        let document;
+        try {
+          document = parse(template[1].replace(/\$\{[^}]*\}/g, ""));
+        } catch {
+          continue; // partial documents in prose examples
+        }
+        problems.push(
+          ...checkCascadeSelections(schema, document, `${path}:${line}`),
+        );
+      }
     }
   }
+  return problems;
+}
+
+/** GraphQL in code: tagged templates, or plain strings holding an operation. */
+const GQL_TEMPLATE =
+  /(?:\b(?:gql|graphql))?`(\s*(?:mutation|query|subscription|fragment)\b[^`]*)`/g;
+
+/**
+ * Validate every `cascade { … }` selection against the reference's
+ * CascadeUpdates: fields exist, object fields have a selection set and
+ * scalars do not. Fragments on application types are not checked.
+ */
+function checkCascadeSelections(schema, document, where) {
+  const root = schema.getType("CascadeUpdates");
+  if (!root) return [];
+  const fragments = new Map(
+    document.definitions
+      .filter((def) => def.kind === Kind.FRAGMENT_DEFINITION)
+      .map((def) => [def.name.value, def]),
+  );
+  const problems = [];
+  const check = (type, selectionSet, seen) => {
+    for (const selection of selectionSet.selections) {
+      if (selection.kind === Kind.FIELD) {
+        const name = selection.name.value;
+        if (name === "__typename") continue;
+        const field = type.getFields()[name];
+        if (!field) {
+          problems.push(
+            `${where}: cascade selection ${type.name}.${name} does not exist`,
+          );
+          continue;
+        }
+        const named = getNamedType(field.type);
+        if (isLeafType(named)) {
+          if (selection.selectionSet) {
+            problems.push(
+              `${where}: cascade selection ${type.name}.${name} is a scalar and takes no selection set`,
+            );
+          }
+        } else if (!selection.selectionSet) {
+          problems.push(
+            `${where}: cascade selection ${type.name}.${name} needs a selection set`,
+          );
+        } else {
+          check(named, selection.selectionSet, seen);
+        }
+      } else {
+        const fragment =
+          selection.kind === Kind.FRAGMENT_SPREAD
+            ? fragments.get(selection.name.value)
+            : selection;
+        if (!fragment || seen.has(fragment)) continue;
+        const condition = fragment.typeCondition?.name.value;
+        const target = condition ? schema.getType(condition) : type;
+        if (target && "getFields" in target) {
+          check(target, fragment.selectionSet, new Set([...seen, fragment]));
+        }
+      }
+    }
+  };
+  // Subscription fields the reference defines, such as cascadeUpdates
+  const subscriptionFields = schema.getSubscriptionType()?.getFields() ?? {};
+  for (const def of document.definitions) {
+    if (
+      def.kind !== Kind.OPERATION_DEFINITION ||
+      def.operation !== "subscription"
+    ) {
+      continue;
+    }
+    for (const selection of def.selectionSet.selections) {
+      const field =
+        selection.kind === Kind.FIELD &&
+        subscriptionFields[selection.name.value];
+      if (field && selection.selectionSet) {
+        check(getNamedType(field.type), selection.selectionSet, new Set());
+      }
+    }
+  }
+  visit(document, {
+    Field(node) {
+      if (node.name.value === "cascade" && node.selectionSet) {
+        check(root, node.selectionSet, new Set());
+        return false;
+      }
+      return undefined;
+    },
+  });
   return problems;
 }
 

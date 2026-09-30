@@ -105,8 +105,8 @@ const CREATE_TODO = gql`
         updated {
           typename
           id
-          field
-          value
+          operation
+          entity { ...CascadeEntity }
         }
         deleted {
           typename

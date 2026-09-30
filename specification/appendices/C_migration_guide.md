@@ -97,7 +97,7 @@ const UPDATE_USER = gql`
         email
       }
       cascade {
-        updated { typename id operation entity }
+        updated { typename id operation entity { ...CascadeEntity } }
         deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }
@@ -203,7 +203,7 @@ const mutation = graphql`
         name
       }
       cascade {
-        updated { typename id operation entity }
+        updated { typename id operation entity { ...CascadeEntity } }
         deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }
@@ -555,8 +555,8 @@ const mutations = {
 
 **Solution**: Always include cascade in mutation responses.
 
-```typescript
-// ❌ Wrong
+```graphql
+# ❌ Wrong
 mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
   updateUser(id: $id, input: $input) {
     data { id name }
@@ -564,12 +564,12 @@ mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
   }
 }
 
-// ✅ Correct
+# ✅ Correct
 mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
   updateUser(id: $id, input: $input) {
     success
     data { id name }
-    cascade { updated { typename id entity } }
+    cascade { updated { typename id entity { ...CascadeEntity } } }
   }
 }
 ```

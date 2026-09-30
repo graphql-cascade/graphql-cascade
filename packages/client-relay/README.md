@@ -87,7 +87,7 @@ const CreateTodoMutation = graphql`
           typename
           id
           operation
-          entity
+          entity { ...CascadeEntity }
         }
         deleted {
           typename
