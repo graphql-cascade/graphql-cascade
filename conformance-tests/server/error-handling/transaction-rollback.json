@@ -1,7 +1,7 @@
 {
   "id": "TC-S-020",
   "name": "Transaction Rollback on Error",
-  "description": "Servers MUST NOT include cascade data when a mutation fails and transaction is rolled back",
+  "description": "Servers MUST NOT report any entity changes when a mutation fails and its transaction is rolled back: the cascade is present but empty",
   "category": "server",
   "subcategory": "error-handling",
   "requirement": "REQ-020",
@@ -23,7 +23,13 @@
         "code": "NOT_FOUND"
       }
     },
-    "cascade": null
+    "cascade": {
+      "updated": [],
+      "deleted": [],
+      "invalidations": [],
+      "typeInvalidations": [],
+      "metadata": { "affectedCount": 0 }
+    }
   },
   "tags": ["error-handling", "rollback", "transaction"]
 }
