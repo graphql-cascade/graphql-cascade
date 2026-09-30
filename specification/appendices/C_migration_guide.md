@@ -97,8 +97,8 @@ const UPDATE_USER = gql`
         email
       }
       cascade {
-        updated { __typename id operation entity }
-        deleted { __typename id }
+        updated { typename id operation entity }
+        deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }
       }
@@ -203,8 +203,8 @@ const mutation = graphql`
         name
       }
       cascade {
-        updated { __typename id operation entity }
-        deleted { __typename id }
+        updated { typename id operation entity }
+        deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }
       }
@@ -458,8 +458,8 @@ describe('End-to-End Cascade', () => {
     // Verify cascade includes related entities
     expect(result.cascade.updated).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ __typename: 'User', id: user.id }),
-        expect.objectContaining({ __typename: 'Company', id: company.id })
+        expect.objectContaining({ typename: 'User', id: user.id }),
+        expect.objectContaining({ typename: 'Company', id: company.id })
       ])
     );
 
@@ -569,7 +569,7 @@ mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
   updateUser(id: $id, input: $input) {
     success
     data { id name }
-    cascade { updated { __typename id entity } }
+    cascade { updated { typename id entity } }
   }
 }
 ```

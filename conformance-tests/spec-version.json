@@ -1,12 +1,13 @@
 {
   "specification": {
     "name": "GraphQL Cascade",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "status": "stable",
     "supportedVersions": [
       "1.0.0",
       "1.1.0",
-      "1.2.0"
+      "1.2.0",
+      "1.3.0"
     ]
   },
   "compatibility": {
@@ -14,6 +15,13 @@
       "2021-10"
     ],
     "breakingChanges": [],
-    "deprecated": []
+    "deprecated": [
+      {
+        "feature": "UpdatedEntity.__typename and DeletedEntity.__typename JSON pseudo-fields",
+        "since": "1.3.0",
+        "removal": "2.0.0",
+        "replacement": "typename"
+      }
+    ]
   }
 }

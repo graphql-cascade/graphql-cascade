@@ -171,7 +171,7 @@ class StreamingCascadeBuilder:
             """Generator for updated entities."""
             for entity, operation in self.tracker.get_updated_stream():
                 yield {
-                    '__typename': entity.__typename__,
+                    'typename': entity.__typename__,
                     'id': entity.id,
                     'operation': operation.value,
                     'entity': entity.to_dict()
@@ -181,7 +181,7 @@ class StreamingCascadeBuilder:
             """Generator for deleted entities."""
             for typename, entity_id in self.tracker.get_deleted_stream():
                 yield {
-                    '__typename': typename,
+                    'typename': typename,
                     'id': entity_id,
                     'deletedAt': self.tracker.transaction_timestamp
                 }

@@ -276,6 +276,21 @@ All specification changes MUST be documented in CHANGELOG.md following this form
 
 ## Appendix: Version History
 
+### v1.3.0 (2026-09-30)
+
+#### Changes
+- `UpdatedEntity` and `DeletedEntity` carry the entity's type name in `typename`. GraphQL reserves names beginning with `__`, so the former `__typename` field could not be declared in a schema, and selecting it returned the wrapper's own type
+- Deprecated the `__typename` pseudo-field on `UpdatedEntity` and `DeletedEntity`, for removal in 2.0.0
+- `reference/cascade_base.graphql` is the normative schema and is valid GraphQL; specification excerpts are checked against it in CI
+- `CascadeErrorCode` in the reference schema lists all ten codes
+
+#### Backward Compatibility
+Backward compatible during the deprecation period: servers send `typename` and keep sending `__typename` in JSON cascades, and clients read `typename` with a fallback to `__typename`.
+
+#### Migration
+- Servers: add `typename` to every `updated` and `deleted` entry; keep `__typename` in JSON cascades until 2.0.0.
+- Clients: read `typename`, falling back to `__typename`; select `typename` instead of `__typename` on `UpdatedEntity` and `DeletedEntity`.
+
 ### v1.2.0 (2026-09-30)
 
 #### Changes

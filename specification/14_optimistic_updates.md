@@ -130,7 +130,7 @@ class OptimisticCascadeGenerator {
     // Add the primary result
     if (predictedResult.__typename && predictedResult.id) {
       cascade.updated.push({
-        __typename: predictedResult.__typename,
+        typename: predictedResult.__typename,
         id: predictedResult.id,
         operation: 'CREATED',  // Assume created for optimistic
         entity: predictedResult
@@ -158,7 +158,7 @@ class OptimisticCascadeGenerator {
       const company = cache.read('Company', result.companyId);
       if (company) {
         updates.push({
-          __typename: 'Company',
+          typename: 'Company',
           id: result.companyId,
           operation: 'UPDATED',
           entity: {
@@ -196,9 +196,9 @@ class OptimisticCascadeGenerator {
     const rollbackState: Array<{ type: string, id: string, data: any }> = [];
 
     for (const entity of cascade.updated) {
-      const current = cache.read(entity.__typename, entity.id);
+      const current = cache.read(entity.typename, entity.id);
       rollbackState.push({
-        type: entity.__typename,
+        type: entity.typename,
         id: entity.id,
         data: current
       });
@@ -558,7 +558,7 @@ type OptimisticHints {
 }
 
 type OptimisticRelatedUpdate {
-  __typename: String!
+  typename: String!
   id: ID!
   operation: CascadeOperation!
   predictedFields: JSON!

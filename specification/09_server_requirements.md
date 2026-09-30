@@ -117,7 +117,7 @@ def construct_cascade_response(mutation_result, tracker, invalidator):
     updated_entities = []
     for entity, operation in tracker.updated_entities:
         updated_entities.append({
-            '__typename': entity.__typename__,
+            'typename': entity.__typename__,
             'id': entity.id,
             'operation': operation.value,
             'entity': entity.to_dict()
@@ -127,7 +127,7 @@ def construct_cascade_response(mutation_result, tracker, invalidator):
     deleted_entities = []
     for typename, entity_id in tracker.deleted_entities:
         deleted_entities.append({
-            '__typename': typename,
+            'typename': typename,
             'id': entity_id,
             'deletedAt': tracker.transaction_timestamp
         })

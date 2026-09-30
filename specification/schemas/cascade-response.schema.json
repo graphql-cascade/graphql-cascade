@@ -112,7 +112,7 @@
       "cascade": {
         "updated": [
           {
-            "__typename": "User",
+            "typename": "User",
             "id": "123",
             "operation": "UPDATED",
             "entity": {

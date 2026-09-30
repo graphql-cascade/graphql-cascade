@@ -53,11 +53,11 @@ mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
     data { id name email }
     cascade {
       updated {
-        __typename
+        typename
         id
         entity { id name email updatedAt }
       }
-      deleted { __typename id }
+      deleted { typename id }
       invalidations { queryName strategy scope }
       metadata { timestamp affectedCount }
     }
@@ -71,7 +71,7 @@ mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
     data { id name email address { street city country } posts { id title } }
     cascade {
       updated {
-        __typename
+        typename
         id
         entity { id name email address { street city country } posts { id title content author { id name } } }
       }

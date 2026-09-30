@@ -4,17 +4,28 @@
  *
  * - No tracked file contains leaked tool-call transcript text.
  * - Every version stamp agrees with specification/VERSION.
+ * - reference/cascade_base.graphql is a valid GraphQL schema, and is the
+ *   normative source: every graphql block in the specification parses, and
+ *   any definition of a reference type matches it (descriptions aside).
  *
  * Usage: node scripts/check-spec.mjs
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { buildASTSchema, parse, print, validateSchema, visit } from "graphql";
 
 // Built from parts so this file never matches its own pattern.
 const TRANSCRIPT_MARKER = ["xai", "function_call"].join(":");
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
+
+const REFERENCE_PATH = "reference/cascade_base.graphql";
+// The reference defines types for implementers' schemas, which own the Query root.
+const MISSING_QUERY_ROOT = "Query root type must be provided.";
+// Implementers own their root operation types; examples show their own.
+const ROOT_TYPES = new Set(["Query", "Mutation", "Subscription"]);
+const GRAPHQL_BLOCK = /^```graphql\n([\s\S]*?)^```/gm;
 
 /**
  * @param {{ path: string, content: string }[]} files
@@ -74,6 +85,70 @@ export function checkVersionConsistency(readFile) {
   return problems;
 }
 
+/**
+ * @param {string} sdl the reference schema
+ * @returns {string[]} one message per syntax or schema validation error
+ */
+export function checkReferenceSchema(sdl) {
+  try {
+    const schema = buildASTSchema(parse(sdl), { assumeValidSDL: false });
+    return validateSchema(schema)
+      .filter((e) => e.message !== MISSING_QUERY_ROOT)
+      .map((e) => `${REFERENCE_PATH}: ${e.message}`);
+  } catch (e) {
+    return [`${REFERENCE_PATH}: ${e.message}`];
+  }
+}
+
+const withoutDescriptions = (node) =>
+  visit(node, {
+    leave: (n) =>
+      n.description ? { ...n, description: undefined } : undefined,
+  });
+
+/**
+ * @param {string} sdl the reference schema
+ * @param {{ path: string, content: string }[]} files specification Markdown
+ * @returns {string[]} one message per unparseable block or drifted definition
+ */
+export function checkSnippets(sdl, files) {
+  const reference = new Map();
+  for (const def of parse(sdl).definitions) {
+    if (def.name && !ROOT_TYPES.has(def.name.value))
+      reference.set(def.name.value, print(withoutDescriptions(def)));
+  }
+
+  const problems = [];
+  for (const { path, content } of files) {
+    for (const match of content.matchAll(GRAPHQL_BLOCK)) {
+      const where = `${path}:${content.slice(0, match.index).split("\n").length}`;
+      let document;
+      try {
+        document = parse(match[1]);
+      } catch (e) {
+        problems.push(`${where}: graphql block does not parse: ${e.message}`);
+        continue;
+      }
+      for (const def of document.definitions) {
+        for (const field of def.fields ?? []) {
+          if (field.name.value.startsWith("__")) {
+            problems.push(
+              `${where}: ${def.name.value}.${field.name.value}: names beginning with "__" are reserved by GraphQL`,
+            );
+          }
+        }
+        const expected = def.name && reference.get(def.name.value);
+        if (expected && print(withoutDescriptions(def)) !== expected) {
+          problems.push(
+            `${where}: ${def.name.value} differs from ${REFERENCE_PATH}`,
+          );
+        }
+      }
+    }
+  }
+  return problems;
+}
+
 function trackedTextFiles(root) {
   const paths = execFileSync("git", ["ls-files", "-z"], {
     cwd: root,
@@ -98,9 +173,22 @@ function trackedTextFiles(root) {
 function main() {
   const root = new URL("../", import.meta.url);
   const readFile = (path) => readFileSync(new URL(path, root), "utf8");
+  const files = trackedTextFiles(root);
+  const sdl = readFile(REFERENCE_PATH);
+  const schemaProblems = checkReferenceSchema(sdl);
   const problems = [
-    ...findCorruption(trackedTextFiles(root)),
+    ...findCorruption(files),
     ...checkVersionConsistency(readFile),
+    ...schemaProblems,
+    ...(schemaProblems.length > 0
+      ? []
+      : checkSnippets(
+          sdl,
+          files.filter(
+            ({ path }) =>
+              path.startsWith("specification/") && path.endsWith(".md"),
+          ),
+        )),
   ];
   if (problems.length > 0) {
     console.error(problems.join("\n"));

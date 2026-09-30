@@ -84,7 +84,8 @@ Represents an entity that was created or updated.
 
 ```
 UpdatedEntity ::= '{'
-    '"__typename"' ':' String ','
+    '"typename"' ':' String ','
+    ( '"__typename"' ':' String ',' )?   # deprecated since 1.3.0; same value as typename
     '"id"' ':' ID ','
     '"operation"' ':' CascadeOperation ','
     '"entity"' ':' Node
@@ -96,14 +97,14 @@ UpdatedEntity ::= '{'
 ┌─────────────────────────────────────────────────────────────┐
 │                      UpdatedEntity                          │
 ├─────────────────────────────────────────────────────────────┤
-│  { "__typename": String, "id": ID, "operation": Operation, "entity": Node } │
+│  { "typename": String, "id": ID, "operation": Operation, "entity": Node }   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Example:**
 ```json
 {
-  "__typename": "User",
+  "typename": "User",
   "id": "123",
   "operation": "UPDATED",
   "entity": {
@@ -120,7 +121,8 @@ Represents an entity that was deleted.
 
 ```
 DeletedEntity ::= '{'
-    '"__typename"' ':' String ','
+    '"typename"' ':' String ','
+    ( '"__typename"' ':' String ',' )?   # deprecated since 1.3.0; same value as typename
     '"id"' ':' ID ','
     '"deletedAt"' ':' DateTime
 '}'
@@ -131,14 +133,14 @@ DeletedEntity ::= '{'
 ┌─────────────────────────────────────────────────────────────┐
 │                      DeletedEntity                          │
 ├─────────────────────────────────────────────────────────────┤
-│  { "__typename": String, "id": ID, "deletedAt": DateTime }  │
+│  { "typename": String, "id": ID, "deletedAt": DateTime }    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Example:**
 ```json
 {
-  "__typename": "Comment",
+  "typename": "Comment",
   "id": "456",
   "deletedAt": "2024-01-15T10:30:00Z"
 }
@@ -450,7 +452,7 @@ Where Element is the appropriate element type (UpdatedEntity, DeletedEntity, etc
 The grammar assumes:
 - `MutationPayload` is defined by the GraphQL schema
 - `Node` is the entity interface defined by the schema
-- All `__typename` values correspond to schema types
+- All `typename` and `__typename` values correspond to schema types
 - All field names exist in their respective types
 
 ## Implementation Notes
@@ -497,7 +499,7 @@ Validators should check:
   "cascade": {
     "updated": [
       {
-        "__typename": "User",
+        "typename": "User",
         "id": "123",
         "operation": "UPDATED",
         "entity": {
@@ -509,7 +511,7 @@ Validators should check:
     ],
     "deleted": [
       {
-        "__typename": "Comment",
+        "typename": "Comment",
         "id": "456",
         "deletedAt": "2024-01-15T10:30:00Z"
       }

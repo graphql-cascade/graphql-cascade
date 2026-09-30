@@ -114,8 +114,8 @@ const mutation = graphql`
         }
       }
       cascade {
-        updated { __typename id operation entity }
-        deleted { __typename id }
+        updated { typename id operation entity }
+        deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }
       }
@@ -138,12 +138,8 @@ type UpdateUserCascade implements CascadeResponse {
   cascade: CascadeUpdates!
 }
 
-type CascadeUpdates {
-  updated: [UpdatedEntity!]!
-  deleted: [DeletedEntity!]!
-  invalidations: [QueryInvalidation!]!
-  metadata: CascadeMetadata!
-}
+# CascadeResponse, CascadeUpdates and the types they use come from
+# reference/cascade_base.graphql.
 
 # Update mutation return type
 type Mutation {
@@ -212,7 +208,7 @@ const mutation = graphql`
     updateUser(input: $input) {
       # Include both Relay and Cascade fields
       user { id name }
-      cascade { updated { __typename id entity } }
+      cascade { updated { typename id entity } }
     }
   }
 `;
@@ -266,9 +262,9 @@ newCompany.getLinkedRecords('employees').push(user);
 // Server tracks all relationship changes
 cascade: {
   updated: [
-    { __typename: "User", id: userId, entity: updatedUser },
-    { __typename: "Company", id: oldCompanyId, entity: updatedOldCompany },
-    { __typename: "Company", id: newCompanyId, entity: updatedNewCompany }
+    { typename: "User", id: userId, entity: updatedUser },
+    { typename: "Company", id: oldCompanyId, entity: updatedOldCompany },
+    { typename: "Company", id: newCompanyId, entity: updatedNewCompany }
   ]
 }
 ```

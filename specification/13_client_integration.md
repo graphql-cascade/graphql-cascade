@@ -121,14 +121,18 @@ export interface CascadeUpdates {
 }
 
 export interface UpdatedEntity {
-  __typename: string;
+  typename: string;
+  /** @deprecated Since 1.3.0; read `typename`, fall back to this for older servers */
+  __typename?: string;
   id: string;
   operation: 'CREATED' | 'UPDATED' | 'DELETED';
   entity: any;
 }
 
 export interface DeletedEntity {
-  __typename: string;
+  typename: string;
+  /** @deprecated Since 1.3.0; read `typename`, fall back to this for older servers */
+  __typename?: string;
   id: string;
   deletedAt: string;
 }
@@ -199,13 +203,14 @@ export class CascadeClient {
     }
 
     // 2. Apply all updates
-    cascade.updated.forEach(({ __typename, id, entity }) => {
-      this.cache.write(__typename, id, entity);
+    // `__typename` is the deprecated name, sent by servers before 1.3.0
+    cascade.updated.forEach(({ typename, __typename, id, entity }) => {
+      this.cache.write(typename ?? __typename!, id, entity);
     });
 
     // 3. Handle deletions
-    cascade.deleted.forEach(({ __typename, id }) => {
-      this.cache.evict(__typename, id);
+    cascade.deleted.forEach(({ typename, __typename, id }) => {
+      this.cache.evict(typename ?? __typename!, id);
     });
 
     // 4. Process invalidations
@@ -378,8 +383,8 @@ const updatedUser = await cascade.mutate(
         errors { message code }
         data { id name email }
         cascade {
-          updated { __typename id operation entity }
-          deleted { __typename id }
+          updated { typename id operation entity }
+          deleted { typename id }
           invalidations { queryName strategy scope }
           metadata { timestamp affectedCount }
         }
@@ -710,21 +715,23 @@ export class CascadeClient {
       }
 
       // 2. Apply all updates
-      cascade.updated.forEach(({ __typename, id, entity }) => {
+      cascade.updated.forEach(({ typename, __typename, id, entity }) => {
+        const type = typename ?? __typename!;
         try {
-          this.cache.write(__typename, id, entity);
+          this.cache.write(type, id, entity);
         } catch (error) {
-          console.warn(`Failed to write entity ${__typename}:${id} to cache:`, error);
+          console.warn(`Failed to write entity ${type}:${id} to cache:`, error);
           // Continue with other updates
         }
       });
 
       // 3. Handle deletions
-      cascade.deleted.forEach(({ __typename, id }) => {
+      cascade.deleted.forEach(({ typename, __typename, id }) => {
+        const type = typename ?? __typename!;
         try {
-          this.cache.evict(__typename, id);
+          this.cache.evict(type, id);
         } catch (error) {
-          console.warn(`Failed to evict entity ${__typename}:${id} from cache:`, error);
+          console.warn(`Failed to evict entity ${type}:${id} from cache:`, error);
           // Continue with other deletions
         }
       });
@@ -834,8 +841,8 @@ const UPDATE_USER = gql`
       errors { message code }
       data { id name email }
       cascade {
-        updated { __typename id operation entity }
-        deleted { __typename id }
+        updated { typename id operation entity }
+        deleted { typename id }
         invalidations { queryName strategy scope }
         metadata { timestamp affectedCount }
       }
