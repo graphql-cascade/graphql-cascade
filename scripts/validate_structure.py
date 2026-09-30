@@ -144,11 +144,12 @@ class StructureValidator:
 
         # Required docs subdirectories
         required_subdirs = [
-            "getting-started",
-            "guides",
-            "tutorials",
+            "guide",
+            "server",
+            "clients",
             "api",
-            "architecture"
+            "cli",
+            "specification"
         ]
 
         missing_subdirs = []
@@ -193,7 +194,7 @@ class StructureValidator:
 
         # Required package types (warnings for missing ones during development)
         expected_packages = [
-            "server",
+            "server-node",
             "client-core",
             "client-apollo",
             "client-relay",
@@ -266,13 +267,14 @@ class StructureValidator:
         # Create directories
         dirs_to_create = [
             "specification/appendices",
-            "docs/getting-started",
-            "docs/guides",
-            "docs/tutorials",
+            "docs/guide",
+            "docs/server",
+            "docs/clients",
             "docs/api",
-            "docs/architecture",
+            "docs/cli",
+            "docs/specification",
             "examples",
-            "packages/server/src",
+            "packages/server-node/src",
             "packages/client-core/src",
             "packages/client-apollo/src",
             "packages/client-relay/src",
