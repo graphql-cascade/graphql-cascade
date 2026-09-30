@@ -441,6 +441,31 @@ describe("CascadeBuilder", () => {
       consoleSpy.mockRestore();
     });
 
+    it("covers dropped streamed hints with invalidations of every changed type", () => {
+      const limited = new StreamingCascadeBuilder(
+        tracker,
+        {
+          computeInvalidations: () =>
+            Array.from({ length: 4 }, () => ({
+              strategy: InvalidationStrategy.INVALIDATE,
+              scope: InvalidationScope.ALL,
+            })),
+        },
+        { maxInvalidations: 2 },
+      );
+      tracker.startTransaction();
+      tracker.trackUpdate(new MockEntity(1, "Test"));
+      tracker.trackDelete("Gone", "2");
+
+      const response = limited.buildStreamingResponse();
+
+      expect(response.cascade.invalidations).toHaveLength(2);
+      expect(response.cascade.typeInvalidations).toEqual([
+        { typename: "Gone", affectedCount: 1 },
+        { typename: "MockEntity", affectedCount: 1 },
+      ]);
+    });
+
     it("names each streamed entry's type in typename and __typename", () => {
       tracker.startTransaction();
       tracker.trackUpdate(new MockEntity(1, "Test"));
