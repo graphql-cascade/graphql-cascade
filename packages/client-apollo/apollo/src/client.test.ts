@@ -1,4 +1,10 @@
-import { ApolloClient, InMemoryCache } from "@apollo/client";
+import {
+  ApolloClient,
+  ApolloLink,
+  InMemoryCache,
+  Observable,
+  gql,
+} from "@apollo/client";
 import { ApolloCascadeClient } from "./client";
 import {
   QueryInvalidation,
@@ -267,5 +273,117 @@ describe("ApolloCascadeClient", () => {
     it("should return the underlying Apollo Client", () => {
       expect(client.getApolloClient()).toBe(apolloClient);
     });
+  });
+});
+
+describe("ApolloCascadeClient.mutate with result unions", () => {
+  const RENAME = gql`
+    mutation Rename {
+      renameUser {
+        ... on RenameUserPayload {
+          data {
+            id
+          }
+          warnings {
+            message
+            code
+          }
+          cascade {
+            updated {
+              typename
+              id
+              operation
+              entity {
+                id
+                ... on User {
+                  name
+                }
+              }
+            }
+            deleted {
+              typename
+              id
+            }
+            invalidations {
+              queryName
+              strategy
+              scope
+            }
+            metadata {
+              timestamp
+              depth
+              affectedCount
+            }
+          }
+        }
+        ... on CascadeFailure {
+          errors {
+            message
+            code
+          }
+        }
+      }
+    }
+  `;
+
+  function clientReturning(renameUser: Record<string, unknown>) {
+    const cache = new InMemoryCache({
+      possibleTypes: {
+        RenameUserResult: ["RenameUserPayload", "CascadeFailure"],
+        Node: ["User"],
+      },
+    });
+    const apollo = new ApolloClient({
+      cache,
+      link: new ApolloLink(() => Observable.of({ data: { renameUser } })),
+    });
+    return { cache, client: new ApolloCascadeClient(apollo) };
+  }
+
+  it("applies the cascade of a success payload", async () => {
+    const { cache, client } = clientReturning({
+      __typename: "RenameUserPayload",
+      data: { __typename: "User", id: "1" },
+      warnings: [],
+      cascade: {
+        __typename: "CascadeUpdates",
+        updated: [
+          {
+            __typename: "UpdatedEntity",
+            typename: "User",
+            id: "1",
+            operation: "UPDATED",
+            entity: { __typename: "User", id: "1", name: "New" },
+          },
+        ],
+        deleted: [],
+        invalidations: [],
+        metadata: {
+          __typename: "CascadeMetadata",
+          timestamp: "t",
+          depth: 1,
+          affectedCount: 1,
+        },
+      },
+    });
+
+    const data = await client.mutate(RENAME);
+
+    expect(data).toEqual({ __typename: "User", id: "1" });
+    expect(cache.extract()["User:1"]).toMatchObject({ name: "New" });
+  });
+
+  it("applies nothing for a CascadeFailure", async () => {
+    const { cache, client } = clientReturning({
+      __typename: "CascadeFailure",
+      errors: [
+        { __typename: "CascadeError", message: "Not found", code: "NOT_FOUND" },
+      ],
+    });
+
+    const data = await client.mutate(RENAME);
+
+    expect(data).toBeNull();
+    expect(cache.extract()["User:1"]).toBeUndefined();
   });
 });

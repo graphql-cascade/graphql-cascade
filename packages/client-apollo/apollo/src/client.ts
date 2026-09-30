@@ -1,6 +1,7 @@
 import { ApolloClient, InMemoryCache, gql, DocumentNode } from "@apollo/client";
 import {
   CascadeClient,
+  toCascadeResponse,
   QueryInvalidation,
   InvalidationStrategy,
   InvalidationScope,
@@ -50,11 +51,12 @@ export class ApolloCascadeClient extends CascadeClient {
     });
 
     const mutationName = Object.keys(result.data!)[0];
-    const cascadeResponse = result.data![mutationName];
+    const fieldResult = result.data![mutationName];
+    const cascadeResponse = toCascadeResponse<T>(fieldResult);
+    if (!cascadeResponse) return fieldResult;
 
     this.applyCascade(cascadeResponse);
-
-    return cascadeResponse.data;
+    return cascadeResponse.data as T;
   }
 
   /**

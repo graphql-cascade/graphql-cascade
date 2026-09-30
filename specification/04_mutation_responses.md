@@ -43,6 +43,50 @@ type UpdateUserCascade implements CascadeResponse {
 
 The interface does not declare `data`. An implementing field may only narrow an interface field's type, so no single declared type could admit `User` in one payload, `[Order!]!` in another and `Boolean` in a third. Specifications before 1.6.0 declared `data: MutationPayload`, a scalar, which no typed payload could implement.
 
+### Result Unions
+
+Instead of returning a `CascadeResponse`, a mutation MAY return a union of a success payload and `CascadeFailure`:
+
+```graphql
+"""
+Implemented by the success member of a mutation result union
+(`<Mutation>Result = <Mutation>Payload | CascadeFailure`), the alternative to
+CascadeResponse. Payloads SHOULD also expose their result as a typed `data`.
+"""
+interface CascadePayload {
+  """The cascade of updates triggered by this mutation."""
+  cascade: CascadeUpdates!
+
+  """Non-critical problems of a mutation that succeeded (partial success)."""
+  warnings: [CascadeError!]!
+}
+
+"""
+The failure member of a mutation result union: the mutation committed no
+change, so there is no cascade.
+"""
+type CascadeFailure {
+  """Why the mutation failed; at least one."""
+  errors: [CascadeError!]!
+}
+
+type UpdateUserPayload implements CascadePayload {
+  data: User!
+  cascade: CascadeUpdates!
+  warnings: [CascadeError!]!
+}
+
+union UpdateUserResult = UpdateUserPayload | CascadeFailure
+```
+
+- The success payload implements `CascadePayload`. Its cascade describes the mutation's changes as in a `CascadeResponse`, and `warnings` carries the errors of a partial success.
+- A server MUST return `CascadeFailure` only when the mutation committed no change. It carries no cascade, which a failure never needs.
+- Clients read the union's `__typename`, so they never read a result or a cascade that does not exist.
+
+**[REQ-105]** Clients MUST accept both forms: apply a `CascadePayload`'s cascade exactly like a `CascadeResponse`'s, and apply nothing for a `CascadeFailure`.
+
+RFC 0001 proposes the result union as the only form in 2.0.0.
+
 ## Response Structure
 
 ### Success Responses

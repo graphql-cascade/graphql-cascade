@@ -79,6 +79,28 @@ interface CascadeResponse {
 }
 
 """
+Implemented by the success member of a mutation result union
+(`<Mutation>Result = <Mutation>Payload | CascadeFailure`), the alternative to
+CascadeResponse. Payloads SHOULD also expose their result as a typed `data`.
+"""
+interface CascadePayload {
+  """The cascade of updates triggered by this mutation."""
+  cascade: CascadeUpdates!
+
+  """Non-critical problems of a mutation that succeeded (partial success)."""
+  warnings: [CascadeError!]!
+}
+
+"""
+The failure member of a mutation result union: the mutation committed no
+change, so there is no cascade.
+"""
+type CascadeFailure {
+  """Why the mutation failed; at least one."""
+  errors: [CascadeError!]!
+}
+
+"""
 The cascade of updates triggered by a mutation.
 """
 type CascadeUpdates {

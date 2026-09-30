@@ -545,3 +545,68 @@ describe("URQLCascadeClient", () => {
     });
   });
 });
+
+describe("URQLCascadeClient payload cascades", () => {
+  const renameTo = (name: string) =>
+    createCascadeUpdates({
+      updated: [
+        {
+          typename: "User",
+          id: "1",
+          operation: CascadeOperation.UPDATED,
+          entity: { name },
+        },
+      ],
+    });
+
+  async function mutateWith(result: Partial<OperationResult>) {
+    const cache = new InMemoryCascadeCache();
+    const client = new URQLCascadeClient(createMockClient(result), cache);
+    const outcome = await client.mutate({} as any, {});
+    return { cache, outcome };
+  }
+
+  it("applies the cascade carried in the mutation payload", async () => {
+    const { cache } = await mutateWith({
+      data: {
+        renameUser: {
+          success: true,
+          data: { id: "1" },
+          cascade: renameTo("New"),
+        },
+      },
+    });
+
+    expect(cache.read("User", "1")?.name).toBe("New");
+  });
+
+  it("applies every mutation field's cascade, in field order", async () => {
+    const { cache } = await mutateWith({
+      data: {
+        first: { data: null, warnings: [], cascade: renameTo("First") },
+        second: { data: null, warnings: [], cascade: renameTo("Second") },
+      },
+    });
+
+    expect(cache.read("User", "1")?.name).toBe("Second");
+  });
+
+  it("applies nothing for a CascadeFailure", async () => {
+    const { cache } = await mutateWith({
+      data: {
+        renameUser: { errors: [{ message: "Not found", code: "NOT_FOUND" }] },
+      },
+    });
+
+    expect(cache.read("User", "1")).toBeNull();
+  });
+
+  it("uses extensions.cascade only when no payload carries a cascade", async () => {
+    const { cache } = await mutateWith({
+      data: { renameUser: { cascade: renameTo("Payload") } },
+      extensions: { cascade: renameTo("Extensions") },
+    });
+
+    expect(cache.read("User", "1")?.name).toBe("Payload");
+  });
+});

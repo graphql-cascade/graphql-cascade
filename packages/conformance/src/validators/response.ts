@@ -138,14 +138,17 @@ function validateTypeInvalidations(
   return problems;
 }
 
-function validateErrors(errors: unknown): ValidationError[] {
+function validateErrors(
+  errors: unknown,
+  field: "errors" | "warnings" = "errors",
+): ValidationError[] {
   if (errors === undefined || errors === null) return [];
   if (!Array.isArray(errors)) {
     return [
       {
         code: "INVALID_ERRORS",
-        message: "errors must be an array or null",
-        path: "errors",
+        message: `${field} must be an array or null`,
+        path: field,
       },
     ];
   }
@@ -158,7 +161,7 @@ function validateErrors(errors: unknown): ValidationError[] {
       problems.push({
         code: "INVALID_ERROR_CODE",
         message: `code "${String(code)}" is not a standard CascadeErrorCode; use domainCode for application-specific codes`,
-        path: `errors[${i}].code`,
+        path: `${field}[${i}].code`,
       });
     }
     if (
@@ -169,7 +172,7 @@ function validateErrors(errors: unknown): ValidationError[] {
       problems.push({
         code: "INVALID_DOMAIN_CODE",
         message: `domainCode "${String(domainCode)}" must be UPPER_SNAKE_CASE segments separated by "."`,
-        path: `errors[${i}].domainCode`,
+        path: `${field}[${i}].domainCode`,
       });
     }
   });
@@ -199,16 +202,41 @@ export function validateResponse(
 
   const r = response as Record<string, unknown>;
 
-  // Check success field
-  if (typeof r.success !== "boolean") {
-    errors.push({
-      code: "MISSING_SUCCESS",
-      message: "Response must have success: boolean",
-      path: "success",
-    });
+  // A CascadeFailure (result-union member): errors, no cascade
+  if (!("success" in r) && !("cascade" in r) && Array.isArray(r.errors)) {
+    if (r.errors.length === 0) {
+      errors.push({
+        code: "EMPTY_FAILURE",
+        message: "CascadeFailure must have at least one error",
+        path: "errors",
+      });
+    }
+    errors.push(...validateErrors(r.errors));
+    return { valid: errors.length === 0, errors };
   }
 
-  errors.push(...validateErrors(r.errors));
+  if (!("success" in r) && "warnings" in r) {
+    // A CascadePayload (result-union member): cascade and warnings
+    if (!Array.isArray(r.warnings)) {
+      errors.push({
+        code: "INVALID_WARNINGS",
+        message: "CascadePayload.warnings must be an array",
+        path: "warnings",
+      });
+    } else {
+      errors.push(...validateErrors(r.warnings, "warnings"));
+    }
+  } else {
+    // A 1.x CascadeResponse
+    if (typeof r.success !== "boolean") {
+      errors.push({
+        code: "MISSING_SUCCESS",
+        message: "Response must have success: boolean",
+        path: "success",
+      });
+    }
+    errors.push(...validateErrors(r.errors));
+  }
 
   // Check cascade field
   if (!r.cascade || typeof r.cascade !== "object") {

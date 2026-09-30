@@ -88,6 +88,10 @@
           "$ref": "#/definitions/CascadeResponse",
           "description": "Cascade received by the client (client tests)"
         },
+        "result": {
+          "type": "object",
+          "description": "A mutation field's result as the client received it: a CascadeResponse, a CascadePayload or a CascadeFailure (client tests)"
+        },
         "clientState": {
           "type": "object",
           "description": "Client-side state for client tests",

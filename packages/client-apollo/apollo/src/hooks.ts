@@ -13,6 +13,7 @@ import {
   CascadeUpdates,
   CascadeConflictResolver,
   cascadeEntryTypename,
+  toCascadeResponse,
 } from "@graphql-cascade/client";
 import { ApolloCascadeCache } from "./cache";
 import { ApolloCascadeClient } from "./client";
@@ -138,11 +139,11 @@ export function useCascadeMutation<
       try {
         // Extract cascade response from mutation result
         const mutationName = Object.keys(apolloData)[0];
-        const cascadeResponse = apolloData[
-          mutationName
-        ] as CascadeResponse<TData>;
+        const cascadeResponse = toCascadeResponse<TData>(
+          apolloData[mutationName],
+        ) as CascadeResponse<TData> | undefined;
 
-        if (cascadeResponse.cascade) {
+        if (cascadeResponse) {
           setCascadeResult(cascadeResponse.cascade);
 
           // Apply cascade updates to cache
@@ -203,24 +204,24 @@ export function useCascadeMutation<
 
         // Extract cascade data
         const mutationName = Object.keys(result.data!)[0];
-        const cascadeResponse = result.data![
-          mutationName
-        ] as CascadeResponse<TData>;
+        if (mutationName === undefined) {
+          throw new Error("Mutation response contains no mutation field");
+        }
+        const cascadeResponse = toCascadeResponse<TData>(
+          result.data![mutationName],
+        ) as CascadeResponse<TData> | undefined;
 
         // Compare the optimistic view with the server's, while it is visible
-        if (
-          rollbackFn &&
-          cascadeResponse.cascade &&
-          detectConflicts(cascadeResponse)
-        ) {
+        if (rollbackFn && cascadeResponse && detectConflicts(cascadeResponse)) {
           cascadeClient.applyCascade(
             resolveConflicts(cascadeResponse, conflictResolution),
           );
         }
 
+        // A result without a cascade was already reported through onError
         return {
-          data: cascadeResponse.data,
-          cascade: cascadeResponse.cascade,
+          data: cascadeResponse?.data as TData,
+          cascade: cascadeResponse?.cascade as CascadeUpdates,
         };
       } finally {
         // The server's cascade is already in the cache, or the mutation
