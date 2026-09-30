@@ -387,3 +387,74 @@ describe("ApolloCascadeClient.mutate with result unions", () => {
     expect(cache.extract()["User:1"]).toBeUndefined();
   });
 });
+
+describe("ApolloCascadeClient REFETCH hints", () => {
+  const TODOS = gql`
+    query Todos {
+      todos {
+        id
+        title
+      }
+    }
+  `;
+  const ADD = gql`
+    mutation AddTodo {
+      addTodo {
+        success
+        data {
+          id
+        }
+        cascade {
+          updated {
+            typename
+            id
+          }
+        }
+      }
+    }
+  `;
+
+  it("refetches the active queries reading the hinted field", async () => {
+    let todosFetches = 0;
+    const apollo = new ApolloClient({
+      cache: new InMemoryCache(),
+      link: new ApolloLink((operation) => {
+        if (operation.operationName === "Todos") {
+          todosFetches++;
+          return Observable.of({
+            data: { todos: [{ __typename: "Todo", id: "1", title: "A" }] },
+          });
+        }
+        return Observable.of({
+          data: {
+            addTodo: {
+              success: true,
+              data: { __typename: "Todo", id: "2" },
+              cascade: {
+                updated: [],
+                deleted: [],
+                invalidations: [
+                  {
+                    queryName: "todos",
+                    strategy: InvalidationStrategy.REFETCH,
+                    scope: InvalidationScope.EXACT,
+                  },
+                ],
+                metadata: { timestamp: "t", depth: 1, affectedCount: 0 },
+              },
+            },
+          },
+        });
+      }),
+    });
+    const watched = apollo.watchQuery({ query: TODOS }).subscribe(() => {});
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(todosFetches).toBe(1);
+
+    await new ApolloCascadeClient(apollo).mutate(ADD);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(todosFetches).toBe(2);
+    watched.unsubscribe();
+  });
+});

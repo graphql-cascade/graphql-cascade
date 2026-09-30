@@ -12,6 +12,7 @@ import {
   InvalidationScope,
   QueryInvalidation,
 } from "./types";
+import { configureLogger, getLoggerConfig } from "./logger";
 
 /**
  * Mock cache for testing - tracks all operations performed on it
@@ -487,5 +488,44 @@ describe("CascadeClient.mutate with result unions", () => {
 
     expect(data).toBeNull();
     expect(cache.written).toEqual([]);
+  });
+});
+
+describe("CascadeClient REFETCH hints", () => {
+  const originalConfig = getLoggerConfig();
+  afterEach(() => configureLogger(originalConfig));
+
+  it("reports a refetch that fails instead of leaving it unhandled", async () => {
+    const failure = new Error("network down");
+    const cache = new MockCache();
+    cache.refetch = () => Promise.reject(failure);
+    const error = jest.fn();
+    configureLogger({
+      level: "error",
+      logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error },
+    });
+
+    new CascadeClient(cache, jest.fn()).applyCascade({
+      success: true,
+      data: null,
+      cascade: {
+        updated: [],
+        deleted: [],
+        invalidations: [
+          {
+            queryName: "todos",
+            strategy: InvalidationStrategy.REFETCH,
+            scope: InvalidationScope.EXACT,
+          },
+        ],
+        metadata: { timestamp: "t", depth: 0, affectedCount: 0 },
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("todos"),
+      failure,
+    );
   });
 });

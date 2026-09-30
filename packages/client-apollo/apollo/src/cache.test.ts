@@ -238,16 +238,34 @@ describe("ApolloCascadeCache", () => {
   });
 
   describe("refetch", () => {
-    it("should throw error for refetch (requires ApolloClient)", async () => {
-      const invalidation: QueryInvalidation = {
+    it("evicts the hinted fields when it has no client", async () => {
+      apolloCache.writeQuery({
+        query: gql`
+          query {
+            getUsers {
+              id
+            }
+            settings {
+              theme
+            }
+          }
+        `,
+        data: {
+          getUsers: [{ __typename: "User", id: "1" }],
+          settings: { __typename: "Settings", theme: "dark" },
+        },
+      });
+
+      await cache.refetch({
         queryName: "getUsers",
         strategy: InvalidationStrategy.REFETCH,
         scope: InvalidationScope.EXACT,
-      };
+      });
 
-      await expect(cache.refetch(invalidation)).rejects.toThrow(
-        "Refetch requires ApolloClient instance, use ApolloCascadeClient.refetch instead",
-      );
+      const rootQuery = (apolloCache.extract() as Record<string, any>)
+        .ROOT_QUERY;
+      expect(rootQuery).not.toHaveProperty("getUsers");
+      expect(rootQuery).toHaveProperty("settings");
     });
   });
 

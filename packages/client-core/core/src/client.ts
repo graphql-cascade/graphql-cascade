@@ -8,6 +8,7 @@ import {
   InvalidationStrategy,
   TypeInvalidation,
 } from "./types";
+import { logger } from "./logger";
 
 /**
  * Type name of a `cascade.updated` or `cascade.deleted` entry. Reads
@@ -135,7 +136,12 @@ export class CascadeClient {
           this.cache.invalidate(invalidation);
           break;
         case InvalidationStrategy.REFETCH:
-          this.cache.refetch(invalidation);
+          this.cache.refetch(invalidation).catch((error: unknown) => {
+            logger.error(
+              `Refetching ${invalidation.queryName ?? invalidation.queryPattern ?? "queries"} failed:`,
+              error,
+            );
+          });
           break;
         case InvalidationStrategy.REMOVE:
           this.cache.remove(invalidation);

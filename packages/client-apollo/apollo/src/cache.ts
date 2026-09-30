@@ -1,4 +1,4 @@
-import { ApolloCache, gql } from "@apollo/client";
+import { ApolloCache, ApolloClient, gql } from "@apollo/client";
 import { fieldNameFromStoreName } from "@apollo/client/cache";
 import { isReference } from "@apollo/client/utilities";
 import {
@@ -49,7 +49,16 @@ function matchesGlob(pattern: string, text: string): boolean {
  * Handles entity-level cache operations for cascade updates.
  */
 export class ApolloCascadeCache implements CascadeCache {
-  constructor(private cache: ApolloCache<any>) {}
+  /**
+   * @param cache - The cache cascades are applied to
+   * @param client - The client whose queries `REFETCH` hints refetch; without
+   *   one, `REFETCH` hints evict like `INVALIDATE`, and queries refetch on
+   *   their next read
+   */
+  constructor(
+    private cache: ApolloCache<any>,
+    private client?: ApolloClient<any>,
+  ) {}
 
   write(typename: string, id: string, data: any): void {
     const cacheId = this.cache.identify({ __typename: typename, id });
@@ -138,12 +147,18 @@ export class ApolloCascadeCache implements CascadeCache {
     this.cache.gc();
   }
 
-  async refetch(_invalidation: QueryInvalidation): Promise<void> {
-    // Apollo's refetchQueries requires access to ApolloClient, not just cache
-    // This would need to be implemented in the client class
-    throw new Error(
-      "Refetch requires ApolloClient instance, use ApolloCascadeClient.refetch instead",
-    );
+  /**
+   * Evict the root query fields the invalidation selects, and refetch the
+   * active queries that read them.
+   */
+  async refetch(invalidation: QueryInvalidation): Promise<void> {
+    if (!this.client) {
+      this.evictQueries(invalidation);
+      return;
+    }
+    await this.client.refetchQueries({
+      updateCache: (cache) => evictQueries(cache, invalidation),
+    });
   }
 
   remove(invalidation: QueryInvalidation): void {
@@ -154,42 +169,48 @@ export class ApolloCascadeCache implements CascadeCache {
     return this.cache.identify(entity) || `${entity.__typename}:${entity.id}`;
   }
 
-  /**
-   * Evict the root query fields the invalidation's scope selects, with all
-   * their arguments. Queries reading an evicted field refetch on their next read.
-   */
   private evictQueries(invalidation: QueryInvalidation): void {
-    const { queryName, queryPattern } = invalidation;
-    let matches: (fieldName: string) => boolean;
-    switch (invalidation.scope) {
-      case InvalidationScope.EXACT:
-        matches = (fieldName) => fieldName === queryName;
-        break;
-      case InvalidationScope.PREFIX:
-        matches = (fieldName) =>
-          queryName !== undefined && fieldName.startsWith(queryName);
-        break;
-      case InvalidationScope.PATTERN:
-        matches = (fieldName) =>
-          queryPattern !== undefined && matchesGlob(queryPattern, fieldName);
-        break;
-      case InvalidationScope.ALL:
-        matches = () => true;
-        break;
-    }
-
-    const rootQuery: Record<string, unknown> =
-      this.cache.extract().ROOT_QUERY ?? {};
-    const fieldNames = new Set(
-      Object.keys(rootQuery)
-        .filter((storeFieldName) => storeFieldName !== "__typename")
-        .map(fieldNameFromStoreName),
-    );
-    for (const fieldName of fieldNames) {
-      if (matches(fieldName)) {
-        this.cache.evict({ id: "ROOT_QUERY", fieldName });
-      }
-    }
-    this.cache.gc();
+    evictQueries(this.cache, invalidation);
   }
+}
+
+/**
+ * Evict the root query fields the invalidation's scope selects, with all
+ * their arguments. Queries reading an evicted field refetch on their next read.
+ */
+function evictQueries(
+  cache: ApolloCache<any>,
+  invalidation: QueryInvalidation,
+): void {
+  const { queryName, queryPattern } = invalidation;
+  let matches: (fieldName: string) => boolean;
+  switch (invalidation.scope) {
+    case InvalidationScope.EXACT:
+      matches = (fieldName) => fieldName === queryName;
+      break;
+    case InvalidationScope.PREFIX:
+      matches = (fieldName) =>
+        queryName !== undefined && fieldName.startsWith(queryName);
+      break;
+    case InvalidationScope.PATTERN:
+      matches = (fieldName) =>
+        queryPattern !== undefined && matchesGlob(queryPattern, fieldName);
+      break;
+    case InvalidationScope.ALL:
+      matches = () => true;
+      break;
+  }
+
+  const rootQuery: Record<string, unknown> = cache.extract().ROOT_QUERY ?? {};
+  const fieldNames = new Set(
+    Object.keys(rootQuery)
+      .filter((storeFieldName) => storeFieldName !== "__typename")
+      .map(fieldNameFromStoreName),
+  );
+  for (const fieldName of fieldNames) {
+    if (matches(fieldName)) {
+      cache.evict({ id: "ROOT_QUERY", fieldName });
+    }
+  }
+  cache.gc();
 }
