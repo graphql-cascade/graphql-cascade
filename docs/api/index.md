@@ -12,8 +12,8 @@
 | `@graphql-cascade/urql` | urql integration | [Guide](/clients/urql) |
 | `@graphql-cascade/nuxt` | Nuxt module for the Apollo integration | [README](https://github.com/graphql-cascade/graphql-cascade/tree/main/packages/nuxt-module/module) |
 | `@graphql-cascade/codegen` | GraphQL Code Generator plugin: the `CascadeEntity` fragment and typed helpers | [README](https://github.com/graphql-cascade/graphql-cascade/tree/main/packages/codegen) |
-| `@graphql-cascade/cli` | `cascade` command: schema validation, codegen, conformance | [CLI](/cli/) |
-| `@graphql-cascade/conformance` | Conformance tests for implementations | [README](https://github.com/graphql-cascade/graphql-cascade/tree/main/packages/conformance) |
+| `@graphql-cascade/cli` | `cascade` command: project setup, schema checks, codegen, diagnostics | [CLI](/cli/) |
+| `@graphql-cascade/conformance` | Conformance runner; does not yet test the implementation it is given ([#65](https://github.com/graphql-cascade/graphql-cascade/issues/65)) | [Conformance](/specification/conformance) |
 
 Every package ships TypeScript definitions. The response types are exported by both `@graphql-cascade/server` and `@graphql-cascade/client`:
 

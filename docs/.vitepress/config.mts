@@ -93,9 +93,7 @@ export default defineConfig({
           text: 'Specification',
           items: [
             { text: 'Overview', link: '/specification/' },
-            { text: 'Conformance', link: '/specification/conformance' },
-            { text: 'Cascade Model', link: '/specification/cascade-model' },
-            { text: 'Full Specification', link: '/specification/full' }
+            { text: 'Conformance', link: '/specification/conformance' }
           ]
         }
       ],

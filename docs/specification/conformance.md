@@ -1,164 +1,38 @@
-# Conformance Requirements
+# Conformance
 
-What it means to be GraphQL Cascade compliant.
+What a conforming implementation does is defined by the specification; this page explains how those requirements are organized and checked. The normative text is the [Conformance](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/01_conformance.md) chapter.
 
-## Overview
+## Levels
 
-This document defines the conformance requirements for GraphQL Cascade implementations. A compliant implementation MUST follow these requirements to ensure interoperability.
+The specification groups features into three levels, each including the one before:
 
-## Terminology
+| Level | Adds |
+|-------|------|
+| **Cascade Basic** | The core types, cascades in mutation responses, tracking of the mutation's own entities, invalidation hints |
+| **Cascade Standard** | Depth control, relationship traversal, structured errors, transaction metadata |
+| **Cascade Complete** | Optimistic updates, subscriptions, conflict resolution |
 
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
+## Requirements and Test Cases
 
-## Server Requirements
-
-### MUST: Return Cascade Metadata
-
-Mutation responses MUST include cascade metadata in the `__cascade` field:
-
-```json
-{
-  "data": {
-    "createTodo": {
-      "todo": { ... },
-      "__cascade": {
-        "created": [],
-        "updated": [],
-        "deleted": [],
-        "invalidated": []
-      }
-    }
-  }
-}
-```
-
-### MUST: Track Entity Changes
-
-Servers MUST accurately track entities that are:
-- Created during the mutation
-- Updated during the mutation
-- Deleted during the mutation
-
-### MUST: Use Standard Entity Format
-
-Entity references MUST include `__typename` and `id`:
+Normative statements carry requirement tags, such as **[REQ-103]** for `EXACT` hint matching. The [`conformance-tests/`](https://github.com/graphql-cascade/graphql-cascade/tree/main/conformance-tests) directory holds machine-readable test cases, one JSON file each, for servers, clients and transport:
 
 ```json
 {
-  "__typename": "Todo",
-  "id": "123"
+  "id": "TC-C-003",
+  "requirement": "REQ-103",
+  "category": "client",
+  "input": { "...": "the initial state and the cascade" },
+  "expected": { "...": "what the cache holds afterwards" }
 }
 ```
 
-### SHOULD: Provide Invalidation Hints
+The repository's checks keep the two in step: every case follows [`test-case-schema.json`](https://github.com/graphql-cascade/graphql-cascade/blob/main/conformance-tests/test-case-schema.json), cites a requirement the specification defines, and every requirement is tested by at least one case. `spec-version.json` records the specification version the cases target.
 
-Servers SHOULD include invalidation hints for queries affected by the mutation:
+## Checking an Implementation
 
-```json
-{
-  "invalidated": [
-    { "__typename": "Query", "field": "todos" }
-  ]
-}
-```
-
-## Client Requirements
-
-### MUST: Process Cascade Metadata
-
-Clients MUST process cascade metadata from mutation responses and update their cache accordingly.
-
-### MUST: Handle All Cascade Operations
-
-Clients MUST handle:
-- Created entities (add to cache)
-- Updated entities (merge into cache)
-- Deleted entities (remove from cache)
-- Invalidated queries (mark for refetch)
-
-### SHOULD: Support Optimistic Updates
-
-Clients SHOULD support optimistic updates with cascade prediction.
-
-### SHOULD: Provide Error Recovery
-
-Clients SHOULD roll back optimistic updates when mutations fail.
-
-## Schema Requirements
-
-### MUST: Define Cascade Types
-
-Schemas MUST define these types:
-
-```graphql
-type Cascade {
-  created: [EntityRef!]!
-  updated: [EntityRef!]!
-  deleted: [EntityRef!]!
-  invalidated: [InvalidationRef!]!
-}
-
-type EntityRef {
-  __typename: String!
-  id: ID!
-}
-
-type InvalidationRef {
-  __typename: String!
-  field: String
-}
-```
-
-### MUST: Include Cascade in Mutation Responses
-
-All mutations MUST include cascade in their response type:
-
-```graphql
-type TodoMutationResponse {
-  todo: Todo
-  __cascade: Cascade!
-}
-```
-
-## Compliance Levels
-
-### Level 1: Basic Compliance
-
-- Implement entity tracking (created, updated, deleted)
-- Return standard cascade format
-- Process cascades on client
-
-### Level 2: Standard Compliance
-
-All Level 1 requirements plus:
-- Invalidation hints
-- Optimistic updates
-- Error handling
-
-### Level 3: Complete Compliance
-
-All Level 2 requirements plus:
-- Relationship propagation
-- Conflict resolution
-- Performance optimizations
-
-## Testing Compliance
-
-Use the compliance test suite:
-
-```bash
-npm install @graphql-cascade/compliance-tests
-cascade-test --endpoint http://localhost:4000/graphql
-```
-
-## Certification
-
-- Official compliance tests available
-- Self-certification process
-- Badge for compliant implementations
+No tool yet runs these cases against an implementation; the runner in `@graphql-cascade/conformance` does not test the implementation it is given ([#65](https://github.com/graphql-cascade/graphql-cascade/issues/65)). Until it does, check an implementation against the cases in your own test suite: set up each case's `input`, run it, and compare the result with `expected`.
 
 ## Next Steps
 
-- **[Cascade Model](/specification/cascade-model)** - Data structures
-- **[Full Specification](/specification/full)** - Complete requirements
-- **[Implementation Guide](/server/)** - Build compliant servers
+- **[Specification](/specification/)**: the chapters
+- **[Server](/server/)** and **[Clients](/clients/)**: the implementations in this repository
