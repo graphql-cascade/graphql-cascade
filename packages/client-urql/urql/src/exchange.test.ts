@@ -319,6 +319,59 @@ describe("cascadeExchange", () => {
     });
   });
 
+  it("evicts deleted entries, including pre-1.3 ones, and reports each", () => {
+    const onCacheDelete = jest.fn();
+    const exchange = cascadeExchange({
+      cacheAdapter: mockCacheAdapter,
+      onCacheDelete,
+    });
+    const mockOperation = { kind: "mutation", key: 1 } as any;
+    const mockResult = {
+      operation: mockOperation,
+      data: {},
+      extensions: {
+        cascade: {
+          updated: [
+            {
+              typename: "Post",
+              id: "1",
+              operation: CascadeOperation.DELETED,
+              entity: {},
+            },
+          ],
+          deleted: [
+            { __typename: "Comment", id: "2", deletedAt: "2024-01-01" },
+          ],
+          invalidations: [],
+          metadata: {
+            timestamp: "2024-01-01T00:00:00Z",
+            depth: 1,
+            affectedCount: 2,
+          },
+        } as unknown as CascadeUpdates,
+      },
+      stale: false,
+      hasNext: false,
+    };
+
+    toArray(
+      exchange({
+        forward: jest.fn(() => fromValue(mockResult)),
+        client: {} as any,
+        dispatchDebug: jest.fn(),
+      } as any)(fromValue(mockOperation)),
+    );
+
+    expect(mockCacheAdapter.evict.mock.calls).toEqual([
+      ["Post", "1"],
+      ["Comment", "2"],
+    ]);
+    expect(onCacheDelete.mock.calls).toEqual([
+      ["Post", "1"],
+      ["Comment", "2"],
+    ]);
+  });
+
   it("applies type invalidations after entity updates", () => {
     const exchange = cascadeExchange({ cacheAdapter: mockCacheAdapter });
     const mockOperation = { kind: "mutation", key: 1 } as any;
