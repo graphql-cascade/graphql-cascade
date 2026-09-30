@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  checkReferenceModule,
   findCorruption,
   checkVersionConsistency,
   checkReferenceSchema,
@@ -11,6 +12,10 @@ import {
   checkDocImports,
   exportedNames,
 } from "./check-spec.mjs";
+import {
+  REFERENCE_MODULE_PATH,
+  renderReferenceModule,
+} from "./reference-module.mjs";
 
 // Built from parts so this file never matches the pattern it tests.
 const MARKER = ["</xai", "function_call>"].join(":");
@@ -459,5 +464,28 @@ describe("checkDocImports", () => {
     assert.deepEqual(checkDocImports([doc(code, "js")], packages), [
       "docs/page.md:4: @graphql-cascade/client-apollo is not a package in this repository",
     ]);
+  });
+});
+
+describe("checkReferenceModule", () => {
+  const sdl = "type Query { a: Int }\n";
+  const reading = (content) => (path) =>
+    path === REFERENCE_MODULE_PATH ? content : "";
+
+  it("accepts a module rendered from the reference schema", () => {
+    assert.deepEqual(
+      checkReferenceModule(sdl, reading(renderReferenceModule(sdl))),
+      [],
+    );
+  });
+
+  it("reports a module rendered from another schema", () => {
+    assert.equal(
+      checkReferenceModule(
+        sdl,
+        reading(renderReferenceModule("type Query { b: Int }\n")),
+      ).length,
+      1,
+    );
   });
 });

@@ -1,22 +1,20 @@
 import * as fs from "fs";
 import {
   GraphQLSchema,
-  buildSchema,
   buildClientSchema,
-  isObjectType,
-  isScalarType,
-  isEnumType,
-  isInterfaceType,
-  isUnionType,
-  GraphQLObjectType,
-  GraphQLField,
-  GraphQLType,
+  buildSchema,
   getNamedType,
-  isNonNullType,
-  isListType,
-  IntrospectionQuery,
+  isEnumType,
+  isInputObjectType,
+  isInterfaceType,
+  isObjectType,
+  isUnionType,
+  type GraphQLArgument,
+  type GraphQLDirective,
+  type GraphQLNamedType,
+  type GraphQLObjectType,
 } from "graphql";
-
+import { REFERENCE_SCHEMA } from "./reference-schema";
 export interface ValidationResult {
   errors: string[];
   warnings: string[];
@@ -24,38 +22,25 @@ export interface ValidationResult {
 }
 
 /**
- * Load a GraphQL schema from a file.
- * Supports both SDL (.graphql, .gql) and JSON introspection formats.
+ * Load a GraphQL schema from SDL files (.graphql, .gql), merged into one
+ * schema, or from one JSON introspection result.
  */
-export function loadSchema(filePath: string): GraphQLSchema {
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Schema file not found: ${filePath}`);
-  }
-
-  const content = fs.readFileSync(filePath, "utf-8");
-
-  // Try to parse as JSON first (introspection query result)
-  if (filePath.endsWith(".json")) {
-    try {
-      const introspection = JSON.parse(content);
-      const schema =
-        "__schema" in introspection
-          ? introspection.__schema
-          : introspection.data?.__schema;
-      if (!schema) {
-        throw new Error("Invalid introspection query result");
-      }
-      return buildClientSchema(schema as any);
-    } catch (error) {
-      throw new Error(
-        `Failed to parse JSON schema: ${error instanceof Error ? error.message : String(error)}`,
-      );
+export function loadSchema(filePaths: string | string[]): GraphQLSchema {
+  const paths = Array.isArray(filePaths) ? filePaths : [filePaths];
+  for (const path of paths) {
+    if (!fs.existsSync(path)) {
+      throw new Error(`Schema file not found: ${path}`);
     }
   }
 
-  // Otherwise parse as SDL
+  if (paths.length === 1 && paths[0].endsWith(".json")) {
+    return loadIntrospection(fs.readFileSync(paths[0], "utf-8"));
+  }
+
   try {
-    return buildSchema(content);
+    return buildSchema(
+      paths.map((path) => fs.readFileSync(path, "utf-8")).join("\n"),
+    );
   } catch (error) {
     throw new Error(
       `Failed to parse GraphQL SDL: ${error instanceof Error ? error.message : String(error)}`,
@@ -63,13 +48,50 @@ export function loadSchema(filePath: string): GraphQLSchema {
   }
 }
 
+function loadIntrospection(content: string): GraphQLSchema {
+  try {
+    const introspection = JSON.parse(content);
+    const schema =
+      "__schema" in introspection
+        ? introspection.__schema
+        : introspection.data?.__schema;
+    if (!schema) {
+      throw new Error("Invalid introspection query result");
+    }
+    return buildClientSchema({ __schema: schema });
+  } catch (error) {
+    throw new Error(
+      `Failed to parse JSON schema: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+/** Types a mutation can return to carry a cascade. */
+const CASCADE_RESULT_TYPES = [
+  "CascadeResponse",
+  "CascadePayload",
+  "CascadeFailure",
+];
+
+/** Reference types that a schema including them must define exactly. */
+const CASCADE_ROOTS = [
+  ...CASCADE_RESULT_TYPES,
+  "CascadeUpdateEvent",
+  "CascadeInfo",
+];
+
+const reference = buildSchema(REFERENCE_SCHEMA);
+
 /**
- * Validate a GraphQL schema for Cascade compatibility.
+ * Validate a GraphQL schema against the specification.
  *
- * This function checks the schema against Cascade best practices:
- * 1. All entity types should have an 'id' field (or use @cascade directive)
- * 2. Mutations should return entities, not primitives like Boolean
- * 3. Circular references should be flagged for consideration
+ * Errors:
+ * - the schema has none of the types mutations return cascades with;
+ * - a Cascade type or directive differs from the reference schema;
+ * - a type with an `id` field does not implement `Node`.
+ *
+ * Warnings: mutations whose results carry no cascade, which the
+ * specification allows alongside Cascade mutations.
  */
 export function validateCascadeCompatibility(
   schema: GraphQLSchema,
@@ -77,149 +99,190 @@ export function validateCascadeCompatibility(
   const errors: string[] = [];
   const warnings: string[] = [];
   const stats = { totalChecks: 0, passedChecks: 0 };
+  const check = (passed: boolean, report: () => void) => {
+    stats.totalChecks++;
+    if (passed) stats.passedChecks++;
+    else report();
+  };
 
-  // Validate object types in the schema
-  validateObjectTypes(schema, errors, warnings, stats);
+  check(
+    CASCADE_RESULT_TYPES.some((name) => schema.getType(name)),
+    () =>
+      errors.push(
+        "The schema has no CascadeResponse, CascadePayload or CascadeFailure type, " +
+          "so no mutation can return a cascade. Add the types from the reference schema.",
+      ),
+  );
 
-  // Validate mutation return types
-  validateMutationReturnTypes(schema, errors, stats);
+  for (const name of cascadeTypeNames()) {
+    const type = schema.getType(name);
+    if (!type) continue;
+    check(typeSignature(type) === typeSignature(reference.getType(name)!), () =>
+      errors.push(`${name} differs from the reference schema.`),
+    );
+  }
 
-  // Calculate compatibility percentage
-  const compatibility = calculateCompatibility(stats);
+  for (const expected of reference.getDirectives()) {
+    const directive = schema.getDirective(expected.name);
+    if (!directive || expected.astNode === undefined) continue;
+    check(directiveSignature(directive) === directiveSignature(expected), () =>
+      errors.push(`@${expected.name} differs from the reference schema.`),
+    );
+  }
+
+  const node = schema.getType("Node");
+  for (const type of userObjectTypes(schema)) {
+    if (!("id" in type.getFields())) continue;
+    check(
+      node !== undefined && type.getInterfaces().some((i) => i.name === "Node"),
+      () =>
+        errors.push(
+          `${type.name} has an id but does not implement Node; entities must, ` +
+            "so cascades can carry them.",
+        ),
+    );
+  }
+
+  const mutation = schema.getMutationType();
+  for (const field of Object.values(mutation?.getFields() ?? {})) {
+    const result = getNamedType(field.type);
+    check(carriesCascade(result), () =>
+      warnings.push(
+        `Mutation.${field.name} returns ${result.name}, which carries no cascade: ` +
+          "clients cannot update their caches from it.",
+      ),
+    );
+  }
 
   return {
     errors,
     warnings,
-    compatibility,
+    compatibility: calculateCompatibility(stats),
   };
 }
 
-/**
- * Validate all object types in the schema for Cascade compatibility.
- */
-function validateObjectTypes(
-  schema: GraphQLSchema,
-  errors: string[],
-  warnings: string[],
-  stats: { totalChecks: number; passedChecks: number },
-): void {
-  const typeMap = schema.getTypeMap();
-
-  for (const [typeName, type] of Object.entries(typeMap)) {
-    // Skip built-in GraphQL types
-    if (shouldSkipType(typeName, type)) {
-      continue;
+/** The reference types reachable from the Cascade roots. */
+function cascadeTypeNames(): Set<string> {
+  const names = new Set<string>();
+  const visit = (type: GraphQLNamedType) => {
+    if (names.has(type.name)) return;
+    names.add(type.name);
+    if (isObjectType(type) || isInterfaceType(type)) {
+      type.getInterfaces().forEach(visit);
+      for (const field of Object.values(type.getFields())) {
+        visit(getNamedType(field.type));
+      }
+    } else if (isUnionType(type)) {
+      type.getTypes().forEach(visit);
     }
-
-    if (isObjectType(type)) {
-      // Skip root operation types
-      if (isRootOperationType(typeName)) {
-        continue;
-      }
-
-      stats.totalChecks++;
-
-      // Check if type has @cascade directive (exempts from id requirement)
-      if (hasCascadeDirective(type)) {
-        stats.passedChecks++;
-        continue;
-      }
-
-      // Validate that type has an 'id' field
-      const fields = type.getFields();
-      if ("id" in fields) {
-        stats.passedChecks++;
-      } else {
-        errors.push(
-          `Type '${typeName}' is missing required 'id' field. ` +
-            `Add 'id: ID!' to the type or use @cascade directive to exempt it.`,
-        );
-      }
-
-      // Check for circular references
-      checkCircularReferences(type, typeName, warnings);
-    }
+  };
+  for (const name of CASCADE_ROOTS) visit(reference.getType(name)!);
+  for (const name of [...names]) {
+    if (reference.getType(name)?.astNode === undefined) names.delete(name);
   }
+  return names;
 }
 
-/**
- * Validate mutation return types to ensure they return entities.
- */
-function validateMutationReturnTypes(
-  schema: GraphQLSchema,
-  errors: string[],
-  stats: { totalChecks: number; passedChecks: number },
-): void {
-  const mutationType = schema.getMutationType();
-  if (!mutationType) {
-    return;
-  }
-
-  const mutations = mutationType.getFields();
-  for (const [mutationName, mutation] of Object.entries(mutations)) {
-    stats.totalChecks++;
-
-    const returnType = getNamedType(mutation.type);
-    const returnTypeName = returnType.name;
-
-    // Mutations returning Boolean are discouraged
-    if (returnTypeName === "Boolean") {
-      errors.push(
-        `Mutation '${mutationName}' returns Boolean. ` +
-          `Consider returning the affected entity instead for better cache updates.`,
-      );
-    } else {
-      stats.passedChecks++;
-    }
-  }
+/** Object types the schema defines itself, excluding root and Cascade types. */
+function userObjectTypes(schema: GraphQLSchema): GraphQLObjectType[] {
+  const roots = new Set(
+    [
+      schema.getQueryType(),
+      schema.getMutationType(),
+      schema.getSubscriptionType(),
+    ]
+      .filter((type) => type !== null && type !== undefined)
+      .map((type) => type!.name),
+  );
+  const cascadeTypes = cascadeTypeNames();
+  return Object.values(schema.getTypeMap()).filter(
+    (type): type is GraphQLObjectType =>
+      isObjectType(type) &&
+      !type.name.startsWith("__") &&
+      !roots.has(type.name) &&
+      !cascadeTypes.has(type.name),
+  );
 }
 
-/**
- * Determine if a type should be skipped during validation.
- */
-function shouldSkipType(typeName: string, type: GraphQLType): boolean {
-  // Skip GraphQL introspection types
-  if (typeName.startsWith("__")) {
-    return true;
-  }
-
-  // Skip scalar, enum, interface, and union types
+/** Whether a mutation result type carries a cascade. */
+function carriesCascade(type: GraphQLNamedType): boolean {
+  const implementsInterface = (name: string) =>
+    isObjectType(type) && type.getInterfaces().some((i) => i.name === name);
   if (
-    isScalarType(type) ||
-    isEnumType(type) ||
-    isInterfaceType(type) ||
-    isUnionType(type)
+    implementsInterface("CascadeResponse") ||
+    implementsInterface("CascadePayload")
   ) {
     return true;
   }
-
-  return false;
-}
-
-/**
- * Check if a type name is a root operation type.
- */
-function isRootOperationType(typeName: string): boolean {
   return (
-    typeName === "Query" ||
-    typeName === "Mutation" ||
-    typeName === "Subscription"
+    isUnionType(type) &&
+    type
+      .getTypes()
+      .some((member) =>
+        member.getInterfaces().some((i) => i.name === "CascadePayload"),
+      )
   );
 }
 
-/**
- * Check if a type has the @cascade directive.
- */
-function hasCascadeDirective(type: GraphQLObjectType): boolean {
-  return (
-    type.astNode?.directives?.some(
-      (directive) => directive.name.value === "cascade",
-    ) ?? false
-  );
+/** A type's structure, ignoring descriptions and the order of members. */
+function typeSignature(type: GraphQLNamedType): string {
+  if (isObjectType(type) || isInterfaceType(type)) {
+    const interfaces = type
+      .getInterfaces()
+      .map((i) => i.name)
+      .sort();
+    const fields = Object.values(type.getFields())
+      .map(
+        (field) =>
+          `${field.name}(${argumentsSignature(field.args)}): ${String(field.type)}`,
+      )
+      .sort();
+    return `${isObjectType(type) ? "type" : "interface"} ${interfaces.join("&")} {${fields.join(", ")}}`;
+  }
+  if (isUnionType(type)) {
+    return `union ${type
+      .getTypes()
+      .map((member) => member.name)
+      .sort()
+      .join("|")}`;
+  }
+  if (isEnumType(type)) {
+    return `enum {${type
+      .getValues()
+      .map((value) => value.name)
+      .sort()
+      .join(", ")}}`;
+  }
+  if (isInputObjectType(type)) {
+    return `input {${Object.values(type.getFields())
+      .map(
+        (field) =>
+          `${field.name}: ${String(field.type)} = ${JSON.stringify(field.defaultValue)}`,
+      )
+      .sort()
+      .join(", ")}}`;
+  }
+  return "scalar";
+}
+
+function directiveSignature(directive: GraphQLDirective): string {
+  return `(${argumentsSignature(directive.args)}) on ${[...directive.locations]
+    .sort()
+    .join("|")}`;
+}
+
+function argumentsSignature(args: readonly GraphQLArgument[]): string {
+  return args
+    .map(
+      (arg) =>
+        `${arg.name}: ${String(arg.type)} = ${JSON.stringify(arg.defaultValue)}`,
+    )
+    .sort()
+    .join(", ");
 }
 
 /**
- * Calculate compatibility percentage based on validation stats.
+ * Calculate compatibility percentage based on checks passed.
  */
 function calculateCompatibility(stats: {
   totalChecks: number;
@@ -229,33 +292,4 @@ function calculateCompatibility(stats: {
     return 100;
   }
   return Math.round((stats.passedChecks / stats.totalChecks) * 100);
-}
-
-/**
- * Check if a type has circular references (self-referential fields).
- */
-function checkCircularReferences(
-  type: GraphQLObjectType,
-  typeName: string,
-  warnings: string[],
-): void {
-  const fields = type.getFields();
-
-  for (const [fieldName, field] of Object.entries(fields)) {
-    const fieldType = getNamedType(field.type);
-
-    // Check if field references the same type (circular reference)
-    if (fieldType.name === typeName) {
-      // Check if the field is a list (common pattern for self-referential relationships)
-      if (
-        isListType(field.type) ||
-        (isNonNullType(field.type) && isListType(field.type.ofType))
-      ) {
-        warnings.push(
-          `Type '${typeName}' has a circular reference in field '${fieldName}'. ` +
-            `Consider using @cascade(depth: N) directive to limit query depth.`,
-        );
-      }
-    }
-  }
 }

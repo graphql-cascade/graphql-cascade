@@ -22,6 +22,10 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
+  REFERENCE_MODULE_PATH,
+  renderReferenceModule,
+} from "./reference-module.mjs";
+import {
   Kind,
   buildASTSchema,
   getNamedType,
@@ -231,6 +235,19 @@ export function checkExampleSchemas(sdl, files) {
       return [`${path}: ${e.message}`];
     }
   });
+}
+
+/**
+ * @param {string} sdl the reference schema
+ * @param {(path: string) => string} readFile
+ * @returns {string[]} a message when the shipped copy differs from the reference
+ */
+export function checkReferenceModule(sdl, readFile) {
+  return readFile(REFERENCE_MODULE_PATH) === renderReferenceModule(sdl)
+    ? []
+    : [
+        `${REFERENCE_MODULE_PATH} differs from ${REFERENCE_PATH}: run pnpm run sync:reference`,
+      ];
 }
 
 /**
@@ -606,6 +623,7 @@ function main() {
     ...checkRequirements(specFiles, caseFiles),
     ...(schemaProblems.length > 0 ? [] : checkSnippets(sdl, docFiles)),
     ...checkDocImports(docFiles, packageExports(files, readFile)),
+    ...checkReferenceModule(sdl, readFile),
     ...checkExampleSchemas(
       sdl,
       files.filter(

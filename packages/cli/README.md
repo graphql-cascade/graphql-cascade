@@ -51,14 +51,14 @@ Next steps:
 
 ### `cascade validate`
 
-Validate your GraphQL schema for Cascade compatibility.
+Validate your GraphQL schema against the specification: the Cascade types must match the reference schema, entities must implement `Node`, and mutations should return cascades.
 
 ```bash
 # Validate default schema (./schema.graphql)
 cascade validate
 
-# Validate specific schema
-cascade validate ./path/to/schema.graphql
+# Validate a schema split across files, merged into one
+cascade validate ./schema/cascade.graphql ./schema/app.graphql
 
 # Strict mode (treat warnings as errors)
 cascade validate --strict

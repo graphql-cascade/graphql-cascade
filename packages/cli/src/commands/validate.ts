@@ -11,17 +11,16 @@ interface ValidateOptions {
 export const validateCommand = new Command("validate")
   .description("Validate GraphQL schema for Cascade compatibility")
   .argument(
-    "[schema]",
-    "Path to schema file (SDL or JSON introspection)",
-    "./schema.graphql",
+    "[schemas...]",
+    "Schema files, merged into one schema (SDL), or one JSON introspection result",
+    ["./schema.graphql"],
   )
   .option("--strict", "Treat warnings as errors")
-  .action(async (schemaPath: string, options: ValidateOptions) => {
+  .action(async (schemaPaths: string[], options: ValidateOptions) => {
     try {
-      console.log(`\nValidating schema: ${schemaPath}\n`);
+      console.log(`\nValidating schema: ${schemaPaths.join(", ")}\n`);
 
-      // Load the schema
-      const schema = loadSchema(schemaPath);
+      const schema = loadSchema(schemaPaths);
 
       // Validate compatibility
       const result = validateCascadeCompatibility(schema);
