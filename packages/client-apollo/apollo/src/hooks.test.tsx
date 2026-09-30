@@ -57,7 +57,7 @@ function createSuccessResponse(
     cascade: {
       updated: [
         {
-          __typename: "User",
+          typename: "User",
           id,
           operation: CascadeOperation.UPDATED,
           entity: { id, name },
@@ -123,7 +123,7 @@ describe("useCascadeMutation", () => {
         cascade: expect.objectContaining({
           updated: expect.arrayContaining([
             expect.objectContaining({
-              __typename: "User",
+              typename: "User",
               id: "1",
             }),
           ]),
@@ -911,6 +911,130 @@ describe("useCascadeMutation", () => {
       // Should have rolled back the optimistic create
       await waitFor(() => {
         expect(result.current[1].error).toBeDefined();
+      });
+    });
+
+    describe("optimistic layer", () => {
+      const userFragment = gql`
+        fragment LayerUser on User {
+          id
+          name
+        }
+      `;
+      const optimisticCascadeResponse = (variables: any) => ({
+        data: { id: "1", name: variables.name },
+        success: true,
+        cascade: {
+          updated: [
+            {
+              typename: "User",
+              id: "1",
+              operation: CascadeOperation.UPDATED,
+              entity: { id: "1", name: variables.name },
+            },
+          ],
+          deleted: [],
+          invalidations: [],
+          metadata: {
+            timestamp: new Date().toISOString(),
+            depth: 1,
+            affectedCount: 1,
+          },
+        },
+      });
+
+      const seededCache = () => {
+        const cache = new InMemoryCache({ addTypename: false });
+        cache.writeFragment({
+          id: "User:1",
+          fragment: userFragment,
+          data: { __typename: "User", id: "1", name: "Original" },
+        });
+        return cache;
+      };
+
+      const renderWith = (cache: InMemoryCache, mock: MockedResponse) =>
+        renderHook(
+          () =>
+            useCascadeMutation(UPDATE_USER_MUTATION, {
+              optimistic: true,
+              optimisticCascadeResponse,
+            }),
+          {
+            wrapper: ({ children }: { children: React.ReactNode }) => (
+              <MockedProvider mocks={[mock]} cache={cache}>
+                {children}
+              </MockedProvider>
+            ),
+          },
+        );
+
+      it("restores an existing entity when the mutation fails", async () => {
+        const cache = seededCache();
+        const { result } = renderWith(cache, {
+          request: {
+            query: UPDATE_USER_MUTATION,
+            variables: { id: "1", name: "Optimistic" },
+          },
+          error: new Error("Update failed"),
+        });
+
+        await act(async () => {
+          await expect(
+            result.current[0]({ variables: { id: "1", name: "Optimistic" } }),
+          ).rejects.toThrow("Update failed");
+        });
+
+        expect(
+          cache.readFragment({ id: "User:1", fragment: userFragment }),
+        ).toMatchObject({ id: "1", name: "Original" });
+      });
+
+      it("shows the optimistic entity while the mutation is in flight", async () => {
+        const cache = seededCache();
+        const { result } = renderWith(cache, {
+          request: {
+            query: UPDATE_USER_MUTATION,
+            variables: { id: "1", name: "Optimistic" },
+          },
+          delay: 50,
+          error: new Error("Update failed"),
+        });
+
+        let pending!: Promise<unknown>;
+        act(() => {
+          pending = result.current[0]({
+            variables: { id: "1", name: "Optimistic" },
+          });
+        });
+
+        expect(
+          cache.readFragment({ id: "User:1", fragment: userFragment }, true),
+        ).toMatchObject({ name: "Optimistic" });
+        await act(async () => {
+          await pending.catch(() => undefined);
+        });
+      });
+
+      it("leaves no optimistic layer once the mutation succeeds", async () => {
+        const cache = seededCache();
+        const { result } = renderWith(cache, {
+          request: {
+            query: UPDATE_USER_MUTATION,
+            variables: { id: "1", name: "Optimistic" },
+          },
+          result: {
+            data: { updateUser: createSuccessResponse("1", "Server") },
+          },
+        });
+
+        await act(async () => {
+          await result.current[0]({
+            variables: { id: "1", name: "Optimistic" },
+          });
+        });
+
+        expect(cache.extract(true)).toEqual(cache.extract(false));
       });
     });
 

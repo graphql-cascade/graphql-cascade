@@ -28,13 +28,29 @@ describe("ApolloCascadeCache", () => {
   });
 
   describe("read", () => {
-    it("should attempt to read entity data from Apollo cache", () => {
-      const data = { name: "John", email: "john@example.com" };
-      cache.write("User", "1", data);
+    it("returns every stored field of the entity", () => {
+      cache.write("User", "1", { name: "John", email: "john@example.com" });
 
-      const result = cache.read("User", "1");
-      // The read method may return partial data due to fragment complexity
-      expect(result).not.toBeUndefined();
+      expect(cache.read("User", "1")).toEqual({
+        __typename: "User",
+        name: "John",
+        email: "john@example.com",
+      });
+    });
+
+    it("returns null for an entity that is not cached", () => {
+      expect(cache.read("User", "missing")).toBeNull();
+    });
+
+    it("sees optimistic writes", () => {
+      cache.write("User", "1", { name: "John" });
+      apolloCache.recordOptimisticTransaction((layer) => {
+        new ApolloCascadeCache(layer).write("User", "1", {
+          name: "Optimistic",
+        });
+      }, "optimistic-1");
+
+      expect(cache.read("User", "1")).toMatchObject({ name: "Optimistic" });
     });
   });
 

@@ -62,42 +62,6 @@ describe("ApolloCascadeClient integration with hooks", () => {
     client = new ApolloCascadeClient(apolloClient);
   });
 
-  describe("optimistic update helpers", () => {
-    it("should apply and rollback optimistic updates", () => {
-      const cache = client.getCache();
-
-      // Initially no data
-      expect(cache.read("User", "1")).toBeNull();
-
-      // Apply optimistic update
-      const rollbackInfo = [
-        {
-          __typename: "User" as const,
-          id: "1",
-          previousData: null,
-        },
-      ];
-
-      // Simulate applying optimistic update
-      cache.write("User", "1", { id: "1", name: "Optimistic Name" });
-
-      // Verify optimistic data is there (cache.read only returns id and __typename)
-      expect(cache.read("User", "1")).toEqual({ id: "1", __typename: "User" });
-
-      // Rollback
-      rollbackInfo.forEach(({ __typename, id, previousData }) => {
-        if (previousData === null) {
-          cache.evict(__typename, id);
-        } else {
-          cache.write(__typename, id, previousData);
-        }
-      });
-
-      // Verify rollback worked
-      expect(cache.read("User", "1")).toBeNull();
-    });
-  });
-
   describe("conflict detection", () => {
     it("should detect conflicts between optimistic and server data", () => {
       const conflictResolver = new CascadeConflictResolver();
@@ -153,8 +117,12 @@ describe("ApolloCascadeClient integration with hooks", () => {
       // Apply cascade
       client.applyCascade(mockCascadeResponse);
 
-      // Verify data was written (cache.read only returns id and __typename)
-      expect(cache.read("User", "1")).toEqual({ id: "1", __typename: "User" });
+      expect(cache.read("User", "1")).toEqual({
+        __typename: "User",
+        id: "1",
+        name: "John Doe",
+        email: "john@example.com",
+      });
     });
 
     it("should handle entity deletions in cascade", () => {

@@ -72,24 +72,17 @@ export class ApolloCascadeCache implements CascadeCache {
     });
   }
 
+  /**
+   * The entity's stored fields, including optimistic writes, with nested
+   * entities as references; null if the entity is not cached.
+   */
   read(typename: string, id: string): any | null {
     const cacheId = this.cache.identify({ __typename: typename, id });
     if (!cacheId) return null;
-
-    try {
-      const fragmentName = getUniqueFragmentName(typename);
-      return this.cache.readFragment({
-        id: cacheId,
-        fragment: gql`
-          fragment ${fragmentName} on ${typename} {
-            id
-            __typename
-          }
-        `,
-      });
-    } catch {
-      return null;
-    }
+    const stored = (this.cache.extract(true) as Record<string, unknown>)[
+      cacheId
+    ];
+    return stored ? { ...stored } : null;
   }
 
   evict(typename: string, id: string): void {
