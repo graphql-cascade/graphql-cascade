@@ -540,6 +540,34 @@ describe("CascadeBuilder", () => {
     });
   });
 
+  describe("Async entity filters", () => {
+    const hideSecret = async (entity: any) => entity.name !== "Secret";
+
+    it("refuses to build synchronously, rather than skip the filter", () => {
+      const filtered = new CascadeTracker({ entityFilter: hideSecret });
+      filtered.startTransaction();
+      filtered.trackUpdate(new MockEntity(1, "Secret"));
+
+      expect(() => new CascadeBuilder(filtered).buildResponse(null)).toThrow(
+        "entityFilter is async: build the response with buildResponseAsync()",
+      );
+    });
+
+    it("applies the filter with buildResponseAsync", async () => {
+      const filtered = new CascadeTracker({ entityFilter: hideSecret });
+      filtered.startTransaction();
+      filtered.trackUpdate(new MockEntity(1, "Secret"));
+      filtered.trackUpdate(new MockEntity(2, "Public"));
+
+      const response = await new CascadeBuilder(filtered).buildResponseAsync(
+        null,
+      );
+
+      expect(response.cascade.updated.map((e) => e.id)).toEqual(["2"]);
+      expect(filtered.inTransaction).toBe(false);
+    });
+  });
+
   describe("Invalidations", () => {
     it("should include invalidations when invalidator is provided and operation succeeds", () => {
       tracker.startTransaction();

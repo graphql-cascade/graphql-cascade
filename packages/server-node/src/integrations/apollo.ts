@@ -6,13 +6,19 @@
  */
 
 import { ApolloServerPlugin, GraphQLRequestListener } from "@apollo/server";
+import { CascadeBuilder } from "../builder";
 import { CascadeTracker } from "../tracker";
-import { CascadeTrackerConfig } from "../types";
+import { CascadeBuilderConfig, Invalidator } from "../types";
 
 /**
  * Configuration options for the Cascade Apollo Server plugin.
  */
-export interface CascadePluginOptions extends CascadeTrackerConfig {
+export interface CascadePluginOptions extends CascadeBuilderConfig {
+  /**
+   * Computes the invalidation hints of each operation's cascade.
+   */
+  invalidator?: Invalidator;
+
   /**
    * The key in the context where the CascadeTracker is stored.
    * @default 'cascadeTracker'
@@ -144,8 +150,13 @@ export function createCascadePlugin(
               return;
             }
 
-            // Get cascade data
-            const cascadeData = tracker.getCascadeData();
+            // Build the operation's cascade: size limits, type
+            // invalidations for entities past the tracker's limit, hints
+            const { cascade: cascadeData } = await new CascadeBuilder(
+              tracker,
+              options?.invalidator,
+              options,
+            ).buildResponseAsync(null);
 
             // Inject into response extensions
             if (response.body.kind === "single") {

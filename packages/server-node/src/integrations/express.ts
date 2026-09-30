@@ -7,7 +7,11 @@
 import { Request, Response, NextFunction } from "express";
 import { CascadeTracker } from "../tracker";
 import { CascadeBuilder } from "../builder";
-import { CascadeTrackerConfig, CascadeBuilderConfig } from "../types";
+import {
+  CascadeTrackerConfig,
+  CascadeBuilderConfig,
+  Invalidator,
+} from "../types";
 
 /**
  * Extend Express Request type to include cascade tracker and builder.
@@ -25,7 +29,10 @@ declare global {
  * Configuration options for cascade middleware.
  */
 export interface CascadeMiddlewareOptions
-  extends CascadeTrackerConfig, CascadeBuilderConfig {}
+  extends CascadeTrackerConfig, CascadeBuilderConfig {
+  /** Computes the invalidation hints of each response */
+  invalidator?: Invalidator;
+}
 
 /**
  * Creates Express middleware that attaches a CascadeTracker and CascadeBuilder
@@ -87,7 +94,7 @@ export function cascadeMiddleware(options?: CascadeMiddlewareOptions) {
     req.cascadeTracker = new CascadeTracker(trackerConfig);
     req.cascadeBuilder = new CascadeBuilder(
       req.cascadeTracker,
-      undefined,
+      options?.invalidator,
       builderConfig,
     );
 

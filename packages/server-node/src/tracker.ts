@@ -64,6 +64,19 @@ export class CascadeTransaction {
  * - Manual tracking
  */
 /**
+ * Thrown when an async `entityFilter` meets a synchronous build, which cannot
+ * await it: skipping the filter would bypass an authorization check.
+ */
+export class AsyncEntityFilterError extends Error {
+  constructor() {
+    super(
+      "entityFilter is async: build the response with buildResponseAsync()",
+    );
+    this.name = "AsyncEntityFilterError";
+  }
+}
+
+/**
  * Tracked changes at a point in a transaction; see `CascadeTracker.checkpoint`.
  */
 export interface TrackerCheckpoint {
@@ -794,12 +807,13 @@ export class CascadeTracker implements EntityChangeIterator {
             entity as TrackedEntity,
             this.context,
           );
-          // If it's a Promise, we can't handle it here - skip entity filtering in sync mode
+          // An async filter cannot run here. Including the entity would
+          // bypass an authorization check, so refuse instead.
           if (result instanceof Promise) {
-            this.log.warn(
-              "Async entityFilter detected in sync mode - filter not applied. Use getCascadeDataAsync() instead.",
-            );
-          } else if (!result) {
+            result.catch(() => undefined);
+            throw new AsyncEntityFilterError();
+          }
+          if (!result) {
             continue;
           }
         }
@@ -819,6 +833,7 @@ export class CascadeTracker implements EntityChangeIterator {
           ...(change.updatedFields && { updatedFields: change.updatedFields }),
         });
       } catch (e) {
+        if (e instanceof AsyncEntityFilterError) throw e;
         this.serializationErrorCount++;
         if (this.onSerializationError) {
           this.onSerializationError(change.entity, e as Error);

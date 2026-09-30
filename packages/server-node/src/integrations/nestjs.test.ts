@@ -7,7 +7,11 @@
 
 import { Test, TestingModule } from "@nestjs/testing";
 import { CascadeModule, CascadeService } from "./nestjs";
-import { CascadeResponse } from "../types";
+import {
+  CascadeResponse,
+  InvalidationScope,
+  InvalidationStrategy,
+} from "../types";
 
 // Mock entity for testing
 class MockEntity {
@@ -24,6 +28,36 @@ class MockEntity {
     };
   }
 }
+
+describe("CascadeModule.forRoot", () => {
+  it("passes the invalidator and updated fields through", async () => {
+    const hint = {
+      queryName: "todos",
+      strategy: InvalidationStrategy.INVALIDATE,
+      scope: InvalidationScope.EXACT,
+    };
+    const module = await Test.createTestingModule({
+      imports: [
+        CascadeModule.forRoot({
+          invalidator: { computeInvalidations: () => [hint] },
+        }),
+      ],
+    }).compile();
+    const service = await module.resolve(CascadeService);
+    service.startTransaction();
+    service.trackUpdate(
+      { __typename: "Todo", id: "1", title: "A" },
+      {
+        updatedFields: ["title"],
+      },
+    );
+
+    const response = service.buildResponse(null);
+
+    expect(response.cascade.invalidations).toEqual([hint]);
+    expect(response.cascade.updated[0].updatedFields).toEqual(["title"]);
+  });
+});
 
 describe("CascadeService", () => {
   let service: CascadeService;

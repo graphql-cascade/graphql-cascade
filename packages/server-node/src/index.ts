@@ -5,7 +5,12 @@
  */
 
 // Core classes
-export { CascadeTracker, CascadeTransaction, trackCascade } from "./tracker";
+export {
+  AsyncEntityFilterError,
+  CascadeTracker,
+  CascadeTransaction,
+  trackCascade,
+} from "./tracker";
 export type { TrackerCheckpoint } from "./tracker";
 export { CascadeBuilder, StreamingCascadeBuilder } from "./builder";
 export { CascadeError } from "./errors";

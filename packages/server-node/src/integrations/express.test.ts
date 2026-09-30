@@ -1,3 +1,4 @@
+import { InvalidationScope, InvalidationStrategy } from "../types";
 /**
  * Tests for Express middleware integration
  */
@@ -51,6 +52,23 @@ describe("cascadeMiddleware", () => {
 
     expect(mockReq.cascadeTracker).toBeDefined();
     expect(mockReq.cascadeTracker).toBeInstanceOf(CascadeTracker);
+  });
+
+  it("builds responses with the configured invalidator's hints", () => {
+    const hint = {
+      queryName: "todos",
+      strategy: InvalidationStrategy.INVALIDATE,
+      scope: InvalidationScope.EXACT,
+    };
+    const middleware = cascadeMiddleware({
+      invalidator: { computeInvalidations: () => [hint] },
+    });
+    middleware(mockReq as Request, mockRes as Response, mockNext);
+    mockReq.cascadeTracker!.startTransaction();
+
+    const response = mockReq.cascadeBuilder!.buildResponse(null);
+
+    expect(response.cascade.invalidations).toEqual([hint]);
   });
 
   it("should attach cascadeBuilder to request", () => {
