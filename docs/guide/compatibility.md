@@ -18,7 +18,7 @@ Each package works with the libraries you already use, declared as peer dependen
 | `@graphql-cascade/client` | `graphql` 16 |
 | `@graphql-cascade/apollo` | `@apollo/client` 3, `graphql` 16, `react` 16.8 to 18 |
 | `@graphql-cascade/relay` | `relay-runtime` 14 to 16, `graphql` 16, `react` 16.8 to 18 |
-| `@graphql-cascade/react-query` | `@tanstack/react-query` 4 or 5, `graphql` 16, `react` 16 |
+| `@graphql-cascade/react-query` | `@tanstack/react-query` 4 or 5, `graphql` 16, `react` 16.8 to 18 |
 | `@graphql-cascade/urql` | `@urql/core` 4 or later, `graphql` 16 or later |
 | `@graphql-cascade/nuxt` | `nuxt` 3 or 4, `@apollo/client` 3 or 4, `@vue/apollo-composable` 4 |
 | `@graphql-cascade/codegen` | `graphql` 15 or 16 |
