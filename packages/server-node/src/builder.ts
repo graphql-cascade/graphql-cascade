@@ -72,6 +72,22 @@ function isQueryInvalidation(hint: unknown): hint is QueryInvalidation {
   return STRATEGIES.has(strategy) && SCOPES.has(scope);
 }
 
+/** Tracker data of a mutation that tracked nothing. */
+function emptyTrackerData() {
+  return {
+    updated: [],
+    deleted: [],
+    overflow: {},
+    metadata: {
+      timestamp: new Date().toISOString(),
+      depth: 0,
+      affectedCount: 0,
+      trackingTime: 0,
+      truncated: false,
+    },
+  };
+}
+
 /**
  * Builds GraphQL Cascade responses from tracked changes.
  *
@@ -115,28 +131,47 @@ export class CascadeBuilder {
     errors: CascadeErrorInfo[] = [],
   ): CascadeResponse {
     const startTime = Date.now();
-
-    // Get cascade data from tracker
     let cascadeData: any;
-    try {
-      cascadeData = this.tracker.getCascadeData();
-      this.tracker.endTransaction();
-    } catch (e) {
-      // If tracker has no transaction, return empty cascade data
-      cascadeData = {
-        updated: [],
-        deleted: [],
-        overflow: {},
-        metadata: {
-          timestamp: new Date().toISOString(),
-          depth: 0,
-          affectedCount: 0,
-          trackingTime: 0,
-          truncated: false,
-        },
-      };
+    if (this.tracker.inTransaction) {
+      cascadeData = this.tracker.endTransaction();
+    } else {
+      cascadeData = emptyTrackerData();
     }
+    return this.respond(cascadeData, primaryResult, success, errors, startTime);
+  }
 
+  /**
+   * Like buildResponse, but awaits an async `entityFilter` (authorization
+   * checks), which buildResponse cannot apply.
+   */
+  async buildResponseAsync<T = unknown>(
+    primaryResult: T | null = null,
+    success: boolean = true,
+    errors: CascadeErrorInfo[] = [],
+  ): Promise<CascadeResponse> {
+    const startTime = Date.now();
+    let cascadeData: any;
+    if (this.tracker.inTransaction) {
+      cascadeData = await this.tracker.endTransactionAsync();
+    } else {
+      cascadeData = emptyTrackerData();
+    }
+    return this.respond(cascadeData, primaryResult, success, errors, startTime);
+  }
+
+  /**
+   * Turn tracked data into the response: invalidations, size limits and
+   * metadata. A mutation that never started a transaction tracked nothing;
+   * a tracker failure is not caught, since an empty cascade would tell
+   * clients that nothing changed.
+   */
+  private respond<T>(
+    cascadeData: any,
+    primaryResult: T | null,
+    success: boolean,
+    errors: CascadeErrorInfo[],
+    startTime: number,
+  ): CascadeResponse {
     // Compute invalidations if invalidator provided
     let hintsTruncated = false;
     if (this.invalidator && success) {

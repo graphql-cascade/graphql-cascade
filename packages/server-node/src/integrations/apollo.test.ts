@@ -9,6 +9,7 @@ import assert from "node:assert";
 import { ApolloServer } from "@apollo/server";
 import { createCascadePlugin, CascadePluginOptions } from "./apollo";
 import { CascadeTracker } from "../tracker";
+import { InvalidationScope, InvalidationStrategy } from "../types";
 
 // Mock entity for testing
 class MockEntity {
@@ -74,8 +75,8 @@ describe("createCascadePlugin", () => {
 
   it("should accept configuration options", () => {
     const options: CascadePluginOptions = {
-      maxDepth: 5,
-      excludeTypes: ["InternalType"],
+      maxUpdatedEntities: 100,
+      invalidator: { computeInvalidations: () => [] },
     };
     const plugin = createCascadePlugin(options);
     expect(plugin).toBeDefined();
@@ -202,18 +203,6 @@ describe("createCascadePlugin", () => {
   });
 
   describe("Configuration Options", () => {
-    it("should use custom tracker configuration", async () => {
-      const plugin = createCascadePlugin({
-        maxDepth: 10,
-        excludeTypes: ["PrivateType"],
-      });
-
-      const requestListener = await plugin.requestDidStart!({} as any);
-      expect(requestListener).toBeDefined();
-
-      // The plugin should create tracker with these options internally
-    });
-
     it("should use custom context key", async () => {
       const plugin = createCascadePlugin({
         contextKey: "myCustomTracker",
@@ -581,13 +570,16 @@ describe("Failed mutation fields", () => {
     },
   };
 
-  async function cascadeFor(query: string) {
+  async function cascadeFor(
+    query: string,
+    options: CascadePluginOptions = {},
+    cascadeTracker = new CascadeTracker(),
+  ) {
     const server = new ApolloServer({
       typeDefs,
       resolvers,
-      plugins: [createCascadePlugin()],
+      plugins: [createCascadePlugin(options)],
     });
-    const cascadeTracker = new CascadeTracker();
     cascadeTracker.startTransaction();
     const response = await server.executeOperation(
       { query },
@@ -596,6 +588,7 @@ describe("Failed mutation fields", () => {
     assert(response.body.kind === "single");
     return response.body.singleResult.extensions?.cascade as {
       updated: Array<{ id: string }>;
+      [field: string]: unknown;
     };
   }
 
@@ -615,6 +608,64 @@ describe("Failed mutation fields", () => {
     }`);
 
     expect(cascade.updated.map((e) => e.id)).toEqual(["2"]);
+  });
+
+  it("sends a complete CascadeUpdates, without tracker internals", async () => {
+    const cascade = await cascadeFor(
+      `mutation { a: updateUser(id: "1", name: "A") { success } }`,
+    );
+
+    expect(Object.keys(cascade).sort()).toEqual([
+      "deleted",
+      "invalidations",
+      "metadata",
+      "typeInvalidations",
+      "updated",
+    ]);
+  });
+
+  it("adds the invalidator's hints", async () => {
+    const hint = {
+      queryName: "users",
+      strategy: InvalidationStrategy.INVALIDATE,
+      scope: InvalidationScope.PREFIX,
+    };
+
+    const cascade = await cascadeFor(
+      `mutation { a: updateUser(id: "1", name: "A") { success } }`,
+      { invalidator: { computeInvalidations: () => [hint] } },
+    );
+
+    expect(cascade.invalidations).toEqual([hint]);
+  });
+
+  it("covers entities past the tracker's limit with type invalidations", async () => {
+    const cascade = await cascadeFor(
+      `mutation {
+        a: updateUser(id: "1", name: "A") { success }
+        b: updateUser(id: "2", name: "B") { success }
+      }`,
+      {},
+      new CascadeTracker({ maxEntities: 1 }),
+    );
+
+    expect(cascade.typeInvalidations).toEqual([
+      { typename: "User", affectedCount: 2 },
+    ]);
+    expect(cascade.metadata).toMatchObject({ truncated: true });
+  });
+
+  it("applies an async entity filter", async () => {
+    const cascade = await cascadeFor(
+      `mutation {
+        a: updateUser(id: "1", name: "A") { success }
+        b: updateUser(id: "2", name: "B") { success }
+      }`,
+      {},
+      new CascadeTracker({ entityFilter: async (entity) => entity.id !== "2" }),
+    );
+
+    expect(cascade.updated.map((e) => e.id)).toEqual(["1"]);
   });
 
   it("keeps the changes of every field that succeeds", async () => {

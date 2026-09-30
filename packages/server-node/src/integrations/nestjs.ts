@@ -14,13 +14,17 @@ import {
   CascadeResponse,
   CascadeErrorInfo,
   GraphQLEntity,
+  Invalidator,
 } from "../types";
 
 /**
  * Configuration options for CascadeModule.
  */
 export interface CascadeModuleOptions
-  extends CascadeTrackerConfig, CascadeBuilderConfig {}
+  extends CascadeTrackerConfig, CascadeBuilderConfig {
+  /** Computes the invalidation hints of each response */
+  invalidator?: Invalidator;
+}
 
 /**
  * Request-scoped service for cascade tracking in NestJS.
@@ -48,9 +52,10 @@ export class CascadeService {
   initWithConfig(
     trackerConfig: CascadeTrackerConfig,
     builderConfig: CascadeBuilderConfig,
+    invalidator?: Invalidator,
   ): void {
     this.tracker = new CascadeTracker(trackerConfig);
-    this.builder = new CascadeBuilder(this.tracker, undefined, builderConfig);
+    this.builder = new CascadeBuilder(this.tracker, invalidator, builderConfig);
   }
 
   /**
@@ -98,8 +103,11 @@ export class CascadeService {
   /**
    * Track entity update.
    */
-  trackUpdate<T extends GraphQLEntity>(entity: T): void {
-    this.tracker.trackUpdate(entity);
+  trackUpdate<T extends GraphQLEntity>(
+    entity: T,
+    options: { updatedFields?: readonly string[] } = {},
+  ): void {
+    this.tracker.trackUpdate(entity, options);
   }
 
   /**
@@ -195,7 +203,11 @@ export class CascadeModule {
           scope: Scope.REQUEST,
           useFactory: () => {
             const service = new CascadeService();
-            service.initWithConfig(trackerConfig, builderConfig);
+            service.initWithConfig(
+              trackerConfig,
+              builderConfig,
+              options?.invalidator,
+            );
             return service;
           },
         },
