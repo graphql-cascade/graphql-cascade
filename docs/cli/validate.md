@@ -1,79 +1,22 @@
 # cascade validate
 
-Validate GraphQL schema for Cascade compliance.
-
-## Usage
+Checks a schema file for problems that keep clients from updating their caches.
 
 ```bash
-cascade validate <schema-file> [options]
+npx cascade validate schema.graphql
 ```
+
+It reports:
+
+- **Errors:** object types without an `id` field, which clients cannot key in their caches.
+- **Warnings:** mutations returning `Boolean`, which give clients nothing to update, and types referencing themselves, whose traversal the server should bound with `maxDepth`.
+
+The command exits with a non-zero status when it finds errors.
+
+It does not yet check a schema against the specification's reference types and payload rules ([#67](https://github.com/graphql-cascade/graphql-cascade/issues/67)); see [Schema Conventions](/server/schema-conventions) for those.
 
 ## Options
 
-- `--endpoint <url>` - Validate against a running server
-- `--mutations-only` - Only check mutation responses
-- `--strict` - Enable strict validation rules
-- `--output <json|text>` - Output format (default: text)
-
-## Examples
-
-Validate a schema file:
-
-```bash
-cascade validate schema.graphql
-```
-
-Validate a running server:
-
-```bash
-cascade validate --endpoint http://localhost:4000/graphql
-```
-
-Strict validation with JSON output:
-
-```bash
-cascade validate schema.graphql --strict --output json
-```
-
-## Validation Rules
-
-The validator checks:
-
-1. **Cascade types are defined**
-   ```graphql
-   type Cascade { ... }
-   type EntityRef { ... }
-   type InvalidationRef { ... }
-   ```
-
-2. **Mutation responses include cascade**
-   ```graphql
-   type TodoMutationResponse {
-     todo: Todo
-     __cascade: Cascade! # Required
-   }
-   ```
-
-3. **Entity identification**
-   ```graphql
-   type Todo {
-     id: ID! # Required
-   }
-   ```
-
-4. **Response type naming**
-   ```graphql
-   # Recommended: TypeMutationResponse pattern
-   type TodoMutationResponse { ... }
-   ```
-
-## Exit Codes
-
-- `0` - Schema is valid
-- `1` - Validation errors found
-- `2` - Invalid arguments
-
-## Next Steps
-
-- **[cascade doctor](/cli/doctor)** - Diagnose runtime issues
-- **[Schema Conventions](/server/schema-conventions)** - Best practices
+| Option | Description |
+|--------|-------------|
+| `--strict` | Treat warnings as errors |

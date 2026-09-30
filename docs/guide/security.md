@@ -47,7 +47,7 @@ Large cascades can consume significant resources.
 
 ### Solution: Response Size Limits (Already Available)
 ```typescript
-const builder = new CascadeBuilder(tracker, null, {
+const builder = new CascadeBuilder(tracker, undefined, {
   maxUpdatedEntities: 100,  // Default: 500
   maxDeletedEntities: 50,   // Default: 100
   maxResponseSizeMb: 1      // Default: 5
@@ -83,16 +83,12 @@ const tracker = new CascadeTracker({
 // Set context before tracking entities
 tracker.setContext({ user: currentUser });
 
-// Use async methods to properly handle async entityFilter
 tracker.startTransaction();
 // ... track entities ...
-const cascadeData = await tracker.endTransactionAsync();
+const response = await new CascadeBuilder(tracker).buildResponseAsync(result);
 ```
 
-**Note on Async Entity Filters:**
-- Use `endTransactionAsync()` or `getCascadeDataAsync()` when using async `entityFilter`
-- Synchronous methods (`endTransaction()`, `getCascadeData()`) will log a warning if async filters are detected
-- Context is passed to `entityFilter` via `setContext()` method
+**Async entity filters** need the async methods: `buildResponseAsync()` on the builder, or `endTransactionAsync()` / `getCascadeDataAsync()` on the tracker. The synchronous ones throw `AsyncEntityFilterError` rather than skip the filter. Pass the viewer to the filter with `setContext()`.
 
 **Synchronous Filtering (for simple cases):**
 ```typescript
@@ -107,7 +103,7 @@ const tracker = new CascadeTracker({
 tracker.setContext({ userRole: 'user', userId: 123 });
 tracker.startTransaction();
 // ... track entities ...
-const cascadeData = tracker.endTransaction(); // Can use sync method
+const response = new CascadeBuilder(tracker).buildResponse(result); // sync is fine
 ```
 
 ## Information Disclosure
@@ -117,7 +113,7 @@ Cascade metadata may reveal system internals (timing, transaction IDs).
 
 ### Solution: Minimal Metadata in Production
 ```typescript
-const builder = new CascadeBuilder(tracker, null, {
+const builder = new CascadeBuilder(tracker, undefined, {
   includeTimingMetadata: process.env.NODE_ENV !== 'production',
   includeTransactionId: process.env.NODE_ENV !== 'production'
 });
