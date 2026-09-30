@@ -64,6 +64,10 @@ Normalizes a mutation field's result to a `CascadeResponse`, or returns `undefin
 
 The type name of an `updated` or `deleted` entry: `typename`, or `__typename` from servers before specification 1.3.0.
 
+### invalidationMatches(invalidation, queryName, args?)
+
+Whether a hint selects a cached query with that name and arguments, by the specification's scopes: `EXACT` compares the name, and the arguments when the hint has them; `PREFIX` the start of the name; `PATTERN` a glob (`*`, `?`); `ALL` matches every query. Caches implementing `CascadeCache` use it to find the queries a hint names.
+
 ### applyTypeInvalidations(cache, typeInvalidations)
 
 Calls `cache.invalidateType` for each type, or invalidates every query once when the cache has no `invalidateType`.

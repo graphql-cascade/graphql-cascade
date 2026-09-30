@@ -1,6 +1,7 @@
 // Core exports
 export * from "./types";
 export * from "./client";
+export * from "./invalidation";
 export * from "./optimistic";
 export * from "./logger";
 export * from "./errors";

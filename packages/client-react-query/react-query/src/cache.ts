@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import {
   CascadeCache,
   QueryInvalidation,
-  InvalidationScope,
+  invalidationMatches,
 } from "@graphql-cascade/client";
 
 /**
@@ -55,51 +55,39 @@ export class ReactQueryCascadeCache implements CascadeCache {
   }
 
   invalidate(invalidation: QueryInvalidation): void {
-    const queryKey = this.invalidationToQueryKey(invalidation);
-    this.queryClient.invalidateQueries(queryKey);
+    void this.queryClient.invalidateQueries(this.filters(invalidation));
   }
 
   async refetch(invalidation: QueryInvalidation): Promise<void> {
-    const queryKey = this.invalidationToQueryKey(invalidation);
-    await this.queryClient.refetchQueries(queryKey);
+    await this.queryClient.refetchQueries(this.filters(invalidation));
   }
 
   remove(invalidation: QueryInvalidation): void {
-    const queryKey = this.invalidationToQueryKey(invalidation);
-    this.queryClient.removeQueries(queryKey);
+    this.queryClient.removeQueries(this.filters(invalidation));
   }
 
   identify(entity: any): string {
     return `${entity.__typename}:${entity.id}`;
   }
 
-  private invalidationToQueryKey(invalidation: QueryInvalidation): any {
-    if (invalidation.scope === InvalidationScope.EXACT) {
-      return [invalidation.queryName, invalidation.arguments];
-    } else if (invalidation.scope === InvalidationScope.PREFIX) {
-      return { queryKey: [invalidation.queryName] };
-    } else if (invalidation.scope === InvalidationScope.PATTERN) {
-      return {
-        predicate: (query: any) => this.matchesPattern(query, invalidation),
-      };
-    } else {
-      return { predicate: () => true }; // Invalidate all
-    }
-  }
-
-  private matchesPattern(query: any, invalidation: QueryInvalidation): boolean {
-    if (!invalidation.queryPattern) return false;
-    const queryKey = query.queryKey;
-    if (!Array.isArray(queryKey) || queryKey.length === 0) return false;
-
-    const queryName = queryKey[0];
-    // Simple glob matching for patterns like "list*", "get*"
-    if (invalidation.queryPattern.endsWith("*")) {
-      const prefix = invalidation.queryPattern.slice(0, -1);
-      return queryName.startsWith(prefix);
-    }
-
-    return queryName === invalidation.queryPattern;
+  /**
+   * Filters selecting the queries an invalidation hint names. Queries are
+   * keyed `[queryName, variables?]`.
+   */
+  private filters(invalidation: QueryInvalidation) {
+    return {
+      predicate: ({ queryKey }: { queryKey: readonly unknown[] }) => {
+        const [queryName, args] = queryKey;
+        return (
+          typeof queryName === "string" &&
+          invalidationMatches(
+            invalidation,
+            queryName,
+            args as Record<string, unknown> | undefined,
+          )
+        );
+      },
+    };
   }
 
   private queryContainsEntity(

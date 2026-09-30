@@ -79,10 +79,8 @@ It returns TanStack Query's mutation result; the mutation's data is the payload'
 |---------|----------------|
 | `updated` | Merge the entity's fields into every cached query result containing an object with its `__typename` and `id` |
 | `deleted` | Remove the entity from lists in cached query results |
-| Hint with scope `EXACT` | The query keyed `[queryName, arguments]` |
-| Hint with scope `PREFIX` | Every query whose first key element is `queryName`, whatever its variables |
-| Hint with scope `PATTERN` | Every query whose first key element matches `queryPattern` (`list*`) |
-| Hint with scope `ALL`, and `typeInvalidations` | Every query |
+| Hints | The queries the hint's scope selects by name, the key's first element: `EXACT` also compares `arguments` with the key's second element |
+| `typeInvalidations` | Every query |
 
 `INVALIDATE` calls `invalidateQueries`, `REFETCH` `refetchQueries`, and `REMOVE` `removeQueries`.
 
