@@ -84,8 +84,6 @@ export class URQLCascadeClient {
     this.cache = cache;
     this.config = {
       autoApply: config.autoApply ?? true,
-      optimistic: config.optimistic ?? false,
-      maxDepth: config.maxDepth ?? 10,
       excludeTypes: config.excludeTypes ?? [],
     };
   }
@@ -141,19 +139,23 @@ export class URQLCascadeClient {
       this.applyCascade(optimisticCascade);
     }
 
+    let result: CascadeMutationResult<T>;
     try {
-      // Execute actual mutation
-      const result = await this.mutate<T, V>(mutation, variables);
-
-      // If successful, the real cascade replaces optimistic
-      return result;
+      result = await this.mutate<T, V>(mutation, variables);
     } catch (error) {
-      // Rollback optimistic updates on error
       if (rollbackData) {
         this.rollback(rollbackData);
       }
       throw error;
     }
+
+    // urql resolves failed operations, and failure payloads commit nothing:
+    // either way the optimistic changes go. On success, the server's cascade
+    // has replaced them.
+    if (rollbackData && !succeeded(result)) {
+      this.rollback(rollbackData);
+    }
+    return result;
   }
 
   /**
@@ -297,4 +299,14 @@ export class URQLCascadeClient {
   getConfig(): Required<URQLCascadeConfig> {
     return { ...this.config };
   }
+}
+
+/** Whether a mutation completed without error and every payload succeeded. */
+function succeeded(result: CascadeMutationResult<unknown>): boolean {
+  return (
+    result.error === undefined &&
+    Object.values((result.data ?? {}) as Record<string, unknown>).every(
+      (field) => toCascadeResponse(field)?.success !== false,
+    )
+  );
 }

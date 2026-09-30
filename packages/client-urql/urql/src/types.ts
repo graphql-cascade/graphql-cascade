@@ -58,18 +58,6 @@ export interface URQLCascadeConfig {
   autoApply?: boolean;
 
   /**
-   * Whether to enable optimistic updates.
-   * @default false
-   */
-  optimistic?: boolean;
-
-  /**
-   * Maximum depth for cascade traversal.
-   * @default 10
-   */
-  maxDepth?: number;
-
-  /**
    * Types to exclude from cascade processing.
    */
   excludeTypes?: string[];
