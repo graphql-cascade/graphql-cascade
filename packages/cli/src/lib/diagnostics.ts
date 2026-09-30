@@ -58,9 +58,14 @@ async function checkCascadePackages(result: DiagnosticResult): Promise<void> {
     };
 
     const cascadePackages = [
+      "@graphql-cascade/server",
       "@graphql-cascade/client",
       "@graphql-cascade/apollo",
+      "@graphql-cascade/relay",
       "@graphql-cascade/react-query",
+      "@graphql-cascade/urql",
+      "@graphql-cascade/nuxt",
+      "@graphql-cascade/codegen",
     ];
 
     let installedCount = 0;
@@ -73,10 +78,6 @@ async function checkCascadePackages(result: DiagnosticResult): Promise<void> {
 
     if (installedCount === 0) {
       result.errors.push("No GraphQL Cascade packages found in dependencies");
-    } else if (installedCount < cascadePackages.length) {
-      result.warnings.push(
-        "Only some GraphQL Cascade packages installed - consider installing all client packages",
-      );
     }
   } catch (error) {
     result.errors.push("Failed to read package.json");

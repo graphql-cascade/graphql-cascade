@@ -108,6 +108,10 @@ generates:
 
       # Generate type guard functions for union responses
       generateTypeGuards: true
+
+      # Generate the CascadeEntity fragment: the entity fields your queries
+      # read, for mutations to select as entity { ...CascadeEntity }
+      cascadeEntityFragment: true
 `;
 
     try {

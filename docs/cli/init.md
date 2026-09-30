@@ -19,7 +19,7 @@ const config: CascadeConfig = {
 export default config;
 ```
 
-If the file exists, it asks before overwriting it.
+If the file exists, it asks before overwriting it. It then lists the packages still to install.
 
 ## Options
 
