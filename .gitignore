@@ -145,9 +145,9 @@ credentials.json
 *.key
 *.crt
 
-# Package manager locks (keep package-lock.json and yarn.lock)
-# But ignore pnpm-lock.yaml if not using pnpm
-# pnpm-lock.yaml
+# The workspace uses pnpm; pnpm-lock.yaml is the only root lockfile
+/package-lock.json
+/yarn.lock
 
 # Build artifacts
 sbom.json
