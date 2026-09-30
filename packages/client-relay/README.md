@@ -336,11 +336,15 @@ const TodoListQuery = graphql`
 
 ```typescript
 function createCascadeRelayEnvironment(
-  network: Network,
+  network: INetwork,
   store: Store,
-  config?: CascadeRelayConfig,
+  config?: RelayCascadeEnvironmentConfig, // { getDataID?, debug?, ... }
 ): Environment;
 ```
+
+The environment applies the cascade of every mutation field in the response, in field order, and passes subscriptions and queries through unchanged. A cascade that cannot be applied is logged; the response still reaches your code.
+
+**Record IDs.** Relay stores each record under its data ID, by default the object's `id`, so cascades update the records your queries read when IDs are unique across types (UUIDs or Relay global IDs). If your schema reuses IDs across types, give the environment a `getDataID`, for example `` (value, typeName) => `${typeName}:${value.id}` ``: the cascade updater uses the same one. Deleted entities are removed from the store.
 
 ### createCascadeUpdater
 
@@ -351,8 +355,8 @@ import { createCascadeUpdater } from "@graphql-cascade/relay";
 
 const updater = createCascadeUpdater(cascadeData);
 
-// Use in commit
-store.commitUpdates(updater);
+// Apply it to the store
+environment.commitUpdate(updater);
 
 // Or in mutation
 commit({

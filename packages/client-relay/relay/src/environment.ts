@@ -1,5 +1,12 @@
-import { Environment, Network, Store, RecordSource } from "relay-runtime";
-import { CascadeResponse } from "@graphql-cascade/client";
+import {
+  Environment,
+  Network,
+  RecordSource,
+  Store,
+  type GraphQLResponse,
+  type INetwork,
+} from "relay-runtime";
+import type { CascadeResponse } from "@graphql-cascade/client";
 import { createCascadeUpdater } from "./updater";
 import { RelayCascadeEnvironmentConfig } from "./types";
 
@@ -10,48 +17,59 @@ import { RelayCascadeEnvironmentConfig } from "./types";
  * and applies the updates to the Relay store.
  */
 export function createCascadeRelayEnvironment(
-  network: Network,
+  network: INetwork,
   store: Store,
   config: RelayCascadeEnvironmentConfig = {},
 ): Environment {
-  // Create a network wrapper that processes cascade responses
-  const cascadeNetwork = Network.create((operation: any, variables: any) => {
-    return network.execute(operation, variables).map((payload: any) => {
-      // Check if this is a mutation response with cascade data
-      if (operation.operationKind === "mutation" && payload.data) {
-        const mutationName = Object.keys(payload.data)[0];
-        const mutationResult = payload.data[mutationName];
-
-        // Check for cascade data in the response
-        if (
-          mutationResult &&
-          typeof mutationResult === "object" &&
-          "cascade" in mutationResult
-        ) {
-          const cascadeResponse = mutationResult as CascadeResponse;
-
-          if (cascadeResponse.cascade) {
-            // Apply cascade updates to the store
-            store.commitUpdates((storeProxy: any) => {
-              const updater = createCascadeUpdater(cascadeResponse.cascade);
-              updater(storeProxy);
-            });
-
-            if (config.debug) {
-              console.log("Applied cascade updates:", cascadeResponse.cascade);
-            }
+  // The network applies each mutation's cascades through the environment,
+  // which exists once the network is built; responses only arrive after that.
+  // Wrapping `execute` keeps every operation kind, subscriptions included.
+  let environment: Environment | undefined;
+  const cascadeNetwork: INetwork = {
+    execute: (request, variables, cacheConfig, uploadables) =>
+      network
+        .execute(request, variables, cacheConfig, uploadables)
+        .map((payload) => {
+          if (request.operationKind === "mutation" && environment) {
+            applyMutationCascades(environment, payload, config);
           }
-        }
-      }
+          return payload;
+        }),
+  };
 
-      return payload;
-    });
-  });
-
-  return new Environment({
+  environment = new Environment({
     network: cascadeNetwork,
     store,
+    ...(config.getDataID && { getDataID: config.getDataID }),
   });
+  return environment;
+}
+
+/**
+ * Apply the cascade of each mutation field, in field order (spec REQ-012).
+ * A cascade that cannot be applied is logged, not thrown: the server has
+ * committed the mutation, so its response still reaches the application.
+ */
+function applyMutationCascades(
+  environment: Environment,
+  payload: GraphQLResponse,
+  config: RelayCascadeEnvironmentConfig,
+): void {
+  if (!("data" in payload) || !payload.data) return;
+  for (const result of Object.values(payload.data)) {
+    const cascade = (result as Partial<CascadeResponse> | null)?.cascade;
+    if (!cascade) continue;
+    try {
+      environment.commitUpdate(
+        createCascadeUpdater(cascade, { getDataID: config.getDataID }),
+      );
+      if (config.debug) {
+        console.log("Applied cascade updates:", cascade);
+      }
+    } catch (error) {
+      console.error("Failed to apply cascade updates:", error);
+    }
+  }
 }
 
 /**

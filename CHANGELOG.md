@@ -15,6 +15,7 @@ The **specification** is versioned independently: its version lives in
 ## [Unreleased]
 
 ### Fixed
+- `@graphql-cascade/relay`: cascades update the records Relay queries read (by data ID), `createCascadeRelayEnvironment` no longer fails every cascade mutation (it called a Store method that does not exist) or drops subscriptions, deletions remove records, and nested entities are linked. Tests use a real Relay store.
 - `@graphql-cascade/cli`: generated `cascade.config.ts` imported `CascadeConfig` from a package that does not exist; it is now exported by `@graphql-cascade/cli`. `@graphql-cascade/server` exports `Invalidator`.
 - READMEs import only real package exports under the real package names; `check:spec` enforces it.
 - `@graphql-cascade/server`: the Apollo Server plugin no longer puts changes from failed mutation fields into `extensions.cascade`; new `CascadeTracker.checkpoint()` / `restore()`.
