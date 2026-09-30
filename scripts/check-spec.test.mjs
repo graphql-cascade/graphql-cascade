@@ -6,6 +6,7 @@ import {
   checkVersionConsistency,
   checkReferenceSchema,
   checkSnippets,
+  checkRequirements,
 } from "./check-spec.mjs";
 
 // Built from parts so this file never matches the pattern it tests.
@@ -191,6 +192,50 @@ describe("checkSnippets", () => {
 }`;
     assert.deepEqual(checkSnippets(REFERENCE, [chapter(snippet)]), [
       "specification/99_test.md:5: Color differs from reference/cascade_base.graphql",
+    ]);
+  });
+});
+
+const spec = (content) => ({ path: "specification/99_test.md", content });
+const testCase = (id, requirement) => ({
+  path: `conformance-tests/${id}.json`,
+  content: JSON.stringify({ id, requirement }),
+});
+
+describe("checkRequirements", () => {
+  const specFiles = [
+    spec("- **[REQ-001]** Servers MUST track creations.\n"),
+    spec("Text.\n\n- **[REQ-002]** Clients MUST apply updates.\n"),
+  ];
+
+  it("accepts requirements that are defined once and each tested", () => {
+    const cases = [testCase("TC-1", "REQ-001"), testCase("TC-2", "REQ-002")];
+    assert.deepEqual(checkRequirements(specFiles, cases), []);
+  });
+
+  it("reports cases citing undefined requirements", () => {
+    const cases = [
+      testCase("TC-1", "REQ-001"),
+      testCase("TC-2", "REQ-002"),
+      testCase("TC-3", "REQ-999"),
+    ];
+    assert.deepEqual(checkRequirements(specFiles, cases), [
+      "conformance-tests/TC-3.json: REQ-999 is not defined in the specification",
+    ]);
+  });
+
+  it("reports requirements no case tests", () => {
+    assert.deepEqual(
+      checkRequirements(specFiles, [testCase("TC-1", "REQ-001")]),
+      ["specification/99_test.md:3: REQ-002 has no conformance case"],
+    );
+  });
+
+  it("reports requirements defined twice", () => {
+    const twice = [...specFiles, spec("- **[REQ-001]** Again.\n")];
+    const cases = [testCase("TC-1", "REQ-001"), testCase("TC-2", "REQ-002")];
+    assert.deepEqual(checkRequirements(twice, cases), [
+      "specification/99_test.md:1: REQ-001 is already defined at specification/99_test.md:1",
     ]);
   });
 });

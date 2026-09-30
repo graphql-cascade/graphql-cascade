@@ -7,6 +7,9 @@
  * - reference/cascade_base.graphql is a valid GraphQL schema, and is the
  *   normative source: every graphql block in the specification parses, and
  *   any definition of a reference type matches it (descriptions aside).
+ * - Every requirement tagged **[REQ-NNN]** in the specification is defined
+ *   once and tested by a conformance case, and every case cites a defined
+ *   requirement.
  *
  * Usage: node scripts/check-spec.mjs
  */
@@ -149,6 +152,48 @@ export function checkSnippets(sdl, files) {
   return problems;
 }
 
+const REQUIREMENT_TAG = /\*\*\[(REQ-\d{3})\]\*\*/g;
+
+/**
+ * @param {{ path: string, content: string }[]} specFiles specification Markdown
+ * @param {{ path: string, content: string }[]} caseFiles conformance cases
+ * @returns {string[]} one message per broken link between spec and cases
+ */
+export function checkRequirements(specFiles, caseFiles) {
+  const problems = [];
+  const defined = new Map();
+  for (const { path, content } of specFiles) {
+    for (const match of content.matchAll(REQUIREMENT_TAG)) {
+      const where = `${path}:${content.slice(0, match.index).split("\n").length}`;
+      if (defined.has(match[1])) {
+        problems.push(
+          `${where}: ${match[1]} is already defined at ${defined.get(match[1])}`,
+        );
+      } else {
+        defined.set(match[1], where);
+      }
+    }
+  }
+
+  const tested = new Set();
+  for (const { path, content } of caseFiles) {
+    const { requirement } = JSON.parse(content);
+    if (defined.has(requirement)) {
+      tested.add(requirement);
+    } else {
+      problems.push(
+        `${path}: ${requirement} is not defined in the specification`,
+      );
+    }
+  }
+
+  for (const [id, where] of defined) {
+    if (!tested.has(id))
+      problems.push(`${where}: ${id} has no conformance case`);
+  }
+  return problems;
+}
+
 function trackedTextFiles(root) {
   const paths = execFileSync("git", ["ls-files", "-z"], {
     cwd: root,
@@ -174,21 +219,24 @@ function main() {
   const root = new URL("../", import.meta.url);
   const readFile = (path) => readFileSync(new URL(path, root), "utf8");
   const files = trackedTextFiles(root);
+  const specFiles = files.filter(
+    ({ path }) => path.startsWith("specification/") && path.endsWith(".md"),
+  );
+  const caseFiles = files.filter(
+    ({ path }) =>
+      path.startsWith("conformance-tests/") &&
+      path.endsWith(".json") &&
+      !path.endsWith("test-case-schema.json") &&
+      !path.endsWith("spec-version.json"),
+  );
   const sdl = readFile(REFERENCE_PATH);
   const schemaProblems = checkReferenceSchema(sdl);
   const problems = [
     ...findCorruption(files),
     ...checkVersionConsistency(readFile),
     ...schemaProblems,
-    ...(schemaProblems.length > 0
-      ? []
-      : checkSnippets(
-          sdl,
-          files.filter(
-            ({ path }) =>
-              path.startsWith("specification/") && path.endsWith(".md"),
-          ),
-        )),
+    ...(schemaProblems.length > 0 ? [] : checkSnippets(sdl, specFiles)),
+    ...checkRequirements(specFiles, caseFiles),
   ];
   if (problems.length > 0) {
     console.error(problems.join("\n"));

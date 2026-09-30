@@ -276,6 +276,22 @@ All specification changes MUST be documented in CHANGELOG.md following this form
 
 ## Appendix: Version History
 
+### v1.4.0 (2026-09-30)
+
+#### Changes
+- Requirements tested by the conformance suite are tagged **[REQ-NNN]** where the specification states them; `check-spec` requires every tag to be unique and tested, and every case to cite a tag
+- Cascade Delivery: the payload `cascade` field is the normative location; with several mutation fields, each carries only its own changes, and a failed field leaves the others intact
+- Optional `extensions.cascade` transport: one cascade for the whole operation, combining all mutation fields
+- Clients SHOULD NOT invalidate or refetch a query only because it contains an updated entity
+- Server tracking requirements spell out created, updated, deleted, relationship and cycle behavior; a failed mutation returns an empty cascade
+
+#### Backward Compatibility
+Backward compatible. The delivery rules describe how servers already behave; the extensions transport is optional; the no-refetch rule is a recommendation.
+
+#### Migration
+- Servers delivering cascades in `extensions`: combine all mutation fields into one cascade.
+- Clients: stop invalidating queries solely because they contain an updated entity.
+
 ### v1.3.0 (2026-09-30)
 
 #### Changes

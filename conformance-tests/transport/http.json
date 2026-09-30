@@ -1,11 +1,11 @@
 {
   "id": "TC-T-001",
   "name": "HTTP Response Extensions",
-  "description": "Cascade data MUST be delivered in the 'extensions.cascade' field of the GraphQL HTTP response",
+  "description": "A server that delivers cascades in extensions MUST put one cascade for the whole operation in extensions.cascade, with the shape of CascadeUpdates",
   "category": "transport",
   "subcategory": "http",
   "requirement": "REQ-040",
-  "priority": "critical",
+  "priority": "medium",
   "input": {
     "request": {
       "method": "POST",
@@ -36,5 +36,5 @@
       }
     }
   },
-  "tags": ["transport", "http", "extensions"]
+  "tags": ["transport", "http", "extensions", "optional"]
 }

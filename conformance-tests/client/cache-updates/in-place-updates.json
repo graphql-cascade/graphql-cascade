@@ -1,11 +1,11 @@
 {
   "id": "TC-C-021",
-  "name": "Entity-Based Query Invalidation",
-  "description": "Clients MUST invalidate queries containing a specific entity when that entity is updated or deleted",
+  "name": "Updated Entities Apply In Place",
+  "description": "Clients SHOULD NOT invalidate or refetch a cached query only because it contains an updated entity: the cascade carries the entity's full data, so queries that contain it read the new data from the cache without a network request",
   "category": "client",
-  "subcategory": "invalidation",
+  "subcategory": "cache-updates",
   "requirement": "REQ-031",
-  "priority": "high",
+  "priority": "medium",
   "input": {
     "clientState": {
       "cache": {
@@ -28,8 +28,8 @@
       "cache": {
         "User:1": { "__typename": "User", "id": "1", "name": "John Updated" }
       },
-      "invalidatedQueries": ["getUser", "getPosts"]
+      "invalidatedQueries": []
     }
   },
-  "tags": ["invalidation", "entity", "cache-update"]
+  "tags": ["cache-update", "performance", "no-refetch"]
 }

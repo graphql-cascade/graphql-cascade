@@ -141,7 +141,7 @@ cascade:
 
 ### Atomicity
 - Cascade responses reflect committed transaction state
-- If mutation fails, no cascade data is returned
+- If a mutation fails, its cascade reports no entity changes (see [Server Requirements](09_server_requirements.md#transaction-semantics))
 - All entities in cascade are consistent with each other
 
 ### Isolation
