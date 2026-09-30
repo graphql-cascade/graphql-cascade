@@ -223,6 +223,19 @@ Breaking changes and deprecations are called out in all three, each with a migra
 
 ## Appendix: Version History
 
+### v1.9.0 (2026-09-30)
+
+#### Changes
+- Mutations MAY return a result union, `<Mutation>Payload | CascadeFailure`, instead of a `CascadeResponse`. The payload implements the new `CascadePayload` interface (`cascade`, `warnings`); `CascadeFailure` (`errors`) means nothing was committed and carries no cascade
+- Clients MUST accept both forms (REQ-105)
+
+#### Backward Compatibility
+Backward compatible for servers, which keep `CascadeResponse`. Clients must add handling for the union.
+
+#### Migration
+- Clients: accept `CascadePayload` and `CascadeFailure` results (the reference clients do, from this release).
+- Servers: optionally move to the result union, which RFC 0001 proposes as the only form in 2.0.0.
+
 ### v1.8.0 (2026-09-30)
 
 #### Changes

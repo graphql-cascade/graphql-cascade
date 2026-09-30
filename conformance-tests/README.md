@@ -22,7 +22,9 @@ conformance-tests/
 │   ├── cache-updates/
 │   │   ├── document-cache.json
 │   │   ├── in-place-updates.json
-│   │   └── normalized-cache.json
+│   │   ├── normalized-cache.json
+│   │   ├── result-union-failure.json
+│   │   └── result-union-payload.json
 │   └── invalidation/
 │       ├── exact-match.json
 │       ├── prefix-match.json
@@ -165,6 +167,8 @@ async function runConformanceTests(serverUrl: string): Promise<TestResult[]> {
 - **TC-C-001** (REQ-101): Normalized Cache Updates
 - **TC-C-002** (REQ-102): Document Cache Updates
 - **TC-C-021** (REQ-031): Updated Entities Apply In Place
+- **TC-C-005** (REQ-105): Result Union Success Payload
+- **TC-C-006** (REQ-105): Result Union Failure
 
 #### Invalidation (`client/invalidation/`)
 - **TC-C-003** (REQ-103): Exact Match Invalidation

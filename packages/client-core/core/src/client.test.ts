@@ -2,6 +2,7 @@ import {
   CascadeClient,
   applyTypeInvalidations,
   cascadeEntryTypename,
+  toCascadeResponse,
 } from "./client";
 import {
   CascadeCache,
@@ -396,5 +397,95 @@ describe("cascadeEntryTypename", () => {
     expect(() => cascadeEntryTypename({})).toThrow(
       "Cascade entry has neither typename nor __typename",
     );
+  });
+});
+
+describe("toCascadeResponse", () => {
+  const cascade = {
+    updated: [],
+    deleted: [],
+    invalidations: [],
+    metadata: { timestamp: "2026-01-01", depth: 0, affectedCount: 0 },
+  };
+  const warning = { message: "Email not sent", code: "INTERNAL_ERROR" };
+
+  it("keeps a 1.x CascadeResponse as it is", () => {
+    const response = { success: true, errors: [], data: { id: "1" }, cascade };
+    expect(toCascadeResponse(response)).toEqual(response);
+  });
+
+  it("reads a CascadePayload, whose warnings mark a partial success", () => {
+    expect(
+      toCascadeResponse({ data: { id: "1" }, cascade, warnings: [warning] }),
+    ).toEqual({ success: true, errors: [warning], data: { id: "1" }, cascade });
+  });
+
+  it("turns a CascadeFailure into a failed response with an empty cascade", () => {
+    const failure = { message: "Not found", code: "NOT_FOUND" };
+    expect(toCascadeResponse({ errors: [failure] })).toEqual({
+      success: false,
+      errors: [failure],
+      data: null,
+      cascade: {
+        updated: [],
+        deleted: [],
+        invalidations: [],
+        typeInvalidations: [],
+        metadata: { timestamp: expect.any(String), depth: 0, affectedCount: 0 },
+      },
+    });
+  });
+
+  it("returns undefined for results that are not cascade results", () => {
+    expect(toCascadeResponse({ id: "1" })).toBeUndefined();
+    expect(toCascadeResponse(null)).toBeUndefined();
+  });
+});
+
+describe("CascadeClient.mutate with result unions", () => {
+  const entry = {
+    typename: "User",
+    id: "1",
+    operation: CascadeOperation.UPDATED,
+    entity: { name: "John" },
+  };
+
+  it("applies the cascade of a success payload", async () => {
+    const cache = new MockCache();
+    const client = new CascadeClient(cache, async () => ({
+      data: {
+        renameUser: {
+          data: { id: "1" },
+          warnings: [],
+          cascade: {
+            updated: [entry],
+            deleted: [],
+            invalidations: [],
+            metadata: { timestamp: "2026-01-01", depth: 1, affectedCount: 1 },
+          },
+        },
+      },
+    }));
+
+    const data = await client.mutate({} as any, {});
+
+    expect(data).toEqual({ id: "1" });
+    expect(cache.written).toEqual([
+      { typename: "User", id: "1", data: { name: "John" } },
+    ]);
+  });
+
+  it("applies nothing for a CascadeFailure", async () => {
+    const cache = new MockCache();
+    const client = new CascadeClient(cache, async () => ({
+      data: {
+        renameUser: { errors: [{ message: "Not found", code: "NOT_FOUND" }] },
+      },
+    }));
+
+    const data = await client.mutate({} as any, {});
+
+    expect(data).toBeNull();
+    expect(cache.written).toEqual([]);
   });
 });

@@ -465,3 +465,44 @@ describe("validateResponse", () => {
     });
   });
 });
+
+describe("validateResponse with result unions", () => {
+  const cascade = {
+    updated: [],
+    deleted: [],
+    invalidations: [],
+    metadata: { timestamp: Date.now() },
+  };
+
+  it("accepts a CascadePayload: cascade and warnings, no success flag", () => {
+    expect(
+      validateResponse({ data: { id: "1" }, cascade, warnings: [] }).errors,
+    ).toEqual([]);
+  });
+
+  it("requires a CascadePayload's warnings to be a list", () => {
+    expect(
+      validateResponse({ cascade, warnings: "none" }).errors,
+    ).toContainEqual({
+      code: "INVALID_WARNINGS",
+      message: "CascadePayload.warnings must be an array",
+      path: "warnings",
+    });
+  });
+
+  it("accepts a CascadeFailure: errors and no cascade", () => {
+    expect(
+      validateResponse({
+        errors: [{ message: "Not found", code: "NOT_FOUND" }],
+      }).errors,
+    ).toEqual([]);
+  });
+
+  it("requires a CascadeFailure to report at least one error", () => {
+    expect(validateResponse({ errors: [] }).errors).toContainEqual({
+      code: "EMPTY_FAILURE",
+      message: "CascadeFailure must have at least one error",
+      path: "errors",
+    });
+  });
+});

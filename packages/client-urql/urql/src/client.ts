@@ -17,6 +17,7 @@ import {
 import {
   applyTypeInvalidations,
   cascadeEntryTypename,
+  toCascadeResponse,
 } from "@graphql-cascade/client";
 import { extractCascadeData } from "./exchange";
 
@@ -26,6 +27,10 @@ import { extractCascadeData } from "./exchange";
 export interface CascadeMutationResult<T> {
   data: T | null;
   error?: Error;
+  /**
+   * The cascade of the first mutation field (every field's cascade is
+   * applied), or `extensions.cascade` when no payload carries one.
+   */
   cascade: CascadeUpdates | null;
 }
 
@@ -157,17 +162,30 @@ export class URQLCascadeClient {
   private processMutationResult<T>(
     result: OperationResult,
   ): CascadeMutationResult<T> {
-    const cascade = extractCascadeData(result);
+    // Each mutation field's payload carries its own cascade (spec REQ-012),
+    // including CascadePayload | CascadeFailure unions. extensions.cascade is
+    // the fallback transport, ignored when payloads carry cascades (REQ-040).
+    const payloadCascades = Object.values(
+      (result.data ?? {}) as Record<string, unknown>,
+    )
+      .map((field) => toCascadeResponse(field)?.cascade)
+      .filter((cascade): cascade is CascadeUpdates => cascade !== undefined);
+    const extensionCascade = extractCascadeData(result);
+    const cascades =
+      payloadCascades.length > 0
+        ? payloadCascades
+        : extensionCascade
+          ? [extensionCascade]
+          : [];
 
-    // Apply cascade updates to cache
-    if (cascade && this.config.autoApply) {
-      this.applyCascade(cascade);
+    if (this.config.autoApply) {
+      cascades.forEach((cascade) => this.applyCascade(cascade));
     }
 
     return {
       data: result.data as T | null,
       error: result.error,
-      cascade,
+      cascade: cascades[0] ?? null,
     };
   }
 

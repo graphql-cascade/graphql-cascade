@@ -1,7 +1,9 @@
 import { DocumentNode } from "graphql";
 import {
   CascadeCache,
+  CascadeError,
   CascadeResponse,
+  CascadeUpdates,
   InvalidationScope,
   InvalidationStrategy,
   TypeInvalidation,
@@ -21,6 +23,50 @@ export function cascadeEntryTypename(entry: {
     throw new TypeError("Cascade entry has neither typename nor __typename");
   }
   return typename;
+}
+
+/**
+ * Normalize a mutation field's result to a CascadeResponse, whichever form
+ * the server uses:
+ * - a 1.x CascadeResponse (`success`, `errors`, `data`, `cascade`);
+ * - a CascadePayload (`data`, `cascade`, `warnings`), a success whose
+ *   warnings mark a partial success;
+ * - a CascadeFailure (`errors`, no cascade): nothing was committed, so the
+ *   response carries an empty cascade.
+ * Returns undefined for a result that is not a cascade result.
+ */
+export function toCascadeResponse<T = unknown>(
+  result: unknown,
+): CascadeResponse<T | null> | undefined {
+  if (typeof result !== "object" || result === null) return undefined;
+  const fields = result as Record<string, unknown>;
+  if (typeof fields.cascade === "object" && fields.cascade !== null) {
+    return {
+      success: (fields.success as boolean | undefined) ?? true,
+      errors: (fields.errors ?? fields.warnings ?? []) as CascadeError[],
+      data: (fields.data ?? null) as T | null,
+      cascade: fields.cascade as CascadeUpdates,
+    };
+  }
+  if (Array.isArray(fields.errors)) {
+    return {
+      success: false,
+      errors: fields.errors as CascadeError[],
+      data: null,
+      cascade: {
+        updated: [],
+        deleted: [],
+        invalidations: [],
+        typeInvalidations: [],
+        metadata: {
+          timestamp: new Date().toISOString(),
+          depth: 0,
+          affectedCount: 0,
+        },
+      },
+    };
+  }
+  return undefined;
 }
 
 /**
@@ -107,15 +153,14 @@ export class CascadeClient {
   async mutate<T = any>(mutation: DocumentNode, variables?: any): Promise<T> {
     const result = await this.executor(mutation, variables);
 
-    // Extract the mutation result (first field in data)
+    // The mutation result is the first field in data
     const mutationName = Object.keys(result.data)[0];
-    const cascadeResponse = result.data[mutationName] as CascadeResponse<T>;
+    const fieldResult = result.data[mutationName];
+    const cascadeResponse = toCascadeResponse<T>(fieldResult);
+    if (!cascadeResponse) return fieldResult as T;
 
-    // Apply cascade
     this.applyCascade(cascadeResponse);
-
-    // Return the primary data
-    return cascadeResponse.data;
+    return cascadeResponse.data as T;
   }
 
   /**

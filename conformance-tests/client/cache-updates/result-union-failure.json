@@ -1,0 +1,29 @@
+{
+  "id": "TC-C-006",
+  "name": "Result Union Failure",
+  "description": "Clients MUST apply nothing for a CascadeFailure (a result union's failure member)",
+  "category": "client",
+  "subcategory": "cache-updates",
+  "requirement": "REQ-105",
+  "priority": "high",
+  "input": {
+    "clientState": {
+      "cache": {
+        "User:1": { "__typename": "User", "id": "1", "name": "Old" }
+      }
+    },
+    "result": {
+      "__typename": "CascadeFailure",
+      "errors": [{ "message": "User not found", "code": "NOT_FOUND" }]
+    }
+  },
+  "expected": {
+    "clientState": {
+      "cache": {
+        "User:1": { "__typename": "User", "id": "1", "name": "Old" }
+      },
+      "invalidatedQueries": []
+    }
+  },
+  "tags": ["result-union", "cache-update"]
+}

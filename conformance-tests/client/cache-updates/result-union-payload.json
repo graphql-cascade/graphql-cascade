@@ -1,0 +1,44 @@
+{
+  "id": "TC-C-005",
+  "name": "Result Union Success Payload",
+  "description": "Clients MUST apply the cascade of a CascadePayload (a result union's success member) exactly like a CascadeResponse's",
+  "category": "client",
+  "subcategory": "cache-updates",
+  "requirement": "REQ-105",
+  "priority": "high",
+  "input": {
+    "clientState": {
+      "cache": {
+        "User:1": { "__typename": "User", "id": "1", "name": "Old" }
+      }
+    },
+    "result": {
+      "__typename": "RenameUserPayload",
+      "data": { "__typename": "User", "id": "1" },
+      "warnings": [],
+      "cascade": {
+        "updated": [
+          {
+            "typename": "User",
+            "id": "1",
+            "operation": "UPDATED",
+            "entity": { "__typename": "User", "id": "1", "name": "New" }
+          }
+        ],
+        "deleted": [],
+        "invalidations": [],
+        "typeInvalidations": [],
+        "metadata": { "affectedCount": 1 }
+      }
+    }
+  },
+  "expected": {
+    "clientState": {
+      "cache": {
+        "User:1": { "__typename": "User", "id": "1", "name": "New" }
+      },
+      "invalidatedQueries": []
+    }
+  },
+  "tags": ["result-union", "cache-update"]
+}
