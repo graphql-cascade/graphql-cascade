@@ -26,10 +26,10 @@ This package provides the foundation for all GraphQL Cascade client integrations
 
 For specific framework integrations, use:
 
-- `@graphql-cascade/client-apollo` - Apollo Client
-- `@graphql-cascade/client-react-query` - React Query
-- `@graphql-cascade/client-relay` - Relay
-- `@graphql-cascade/client-urql` - URQL
+- `@graphql-cascade/apollo` - Apollo Client
+- `@graphql-cascade/react-query` - React Query
+- `@graphql-cascade/relay` - Relay
+- `@graphql-cascade/urql` - URQL
 
 ## Basic Usage
 
@@ -254,13 +254,13 @@ export class MyCascadeClient extends CascadeClient {
 Enable debug logging for troubleshooting:
 
 ```typescript
-import { setLogLevel, LogLevel } from "@graphql-cascade/client";
+import { configureLogger, LogLevel } from "@graphql-cascade/client";
 
 // Enable verbose logging
-setLogLevel(LogLevel.DEBUG);
+configureLogger({ level: LogLevel.DEBUG });
 
-// Or use environment variable
-// CASCADE_LOG_LEVEL=debug
+// Or route messages to your own logger
+configureLogger({ logger: myLogger, prefix: "[cascade]" });
 ```
 
 ## Development
@@ -279,10 +279,10 @@ pnpm build
 ## Related Packages
 
 - [@graphql-cascade/server](../server-node) - Server implementation
-- [@graphql-cascade/client-apollo](../client-apollo) - Apollo Client integration
-- [@graphql-cascade/client-react-query](../client-react-query) - React Query integration
-- [@graphql-cascade/client-relay](../client-relay) - Relay integration
-- [@graphql-cascade/client-urql](../client-urql) - URQL integration
+- [@graphql-cascade/apollo](../client-apollo) - Apollo Client integration
+- [@graphql-cascade/react-query](../client-react-query) - React Query integration
+- [@graphql-cascade/relay](../client-relay) - Relay integration
+- [@graphql-cascade/urql](../client-urql) - URQL integration
 
 ## License
 

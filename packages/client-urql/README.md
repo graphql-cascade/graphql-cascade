@@ -5,7 +5,7 @@ Seamless integration with URQL for automatic cascade cache updates. This package
 ## Installation
 
 ```bash
-npm install @graphql-cascade/client-urql @urql/core
+npm install @graphql-cascade/urql @urql/core
 ```
 
 ### Peer Dependencies
@@ -28,7 +28,7 @@ npm install @graphql-cascade/client-urql @urql/core
 
 ```typescript
 import { createClient, fetchExchange } from "@urql/core";
-import { cascadeExchange } from "@graphql-cascade/client-urql";
+import { cascadeExchange } from "@graphql-cascade/urql";
 
 const client = createClient({
   url: "http://localhost:4000/graphql",
@@ -49,7 +49,7 @@ const client = createClient({
 ```tsx
 import { Provider } from "urql";
 import { createClient, fetchExchange } from "@urql/core";
-import { cascadeExchange } from "@graphql-cascade/client-urql";
+import { cascadeExchange } from "@graphql-cascade/urql";
 
 const client = createClient({
   url: "/graphql",
@@ -71,10 +71,7 @@ For more control, use the `URQLCascadeClient` wrapper:
 
 ```typescript
 import { createClient, fetchExchange } from "@urql/core";
-import {
-  URQLCascadeClient,
-  InMemoryCascadeCache,
-} from "@graphql-cascade/client-urql";
+import { URQLCascadeClient, InMemoryCascadeCache } from "@graphql-cascade/urql";
 
 const urqlClient = createClient({
   url: "/graphql",
@@ -117,7 +114,7 @@ Position the cascade exchange before the fetch exchange but after other processi
 
 ```typescript
 import { cacheExchange, fetchExchange } from "@urql/core";
-import { cascadeExchange } from "@graphql-cascade/client-urql";
+import { cascadeExchange } from "@graphql-cascade/urql";
 
 const client = createClient({
   url: "/graphql",
@@ -242,7 +239,7 @@ For normalized caching, combine with graphcache:
 ```typescript
 import { createClient, fetchExchange } from "@urql/core";
 import { cacheExchange } from "@urql/exchange-graphcache";
-import { cascadeExchange } from "@graphql-cascade/client-urql";
+import { cascadeExchange } from "@graphql-cascade/urql";
 
 const client = createClient({
   url: "/graphql",
@@ -275,7 +272,7 @@ const client = createClient({
 Creates a URQL exchange that processes cascade responses.
 
 ```typescript
-import { cascadeExchange } from "@graphql-cascade/client-urql";
+import { cascadeExchange } from "@graphql-cascade/urql";
 
 const exchange = cascadeExchange({
   debug: true,
@@ -381,19 +378,16 @@ const result = await cascadeClient.mutate<CreateTodoResponse>(CREATE_TODO, {
 ### Custom Cache Adapter
 
 ```typescript
-import {
-  CascadeCache,
-  CascadeInvalidation,
-} from "@graphql-cascade/client-urql";
+import type { CascadeCache, QueryInvalidation } from "@graphql-cascade/urql";
 
 class CustomCache implements CascadeCache {
-  private store: Map<string, any> = new Map();
+  private store = new Map<string, Record<string, unknown>>();
 
-  write(typename: string, id: string, data: any): void {
+  write(typename: string, id: string, data: Record<string, unknown>): void {
     this.store.set(`${typename}:${id}`, data);
   }
 
-  read(typename: string, id: string): any | null {
+  read(typename: string, id: string): Record<string, unknown> | null {
     return this.store.get(`${typename}:${id}`) ?? null;
   }
 
@@ -401,8 +395,20 @@ class CustomCache implements CascadeCache {
     this.store.delete(`${typename}:${id}`);
   }
 
-  invalidate(invalidation: CascadeInvalidation): void {
-    // Custom invalidation logic
+  invalidate(invalidation: QueryInvalidation): void {
+    // Mark the matching queries stale
+  }
+
+  async refetch(invalidation: QueryInvalidation): Promise<void> {
+    // Re-run the matching queries
+  }
+
+  remove(invalidation: QueryInvalidation): void {
+    // Drop the matching queries from the cache
+  }
+
+  identify(entity: Record<string, unknown>): string {
+    return `${entity.__typename}:${entity.id}`;
   }
 }
 
@@ -413,7 +419,7 @@ const cascadeClient = new URQLCascadeClient(client, new CustomCache());
 
 ```typescript
 import { createClient, ssrExchange, fetchExchange } from "@urql/core";
-import { cascadeExchange } from "@graphql-cascade/client-urql";
+import { cascadeExchange } from "@graphql-cascade/urql";
 
 // Create SSR exchange
 const ssr = ssrExchange({

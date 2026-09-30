@@ -10,6 +10,8 @@
  *   any definition of a reference type matches it (descriptions aside).
  * - Example schemas under examples/, merged with the reference, are valid
  *   GraphQL schemas and repeat reference types unchanged.
+ * - Code in the READMEs and checked docs imports only real package exports,
+ *   and its GraphQL follows the same rules as the specification's.
  * - Every requirement tagged **[REQ-NNN]** in the specification is defined
  *   once and tested by a conformance case, and every case cites a defined
  *   requirement.
@@ -141,6 +143,22 @@ function reservedFields(document) {
   );
 }
 
+const INTROSPECTION_FIELDS = new Set(["__typename", "__schema", "__type"]);
+
+/** Selected fields named with the reserved `__` prefix, introspection aside. */
+function reservedSelections(document) {
+  const names = [];
+  visit(document, {
+    Field(node) {
+      const name = node.name.value;
+      if (name.startsWith("__") && !INTROSPECTION_FIELDS.has(name)) {
+        names.push(name);
+      }
+    },
+  });
+  return names;
+}
+
 /**
  * Printed structure (descriptions aside) of each reference definition that
  * examples and excerpts must reproduce exactly; root types are exempt.
@@ -235,6 +253,9 @@ export function checkSnippets(sdl, files) {
       for (const { name } of reservedFields(document)) {
         problems.push(`${where}: ${name}: ${RESERVED_NAME}`);
       }
+      for (const name of reservedSelections(document)) {
+        problems.push(`${where}: selection ${name}: ${RESERVED_NAME}`);
+      }
       for (const def of document.definitions) {
         const expected =
           isTypeSystemDefinitionNode(def) &&
@@ -293,6 +314,114 @@ export function checkRequirements(specFiles, caseFiles) {
   return problems;
 }
 
+const DECLARATION =
+  /export\s+(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?(?:const|let|var|function\*?|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
+const NAMED_EXPORT =
+  /export\s+(?:type\s+)?\{([^}]*)\}(?:\s*from\s*["']([^"']+)["'])?/g;
+const STAR_EXPORT =
+  /export\s*\*\s*(?:as\s+([\w$]+)\s*)?from\s*["']([^"']+)["']/g;
+
+/**
+ * Names in an import or export list. For `a as b`, exports list `b` (the
+ * name others see) and imports list `a` (the name the module exports).
+ */
+function listedNames(list, side = "exported") {
+  return list
+    .split(",")
+    .map((item) => item.trim().replace(/^type\s+/, ""))
+    .filter(Boolean)
+    .map((item) => {
+      const [original, alias] = item.split(/\s+as\s+/);
+      return (side === "imported" ? original : (alias ?? original)).trim();
+    });
+}
+
+function resolveModule(readFile, from, specifier) {
+  const base = `${from.slice(0, from.lastIndexOf("/") + 1)}${specifier.replace(/^\.\//, "")}`;
+  for (const candidate of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`]) {
+    try {
+      readFile(candidate);
+      return candidate;
+    } catch {
+      // try the next candidate
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Names a TypeScript module exports, following `export * from` locally.
+ *
+ * @param {(path: string) => string} readFile reads a repo-relative path
+ * @param {string} entry the module to start from, e.g. "packages/x/src/index.ts"
+ * @returns {Set<string>}
+ */
+export function exportedNames(readFile, entry, seen = new Set()) {
+  const names = new Set();
+  if (seen.has(entry)) return names;
+  seen.add(entry);
+  const source = readFile(entry);
+  for (const [, name] of source.matchAll(DECLARATION)) names.add(name);
+  for (const [, list] of source.matchAll(NAMED_EXPORT)) {
+    for (const name of listedNames(list)) names.add(name);
+  }
+  for (const [, alias, specifier] of source.matchAll(STAR_EXPORT)) {
+    if (alias) {
+      names.add(alias);
+      continue;
+    }
+    const module = specifier.startsWith(".")
+      ? resolveModule(readFile, entry, specifier)
+      : undefined;
+    if (module) {
+      for (const name of exportedNames(readFile, module, seen)) names.add(name);
+    }
+  }
+  return names;
+}
+
+const CODE_BLOCK =
+  /^```(?:ts|typescript|tsx|js|javascript|jsx)\b[^\n]*\n([\s\S]*?)^```/gm;
+const PACKAGE_IMPORT =
+  /import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*["'](@graphql-cascade\/[^"']+)["']/g;
+
+/**
+ * @param {{ path: string, content: string }[]} files documentation Markdown
+ * @param {Map<string, Set<string>>} packages exports of each package by name
+ * @returns {string[]} one message per import of a missing package or export
+ */
+export function checkDocImports(files, packages) {
+  const problems = [];
+  for (const { path, content } of files) {
+    for (const block of content.matchAll(CODE_BLOCK)) {
+      const codeStart = block.index + block[0].indexOf("\n") + 1;
+      for (const match of block[1].matchAll(PACKAGE_IMPORT)) {
+        const line = content
+          .slice(0, codeStart + match.index)
+          .split("\n").length;
+        const specifier = match[2];
+        const packageName = specifier.split("/").slice(0, 2).join("/");
+        const exports = packages.get(packageName);
+        if (!exports) {
+          problems.push(
+            `${path}:${line}: ${packageName} is not a package in this repository`,
+          );
+          continue;
+        }
+        if (specifier !== packageName) continue; // subpath exports
+        for (const name of listedNames(match[1], "imported")) {
+          if (!exports.has(name)) {
+            problems.push(
+              `${path}:${line}: ${packageName} does not export ${name}`,
+            );
+          }
+        }
+      }
+    }
+  }
+  return problems;
+}
+
 function trackedTextFiles(root) {
   const paths = execFileSync("git", ["ls-files", "-z"], {
     cwd: root,
@@ -314,6 +443,30 @@ function trackedTextFiles(root) {
   return files;
 }
 
+/**
+ * Documentation whose code must match the packages and the reference schema.
+ * Sections join this list as they are brought up to date.
+ */
+const CHECKED_DOCS = [/^README\.md$/, /^packages\/.+\/README\.md$/];
+
+/** Exported names of every package, keyed by package name. */
+function packageExports(files, readFile) {
+  const packages = new Map();
+  for (const { path, content } of files) {
+    if (!/^packages\/(?:[^/]+\/)?[^/]+\/package\.json$/.test(path)) continue;
+    const { name, main } = JSON.parse(content);
+    if (!name || !main) continue;
+    const dir = path.slice(0, -"package.json".length);
+    const entry = `${dir}${main.replace(/^(\.\/)?dist\//, "src/").replace(/\.m?js$/, ".ts")}`;
+    try {
+      packages.set(name, exportedNames(readFile, entry));
+    } catch {
+      packages.set(name, new Set());
+    }
+  }
+  return packages;
+}
+
 function main() {
   const root = new URL("../", import.meta.url);
   const readFile = (path) => readFileSync(new URL(path, root), "utf8");
@@ -328,6 +481,9 @@ function main() {
       !path.endsWith("test-case-schema.json") &&
       !path.endsWith("spec-version.json"),
   );
+  const docFiles = files.filter(({ path }) =>
+    CHECKED_DOCS.some((pattern) => pattern.test(path)),
+  );
   const sdl = readFile(REFERENCE_PATH);
   const schemaProblems = checkReferenceSchema(sdl);
   const problems = [
@@ -336,6 +492,8 @@ function main() {
     ...schemaProblems,
     ...(schemaProblems.length > 0 ? [] : checkSnippets(sdl, specFiles)),
     ...checkRequirements(specFiles, caseFiles),
+    ...(schemaProblems.length > 0 ? [] : checkSnippets(sdl, docFiles)),
+    ...checkDocImports(docFiles, packageExports(files, readFile)),
     ...checkExampleSchemas(
       sdl,
       files.filter(

@@ -5,7 +5,7 @@ Integration with React Query for automatic cache updates in non-normalized cache
 ## Installation
 
 ```bash
-npm install @graphql-cascade/client-react-query @tanstack/react-query
+npm install @graphql-cascade/react-query @tanstack/react-query
 ```
 
 **Peer Dependencies:**
@@ -54,7 +54,7 @@ const queryClient = new QueryClient({
 Create a cascade client instance with your GraphQL executor:
 
 ```typescript
-import { ReactQueryCascadeClient } from "@graphql-cascade/client-react-query";
+import { ReactQueryCascadeClient } from "@graphql-cascade/react-query";
 import { GraphQLClient } from "graphql-request"; // or your preferred GraphQL client
 
 const graphqlClient = new GraphQLClient("/graphql");
@@ -88,7 +88,7 @@ const executor = async (
 ### Basic Mutations with useCascadeMutation
 
 ```typescript
-import { useCascadeMutation } from '@graphql-cascade/client-react-query';
+import { useCascadeMutation } from '@graphql-cascade/react-query';
 import { gql } from 'graphql-tag';
 
 const CREATE_TODO = gql`
@@ -155,7 +155,7 @@ function TodoForm() {
 ### Optimistic Updates with useOptimisticCascadeMutation
 
 ```typescript
-import { useOptimisticCascadeMutation } from '@graphql-cascade/client-react-query';
+import { useOptimisticCascadeMutation } from '@graphql-cascade/react-query';
 
 const TOGGLE_TODO = gql`
   mutation ToggleTodo($id: ID!) {
@@ -298,7 +298,7 @@ The package is fully typed and provides excellent TypeScript support:
 import {
   ReactQueryCascadeClient,
   useCascadeMutation,
-} from "@graphql-cascade/client-react-query";
+} from "@graphql-cascade/react-query";
 
 // Strongly typed mutation hook
 const mutation = useCascadeMutation<

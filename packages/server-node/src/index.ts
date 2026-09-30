@@ -66,6 +66,7 @@ export type {
   CascadeUpdatedEntity,
   CascadeDeletedEntity,
   QueryInvalidation,
+  Invalidator,
   CascadeTypeInvalidation,
   CascadeData,
   CascadeErrorInfo,

@@ -6,6 +6,8 @@ import { doctorCommand } from "./commands/doctor";
 import { initCommand } from "./commands/init";
 import { validateCommand } from "./commands/validate";
 
+export type { CascadeConfig } from "./config";
+
 const program = new Command();
 
 program

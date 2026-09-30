@@ -216,6 +216,33 @@ describe("init command", () => {
       expect(writeCall![1]).toContain("apollo");
     });
 
+    it("types the generated config with the CLI's own CascadeConfig", async () => {
+      await initCommand.parseAsync([
+        "node",
+        "test",
+        "init",
+        "--client",
+        "urql",
+        "--schema",
+        "./schema.graphql",
+        "--yes",
+      ]);
+
+      const writeCall = mockFs.writeFileSync.mock.calls.find((call) =>
+        call[0].toString().includes("cascade.config.ts"),
+      );
+      expect(writeCall![1])
+        .toBe(`import type { CascadeConfig } from '@graphql-cascade/cli';
+
+const config: CascadeConfig = {
+  client: 'urql',
+  schema: './schema.graphql',
+};
+
+export default config;
+`);
+    });
+
     it("should include schema path in generated config", async () => {
       await initCommand.parseAsync([
         "node",
