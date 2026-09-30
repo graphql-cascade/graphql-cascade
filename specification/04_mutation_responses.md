@@ -345,7 +345,7 @@ fragment CascadeEntity on Node {
 }
 ```
 
-It SHOULD select, for each type, the fields that the client's cached queries read, so every cached field is refreshed and no unused field is sent. A type the fragment leaves out still arrives with its `typename` and `id`, but none of its fields. Clients SHOULD therefore derive the fragment from their queries rather than write it by hand ([RFC 0001](../design/rfc-0001-cascade-2.md) proposes generating it).
+It SHOULD select, for each type, the fields that the client's cached queries read, so every cached field is refreshed and no unused field is sent. A type the fragment leaves out still arrives with its `typename` and `id`, but none of its fields. Clients SHOULD therefore derive the fragment from their queries rather than write it by hand; `@graphql-cascade/codegen` generates it (`cascadeEntityFragment` option).
 
 ### TypeInvalidation Details
 ```graphql

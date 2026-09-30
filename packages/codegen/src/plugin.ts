@@ -1,5 +1,9 @@
 import { PluginFunction, Types } from "@graphql-codegen/plugin-helpers";
 import { GraphQLSchema } from "graphql";
+import {
+  buildCascadeEntityFragment,
+  type CascadeEntityFragmentOptions,
+} from "./cascade-entity";
 import { CascadeVisitor } from "./visitor";
 
 export interface CascadePluginConfig {
@@ -20,6 +24,13 @@ export interface CascadePluginConfig {
    * @default true
    */
   generateTypeGuards?: boolean;
+
+  /**
+   * Output only the CascadeEntity fragment, for a `.graphql` target that the
+   * project's documents include: `entity { ...CascadeEntity }`.
+   * @default false
+   */
+  cascadeEntityFragment?: boolean | CascadeEntityFragmentOptions;
 }
 
 export const plugin: PluginFunction<CascadePluginConfig> = (
@@ -27,6 +38,14 @@ export const plugin: PluginFunction<CascadePluginConfig> = (
   documents: Types.DocumentFile[],
   config: CascadePluginConfig,
 ) => {
+  if (config.cascadeEntityFragment) {
+    const options =
+      typeof config.cascadeEntityFragment === "object"
+        ? config.cascadeEntityFragment
+        : {};
+    return { content: buildCascadeEntityFragment(schema, documents, options) };
+  }
+
   const visitor = new CascadeVisitor(schema, config);
 
   // Visit all documents and extract cascade patterns
