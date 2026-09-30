@@ -199,7 +199,7 @@ async function runConformanceTests(serverUrl: string): Promise<TestResult[]> {
 
 2. **Define Test**: Create JSON file following the schema
 
-3. **Validate**: Ensure it passes JSON schema validation
+3. **Validate**: `pnpm --filter @graphql-cascade/conformance test` checks every case against `test-case-schema.json` and for unique ids; CI runs it too
 
 4. **Document**: Update this README with the new test
 
