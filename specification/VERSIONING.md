@@ -120,9 +120,9 @@ Specifications MUST:
    - Deprecated features continue to work during deprecation period
    - No breaking changes until removal
 
-## Version Negotiation Mechanism
+## Version Discovery and Compatibility
 
-Clients and servers negotiate the Cascade version to ensure compatibility.
+Clients learn which specification versions a server implements, and rely on compatibility rules instead of negotiating per request.
 
 ### Version Discovery
 
@@ -181,106 +181,25 @@ Specifications before 1.5.0 named this query `__cascade`. GraphQL reserves names
 }
 ```
 
-### Version Compatibility Rules
+### Version Compatibility
 
-1. **Client Version Declaration**
-   - Clients SHOULD declare supported versions in request headers
-   - Header: `X-Cascade-Version: 1.2`
+Specification versions with the same MAJOR version are compatible. Within a MAJOR version, changes are additive or go through the [deprecation policy](#deprecation-policy), so a client written for one minor version can process responses from a server implementing another:
 
-2. **Server Version Response**
-   - Servers MUST include version in all cascade responses
-   - Response includes negotiated version in metadata
+- Clients MUST ignore fields of cascade responses that they do not recognize.
+- Clients MUST treat enum values they do not recognize as each enum's definition says, for example an unknown `CascadeErrorCode` as `INTERNAL_ERROR`.
+- Clients that rely on a feature introduced in a MINOR version SHOULD check the server's `cascadeInfo.supportedVersions` before using it, and fall back to the behavior of the versions it lists.
 
-3. **Compatibility Matrix**
-   - Clients MAY specify minimum/maximum supported versions
-   - Servers MUST reject incompatible version requests
+There is no request header or per-response version: discovery through `cascadeInfo` is enough to choose features, and the compatibility rules make every response of the same MAJOR version readable. A server that implements a different MAJOR version is incompatible; clients detect it from `cascadeInfo.version`.
 
-### Version Negotiation Flow
+## Recording Changes
 
-```
-Client Request ──► Server
-  ↓                    ↓
-  X-Cascade-Version: 1.2
-  ↓                    ↓
-Server Validates ──► Compatible?
-  ↓                    ↓
-  Yes ──► Process with v1.2
-  ↓                    ↓
-  No ───► Error Response
-              (version incompatible)
-```
+Every specification version is recorded in three places. `node scripts/check-spec.mjs` checks the history entry, the release notes and every version stamp against [`VERSION`](VERSION):
 
-## Changelog Format Requirements
+1. An entry in the [version history](#appendix-version-history) below, with **Changes**, **Backward Compatibility** and **Migration** sections.
+2. Release notes in [`releases/spec-vMAJOR.MINOR.PATCH.md`](../releases/).
+3. An entry in the repository [`CHANGELOG.md`](../CHANGELOG.md), which also records package changes.
 
-All specification changes MUST be documented in CHANGELOG.md following this format:
-
-### Version Header
-```markdown
-## [1.2.0] - 2024-01-15
-
-### Added
-- New feature descriptions
-- New capabilities
-
-### Changed
-- Modified behaviors
-- Updated requirements
-
-### Deprecated
-- Features marked for removal
-- Migration notices
-
-### Removed
-- Removed features
-- Breaking changes
-
-### Fixed
-- Bug fixes
-- Clarifications
-
-### Security
-- Security-related changes
-```
-
-### Changelog Requirements
-
-1. **Version Links**: Each version links to diff and release notes
-2. **Breaking Changes**: Clearly marked with ⚠️ emoji
-3. **Migration Guides**: Links to migration documentation
-4. **Implementation Impact**: Notes on implementation effort required
-
-## Compatibility Matrix Template
-
-### Implementation Compatibility Matrix
-
-| Implementation | Cascade v1.0 | v1.1 | v1.2 | Notes |
-|----------------|--------------|------|------|-------|
-| Server-A (Node) | ✅ Full | ✅ Full | ⚠️ Partial | Missing optimistic updates |
-| Server-B (Python) | ✅ Full | ✅ Full | ❌ None | Planned for v2.0 |
-| Client-Apollo | ✅ Full | ✅ Full | ✅ Full | |
-| Client-Relay | ⚠️ Partial | ✅ Full | ✅ Full | Limited subscription support |
-
-**Legend:**
-- ✅ **Full**: Complete implementation
-- ⚠️ **Partial**: Missing some features
-- ❌ **None**: Not implemented
-
-### Feature Compatibility Matrix
-
-| Feature | v1.0 | v1.1 | v1.2 | Breaking Change |
-|---------|------|------|------|------------------|
-| Basic Cascade | ✅ | ✅ | ✅ | No |
-| Optimistic Updates | ❌ | ⚠️ Experimental | ✅ | No |
-| Advanced Invalidation | ❌ | ✅ | ✅ | No |
-| Subscription Integration | ❌ | ❌ | ✅ | No |
-
-### Migration Compatibility
-
-| From Version | To Version | Migration Effort | Breaking |
-|--------------|------------|------------------|----------|
-| v1.0 | v1.1 | Low | No |
-| v1.1 | v1.2 | Medium | No |
-| v1.0 | v1.2 | Medium | No |
+Breaking changes and deprecations are called out in all three, each with a migration path.
 
 ## Implementation Guidelines
 
@@ -303,6 +222,19 @@ All specification changes MUST be documented in CHANGELOG.md following this form
 3. **Compatibility Checking**: Warn about version incompatibilities
 
 ## Appendix: Version History
+
+### v1.7.0 (2026-09-30)
+
+#### Changes
+- Version compatibility: versions with the same MAJOR version are compatible; clients MUST ignore response fields they do not recognize and SHOULD check `cascadeInfo.supportedVersions` before relying on a MINOR-version feature
+- Removed version negotiation requirements that nothing could implement: the `X-Cascade-Version` request header, a version in cascade metadata (which `CascadeMetadata` never had), and rejection of "incompatible" requests
+- Replaced the changelog format and compatibility matrix templates with how changes are actually recorded
+
+#### Backward Compatibility
+Backward compatible: the removed requirements had no implementation, and ignoring unknown fields is how GraphQL clients already behave.
+
+#### Migration
+- None for servers. Clients that fail on unknown response fields must ignore them.
 
 ### v1.6.0 (2026-09-30)
 

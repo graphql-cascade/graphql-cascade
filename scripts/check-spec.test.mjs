@@ -39,6 +39,7 @@ const consistentTree = {
   }),
   "README.md":
     '<img src="https://img.shields.io/badge/Specification-v1.1.0-blue">',
+  "releases/spec-v1.1.0.md": "# Release notes\n",
 };
 
 const reader = (tree) => (path) => {
@@ -79,6 +80,14 @@ describe("checkVersionConsistency", () => {
     };
     assert.deepEqual(checkVersionConsistency(reader(tree)), [
       "specification/VERSIONING.md: missing history entry ### v1.1.0",
+    ]);
+  });
+
+  it("requires release notes for the current version", () => {
+    const tree = { ...consistentTree };
+    delete tree["releases/spec-v1.1.0.md"];
+    assert.deepEqual(checkVersionConsistency(reader(tree)), [
+      "releases/spec-v1.1.0.md: missing release notes for 1.1.0",
     ]);
   });
 
