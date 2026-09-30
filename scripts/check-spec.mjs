@@ -3,7 +3,8 @@
  * Specification integrity checks.
  *
  * - No tracked file contains leaked tool-call transcript text.
- * - Every version stamp agrees with specification/VERSION.
+ * - Every version stamp agrees with specification/VERSION, and the version
+ *   has release notes.
  * - reference/cascade_base.graphql is a valid GraphQL schema, and is the
  *   normative source: every graphql block in the specification parses, and
  *   any definition of a reference type matches it (descriptions aside).
@@ -93,6 +94,13 @@ export function checkVersionConsistency(readFile) {
 
   if (!readFile("README.md").includes(`Specification-v${version}-`)) {
     problems.push(`README.md: expected badge Specification-v${version}`);
+  }
+
+  const releaseNotes = `releases/spec-v${version}.md`;
+  try {
+    readFile(releaseNotes);
+  } catch {
+    problems.push(`${releaseNotes}: missing release notes for ${version}`);
   }
 
   return problems;

@@ -165,7 +165,7 @@ Version compatibility is defined in detail in [VERSIONING.md](VERSIONING.md).
 ### Key Requirements
 
 - **Semantic Versioning**: All versions follow [SemVer 2.0.0](https://semver.org/)
-- **Version Negotiation**: Clients and servers MUST negotiate compatible versions
+- **Compatibility**: Versions with the same MAJOR version are compatible; clients MUST ignore response fields they do not recognize ([Version Compatibility](VERSIONING.md#version-compatibility))
 - **Deprecation Policy**: Deprecated features have defined migration timelines
 - **Breaking Changes**: Require MAJOR version bumps with migration guides
 
