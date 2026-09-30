@@ -1,141 +1,47 @@
-# GraphQL Cascade Specification
+# Specification
 
-The formal specification for GraphQL Cascade.
+The GraphQL Cascade specification defines what servers return from mutations and what clients do with it. It is maintained in the repository's [`specification/`](https://github.com/graphql-cascade/graphql-cascade/tree/main/specification) directory; this page is a map of it. For a practical introduction, read the [guide](/guide/) first.
 
-## Overview
+## Chapters
 
-The GraphQL Cascade specification defines a standardized approach for automatic cache management in GraphQL applications. By having servers track and return all affected entities from mutations, clients can automatically keep their caches synchronized without manual cache management code.
+| Chapter | Covers |
+|---------|--------|
+| [00 Introduction](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/00_introduction.md) | The problem and the approach |
+| [01 Conformance](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/01_conformance.md) | Conformance levels and what each requires |
+| [02 Cascade Model](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/02_cascade_model.md) | Updated, deleted and invalidated data, and metadata |
+| [03 Entity Identification](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/03_entity_identification.md) | `Node`, IDs, and refetching by ID |
+| [04 Mutation Responses](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/04_mutation_responses.md) | Payload shapes, result unions, errors, transport, size limits |
+| [05 Invalidation](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/05_invalidation.md) | Hint strategies and scopes, type invalidation |
+| [06 Subscriptions](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/06_subscriptions.md) | Cascades delivered through subscriptions |
+| [07 Schema Conventions](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/07_schema_conventions.md) | Naming and schema structure |
+| [08 Directives](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/08_directives.md) | `@cascade` and `@cascadeInvalidates` |
+| [09 Server Requirements](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/09_server_requirements.md) | What servers must track and return |
+| [10 Tracking Algorithm](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/10_tracking_algorithm.md) | Collecting affected entities |
+| [11 Invalidation Algorithm](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/11_invalidation_algorithm.md) | Computing hints |
+| [12 Performance Requirements](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/12_performance_requirements.md) | Limits implementations must respect |
+| [13 Client Integration](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/13_client_integration.md) | How clients apply cascades |
+| [14 Optimistic Updates](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/14_optimistic_updates.md) | Applying cascades before the server answers |
+| [15 Conflict Resolution](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/15_conflict_resolution.md) | When local and server data disagree |
+| [16 Security](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/16_security.md) | Authorization and data exposure |
+| [17 Performance](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/17_performance.md) | Optimization guidance |
 
-## Quick Links
+The [appendices](https://github.com/graphql-cascade/graphql-cascade/tree/main/specification/appendices) compare Cascade with Relay and Apollo, and hold a glossary, examples and the grammar.
 
-- **[Conformance Requirements](/specification/conformance)** - What it takes to be compliant
-- **[Cascade Model](/specification/cascade-model)** - Core data structures
-- **[Full Specification](/specification/full)** - Complete technical specification
+## Normative Artifacts
 
-## Version
+- **[Reference schema](https://github.com/graphql-cascade/graphql-cascade/blob/main/reference/cascade_base.graphql)**: the GraphQL types every Cascade schema includes. The specification's type definitions match it exactly.
+- **[JSON Schemas](https://github.com/graphql-cascade/graphql-cascade/tree/main/specification/schemas)**: the response structures, for validating responses outside GraphQL.
+- **Requirement tags**: normative statements carry tags such as `[REQ-103]`, which conformance test cases cite. A requirement is defined once and tested by at least one case.
 
-- **Current Version**: 0.1 (Draft)
-- **Status**: Active Development
-- **Last Updated**: November 2025
+## Versions
 
-## Specification Sections
+The specification follows semantic versioning: minor versions only add, and a change that could break a conforming implementation waits for a major version. [`VERSIONING.md`](https://github.com/graphql-cascade/graphql-cascade/blob/main/specification/VERSIONING.md) records every version with its changes and migration notes, and [`releases/`](https://github.com/graphql-cascade/graphql-cascade/tree/main/releases) holds the release notes.
 
-The full specification is organized into 18 sections:
+## Changing the Specification
 
-### Core Concepts (00-02)
-- **00 Introduction** - Problem statement and solution overview
-- **01 Conformance** - Compliance requirements
-- **02 Cascade Model** - Core data structures and concepts
-
-### Entity Management (03-05)
-- **03 Entity Identification** - How entities are uniquely identified
-- **04 Mutation Responses** - Standardized mutation response format
-- **05 Invalidation** - Cache invalidation rules and strategies
-
-### Advanced Features (06-08)
-- **06 Subscriptions** - Real-time updates with cascades
-- **07 Schema Conventions** - Required GraphQL schema patterns
-- **08 Directives** - Custom directives for cascade control
-
-### Implementation Details (09-11)
-- **09 Server Requirements** - Server-side implementation requirements
-- **10 Tracking Algorithm** - How servers track entity relationships
-- **11 Invalidation Algorithm** - Server-side invalidation logic
-
-### Client Integration (12-15)
-- **12 Performance Requirements** - Performance expectations and guarantees
-- **13 Client Integration** - How clients process cascades
-- **14 Optimistic Updates** - Optimistic update patterns
-- **15 Conflict Resolution** - Handling update conflicts
-
-### Production Concerns (16-17)
-- **16 Security** - Security considerations and best practices
-- **17 Performance** - Performance optimization and monitoring
-
-## Reading Paths
-
-### For Application Developers
-
-Start here if you're building apps with Cascade:
-
-1. [What is Cascade?](/guide/) - Introduction
-2. [Core Concepts](/guide/concepts) - Understand the model
-3. [Conformance](/specification/conformance) - What to expect
-4. [Client Guide](/clients/) - Integrate with your app
-
-### For Server Implementers
-
-Building a Cascade-compliant server:
-
-1. [Conformance](/specification/conformance) - Requirements
-2. [Cascade Model](/specification/cascade-model) - Data structures
-3. [Server Guide](/server/) - Implementation guide
-4. [Full Specification](/specification/full) - Complete details
-
-### For Client Library Authors
-
-Building Cascade support for a client library:
-
-1. [Conformance](/specification/conformance) - What clients must do
-2. [Cascade Model](/specification/cascade-model) - Response format
-3. [Client Integration](#) - Processing cascades
-4. [Full Specification](/specification/full) - Edge cases
-
-## Compliance Levels
-
-### Cascade Basic
-Implements core features:
-- Entity tracking (created, updated, deleted)
-- Basic invalidation
-- Standard response format
-
-### Cascade Standard
-Implements core + extended features:
-- Cascade depth control
-- Relationship traversal
-- Transaction metadata
-- Structured error handling
-
-### Cascade Complete
-Implements all features:
-- Optimistic updates protocol
-- Real-time subscriptions integration
-- Conflict resolution
-- Advanced performance optimizations
-
-## Source Documents
-
-The full specification is maintained in the repository:
-
-- **Location**: `/specification/` directory
-- **Format**: Markdown files (00-17)
-- **Grammar**: EBNF grammar in `grammar.ebnf`
-- **Schemas**: JSON schemas in `schemas/`
-- **Version History**: `VERSIONING.md`
-
-View the source specification files:
-- [Full Specification](/specification/full)
-
-## Contributing
-
-To contribute to the specification:
-
-1. Read the [Contributing Guide](../../CONTRIBUTING.md)
-2. Review the [Design Documents](../../design/)
-3. Propose changes via GitHub Issues
-4. Submit PRs for specification updates
-
-## Related Standards
-
-GraphQL Cascade builds upon:
-
-- [GraphQL Specification](https://spec.graphql.org/) - Core GraphQL protocol
-- [GraphQL Cursor Connections](https://relay.dev/graphql/connections.htm) - Pagination
-- [JSON:API](https://jsonapi.org/) - Inspiration for relationship tracking
+Propose changes in a GitHub issue. Larger changes, such as the next major version, are designed in RFCs under [`design/`](https://github.com/graphql-cascade/graphql-cascade/tree/main/design) first. A change to a requirement comes with the conformance test cases that check it.
 
 ## Next Steps
 
-- **[Conformance Requirements](/specification/conformance)** - What implementations must do
-- **[Cascade Model](/specification/cascade-model)** - Core data structures
-- **[Full Specification](/specification/full)** - Complete technical details
-- **[Guide](/guide/)** - Practical examples and patterns
+- **[Conformance](/specification/conformance)**: testing an implementation
+- **[Guide](/guide/)**: Cascade in practice

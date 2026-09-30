@@ -563,6 +563,7 @@ const CHECKED_DOCS = [
   /^docs\/guide\/(index|installation|quick-start|concepts)\.md$/,
   /^docs\/server\/[^/]+\.md$/,
   /^docs\/clients\/[^/]+\.md$/,
+  /^docs\/specification\/[^/]+\.md$/,
   /^docs\/api\/[^/]+\.md$/,
 ];
 
