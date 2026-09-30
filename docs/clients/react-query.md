@@ -71,7 +71,7 @@ function TodoItem({ todo }) {
 
 It returns TanStack Query's mutation result; the mutation's data is the payload's `data`. Besides TanStack Query's mutation options, it takes `retryOptions` (`maxRetries`, `baseDelay`, `maxDelay`, `exponentialBackoff`) and `onRetryAttempt`: mutations failing with retryable cascade errors are retried with backoff.
 
-`useOptimisticCascadeMutation(cascadeClient, mutation, variables => optimisticResponse)` applies an optimistic `CascadeResponse` first and rolls it back if the mutation fails.
+`useOptimisticCascadeMutation(cascadeClient, mutation, variables => optimisticResponse)` applies an optimistic `CascadeResponse` first and rolls it back unless the mutation succeeds.
 
 ## How Cascades Map to Query Data
 
