@@ -309,7 +309,7 @@ describe("InMemoryCascadeCache", () => {
     });
   });
 
-  describe("patternToRegex", () => {
+  describe("PATTERN hints", () => {
     it("should convert glob patterns correctly", () => {
       cache.storeQuery("getUsers", undefined, []);
       cache.storeQuery("getUserById", undefined, {});
@@ -339,18 +339,64 @@ describe("InMemoryCascadeCache", () => {
       expect(cache.getQuery("query.with.dots")?.isStale).toBe(true);
     });
 
-    it("should reject patterns exceeding maximum length", () => {
+    it("accepts patterns of any length", () => {
       cache.storeQuery("getUsers", undefined, []);
 
-      const longPattern = "a".repeat(101); // Exceeds 100 char limit
+      cache.invalidate({
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.PATTERN,
+        queryPattern: "*".repeat(200) + "Users",
+      });
 
-      expect(() => {
-        cache.invalidate({
-          strategy: InvalidationStrategy.INVALIDATE,
-          scope: InvalidationScope.PATTERN,
-          queryPattern: longPattern,
-        });
-      }).toThrow("Pattern exceeds maximum length of 100 characters");
+      expect(cache.getQuery("getUsers")?.isStale).toBe(true);
+    });
+  });
+
+  describe("hint scopes", () => {
+    beforeEach(() => {
+      cache.storeQuery("getUser", { id: "1" }, {});
+      cache.storeQuery("getUser", { id: "2" }, {});
+      cache.storeQuery(
+        "listUsers",
+        { first: 10, filter: { role: "ADMIN" } },
+        [],
+      );
+    });
+
+    const invalidate = (fields: Record<string, unknown>) =>
+      cache.invalidate({
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.EXACT,
+        ...fields,
+      });
+
+    it("EXACT without arguments selects every query of that name", () => {
+      invalidate({ queryName: "getUser" });
+
+      expect(cache.getQuery("getUser", { id: "1" })?.isStale).toBe(true);
+      expect(cache.getQuery("getUser", { id: "2" })?.isStale).toBe(true);
+    });
+
+    it("EXACT compares arguments whatever their key order", () => {
+      invalidate({
+        queryName: "listUsers",
+        arguments: { filter: { role: "ADMIN" }, first: 10 },
+      });
+
+      expect(
+        cache.getQuery("listUsers", { first: 10, filter: { role: "ADMIN" } })
+          ?.isStale,
+      ).toBe(true);
+    });
+
+    it("PATTERN matches query names, whatever their arguments", () => {
+      invalidate({ scope: InvalidationScope.PATTERN, queryPattern: "*Users" });
+
+      expect(
+        cache.getQuery("listUsers", { first: 10, filter: { role: "ADMIN" } })
+          ?.isStale,
+      ).toBe(true);
+      expect(cache.getQuery("getUser", { id: "1" })?.isStale).toBe(false);
     });
   });
 

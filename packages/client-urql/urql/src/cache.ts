@@ -1,12 +1,9 @@
 /**
- * URQL Cache Adapter for GraphQL Cascade.
- *
- * Provides a simple in-memory cache implementation that can be used
- * with the cascade exchange. For production use with URQL's graphcache,
- * consider using the GraphcacheCascadeAdapter instead.
+ * In-memory CascadeCache for URQLCascadeClient and the cascade exchange.
  */
 
-import { CascadeCache, QueryInvalidation, InvalidationScope } from "./types";
+import { invalidationMatches } from "@graphql-cascade/client";
+import { CascadeCache, QueryInvalidation } from "./types";
 
 /**
  * Entity stored in the cache.
@@ -163,74 +160,14 @@ export class InMemoryCascadeCache implements CascadeCache {
   }
 
   /**
-   * Find queries matching an invalidation pattern.
+   * Keys of the stored queries the invalidation hint selects.
    */
   private findMatchingQueries(invalidation: QueryInvalidation): string[] {
-    const matches: string[] = [];
-
-    switch (invalidation.scope) {
-      case InvalidationScope.EXACT:
-        const exactKey = this.queryKey(
-          invalidation.queryName ?? "",
-          invalidation.arguments,
-        );
-        if (this.queries.has(exactKey)) {
-          matches.push(exactKey);
-        }
-        break;
-
-      case InvalidationScope.PREFIX:
-        for (const key of this.queries.keys()) {
-          if (
-            invalidation.queryName &&
-            key.startsWith(invalidation.queryName)
-          ) {
-            matches.push(key);
-          }
-        }
-        break;
-
-      case InvalidationScope.PATTERN:
-        if (invalidation.queryPattern) {
-          const pattern = this.patternToRegex(invalidation.queryPattern);
-          for (const key of this.queries.keys()) {
-            if (pattern.test(key)) {
-              matches.push(key);
-            }
-          }
-        }
-        break;
-
-      case InvalidationScope.ALL:
-        matches.push(...this.queries.keys());
-        break;
-    }
-
-    return matches;
-  }
-
-  /**
-   * Maximum length for query patterns to prevent ReDoS attacks.
-   */
-  private static readonly MAX_PATTERN_LENGTH = 100;
-
-  /**
-   * Convert a simple glob pattern to regex.
-   * @throws Error if pattern exceeds maximum length
-   */
-  private patternToRegex(pattern: string): RegExp {
-    // Validate pattern length to prevent ReDoS attacks
-    if (pattern.length > InMemoryCascadeCache.MAX_PATTERN_LENGTH) {
-      throw new Error(
-        `Pattern exceeds maximum length of ${InMemoryCascadeCache.MAX_PATTERN_LENGTH} characters`,
-      );
-    }
-
-    const escaped = pattern
-      .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-      .replace(/\*/g, ".*")
-      .replace(/\?/g, ".");
-    return new RegExp(`^${escaped}$`);
+    return [...this.queries]
+      .filter(([, query]) =>
+        invalidationMatches(invalidation, query.name, query.args),
+      )
+      .map(([key]) => key);
   }
 
   /**
