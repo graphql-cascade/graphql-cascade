@@ -11,9 +11,11 @@ import {
   CascadeBuilderConfig,
   CascadeUpdatedEntity,
   CascadeDeletedEntity,
-  CascadeInvalidation,
   CascadeTypeInvalidation,
+  InvalidationScope,
+  InvalidationStrategy,
   Invalidator,
+  QueryInvalidation,
 } from "./types";
 import type { MetricsCollector } from "./metrics";
 
@@ -60,6 +62,14 @@ function toTypeInvalidations(
   return [...counts]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([typename, affectedCount]) => ({ typename, affectedCount }));
+}
+
+const STRATEGIES = new Set<unknown>(Object.values(InvalidationStrategy));
+const SCOPES = new Set<unknown>(Object.values(InvalidationScope));
+
+function isQueryInvalidation(hint: unknown): hint is QueryInvalidation {
+  const { strategy, scope } = (hint ?? {}) as Record<string, unknown>;
+  return STRATEGIES.has(strategy) && SCOPES.has(scope);
 }
 
 /**
@@ -131,12 +141,11 @@ export class CascadeBuilder {
     let hintsTruncated = false;
     if (this.invalidator && success) {
       try {
-        const invalidations =
-          this.invalidator.computeInvalidations(
-            cascadeData.updated,
-            cascadeData.deleted,
-            primaryResult,
-          ) ?? [];
+        const invalidations = this.computeInvalidations(
+          cascadeData.updated,
+          cascadeData.deleted,
+          primaryResult,
+        );
         hintsTruncated = invalidations.length > this.maxInvalidations;
         cascadeData.invalidations = invalidations.slice(
           0,
@@ -309,6 +318,31 @@ export class CascadeBuilder {
   }
 
   /**
+   * Ask the invalidator for query hints, dropping (and reporting through
+   * `onInvalidationError`) any without a valid strategy and scope, which
+   * clients could not apply.
+   */
+  protected computeInvalidations(
+    updated: CascadeUpdatedEntity[],
+    deleted: CascadeDeletedEntity[],
+    primaryResult: unknown,
+  ): QueryInvalidation[] {
+    const hints: unknown[] =
+      this.invalidator?.computeInvalidations(updated, deleted, primaryResult) ??
+      [];
+    const valid = hints.filter(isQueryInvalidation);
+    const dropped = hints.length - valid.length;
+    if (dropped > 0) {
+      this.onInvalidationError?.(
+        new Error(
+          `Dropped ${dropped} invalidation hint(s) without a valid strategy and scope`,
+        ),
+      );
+    }
+    return valid;
+  }
+
+  /**
    * Estimate the JSON size of the cascade data.
    */
   private estimateResponseSize(
@@ -410,12 +444,11 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
 
     // Compute invalidations
     if (this.invalidator && success) {
-      const invalidations =
-        this.invalidator.computeInvalidations(
-          cascadeData.updated,
-          cascadeData.deleted,
-          primaryResult,
-        ) ?? [];
+      const invalidations = this.computeInvalidations(
+        cascadeData.updated,
+        cascadeData.deleted,
+        primaryResult,
+      );
       cascadeData.invalidations = invalidations.slice(0, this.maxInvalidations);
       // Dropped query hints: invalidating every changed type covers them.
       if (invalidations.length > this.maxInvalidations) {

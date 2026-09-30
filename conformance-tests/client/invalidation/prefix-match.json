@@ -17,7 +17,7 @@
     "cascade": {
       "updated": [{ "__typename": "User", "id": "1", "name": "Updated" }],
       "invalidations": [
-        { "type": "pattern", "target": "getUser*", "reason": "user updated" }
+        { "queryName": "getUser", "strategy": "INVALIDATE", "scope": "PREFIX" }
       ],
       "metadata": { "affectedCount": 1, "operationType": "UPDATE" }
     }

@@ -7,7 +7,9 @@ describe("validateResponse", () => {
       cascade: {
         updated: [{ __typename: "User", id: "1", operation: "CREATE" }],
         deleted: [{ __typename: "Post", id: "2" }],
-        invalidations: [{ queryName: "getUsers" }],
+        invalidations: [
+          { queryName: "getUsers", strategy: "INVALIDATE", scope: "EXACT" },
+        ],
         metadata: {
           timestamp: Date.now(),
         },
@@ -96,25 +98,75 @@ describe("validateResponse", () => {
     });
   });
 
-  it("invalid invalidation fails (missing queryName)", () => {
-    const response = {
-      success: true,
-      cascade: {
-        updated: [],
-        deleted: [],
-        invalidations: [
-          {}, // missing queryName
-        ],
-        metadata: { timestamp: Date.now() },
-      },
-    };
+  describe("invalidations", () => {
+    const errorsFor = (invalidation: Record<string, unknown>) =>
+      validateResponse({
+        success: true,
+        cascade: {
+          updated: [],
+          deleted: [],
+          invalidations: [invalidation],
+          metadata: { timestamp: Date.now() },
+        },
+      }).errors;
 
-    const result = validateResponse(response);
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContainEqual({
-      code: "MISSING_QUERY_NAME",
-      message: "QueryInvalidation must have queryName",
-      path: "cascade.invalidations[0].queryName",
+    it("requires strategy and scope", () => {
+      expect(errorsFor({ queryName: "getUsers" })).toEqual([
+        {
+          code: "INVALID_STRATEGY",
+          message:
+            "QueryInvalidation.strategy must be one of INVALIDATE, REFETCH, REMOVE",
+          path: "cascade.invalidations[0].strategy",
+        },
+        {
+          code: "INVALID_SCOPE",
+          message:
+            "QueryInvalidation.scope must be one of EXACT, PREFIX, PATTERN, ALL",
+          path: "cascade.invalidations[0].scope",
+        },
+      ]);
+    });
+
+    it("rejects unknown strategy and scope values", () => {
+      const codes = errorsFor({
+        queryName: "getUsers",
+        strategy: "SOMETIMES",
+        scope: "NEARBY",
+      }).map((e) => e.code);
+      expect(codes).toEqual(["INVALID_STRATEGY", "INVALID_SCOPE"]);
+    });
+
+    it("accepts ALL scope without a query name", () => {
+      expect(errorsFor({ strategy: "INVALIDATE", scope: "ALL" })).toEqual([]);
+    });
+
+    it.each(["EXACT", "PREFIX"])("requires queryName for %s scope", (scope) => {
+      expect(errorsFor({ strategy: "INVALIDATE", scope })).toEqual([
+        {
+          code: "MISSING_QUERY_NAME",
+          message: `QueryInvalidation with ${scope} scope must have queryName`,
+          path: "cascade.invalidations[0].queryName",
+        },
+      ]);
+    });
+
+    it("accepts queryHash in place of queryName for EXACT scope", () => {
+      expect(
+        errorsFor({ queryHash: "abc123", strategy: "REFETCH", scope: "EXACT" }),
+      ).toEqual([]);
+    });
+
+    it("requires queryPattern for PATTERN scope", () => {
+      expect(
+        errorsFor({ queryName: "list", strategy: "REMOVE", scope: "PATTERN" }),
+      ).toEqual([
+        {
+          code: "MISSING_QUERY_PATTERN",
+          message:
+            "QueryInvalidation with PATTERN scope must have queryPattern",
+          path: "cascade.invalidations[0].queryPattern",
+        },
+      ]);
     });
   });
 

@@ -108,7 +108,7 @@ Check that cascade invalidations are being processed by your client.
 ```typescript
 // Check cascade response includes invalidations
 console.log(response.cascade.invalidations);
-// Should show: [{ __typename: 'Query', field: 'users' }]
+// Should show: [{ queryName: 'users', strategy: 'INVALIDATE', scope: 'EXACT' }]
 ```
 
 ---
@@ -357,7 +357,7 @@ const builder = new CascadeBuilder(tracker);
 // Correct - pass invalidator
 const invalidator = {
   computeInvalidations(updated, deleted, result) {
-    return [{ __typename: 'Query', field: 'users', reason: 'User modified' }];
+    return [{ queryName: 'users', strategy: 'INVALIDATE', scope: 'EXACT' }];
   }
 };
 const builder = new CascadeBuilder(tracker, invalidator);
@@ -376,6 +376,7 @@ const { data } = useQuery({
 cascade: {
   invalidations: [{
     queryName: 'users',
+    strategy: 'INVALIDATE',
     scope: 'PREFIX' // Invalidates all 'users*' queries
   }]
 }

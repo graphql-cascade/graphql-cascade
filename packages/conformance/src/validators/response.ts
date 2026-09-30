@@ -1,4 +1,8 @@
 import type { ResponseValidationResult, ValidationError } from "../types";
+import {
+  INVALIDATION_SCOPE_VALUES,
+  INVALIDATION_STRATEGY_VALUES,
+} from "./schema";
 
 const STANDARD_ERROR_CODES = new Set([
   "VALIDATION_ERROR",
@@ -14,6 +18,48 @@ const STANDARD_ERROR_CODES = new Set([
 ]);
 
 const DOMAIN_CODE_PATTERN = /^[A-Z][A-Z0-9_]*(\.[A-Z][A-Z0-9_]*)*$/;
+
+/**
+ * A QueryInvalidation needs a known strategy and scope, plus whatever its
+ * scope matches on: queryName (or queryHash, for EXACT) or queryPattern.
+ */
+function validateQueryInvalidation(
+  inv: Record<string, unknown>,
+  path: string,
+): ValidationError[] {
+  const problems: ValidationError[] = [];
+  if (!INVALIDATION_STRATEGY_VALUES.includes(inv.strategy as string)) {
+    problems.push({
+      code: "INVALID_STRATEGY",
+      message: `QueryInvalidation.strategy must be one of ${INVALIDATION_STRATEGY_VALUES.join(", ")}`,
+      path: `${path}.strategy`,
+    });
+  }
+  if (!INVALIDATION_SCOPE_VALUES.includes(inv.scope as string)) {
+    problems.push({
+      code: "INVALID_SCOPE",
+      message: `QueryInvalidation.scope must be one of ${INVALIDATION_SCOPE_VALUES.join(", ")}`,
+      path: `${path}.scope`,
+    });
+  }
+  const namesQuery =
+    inv.scope === "PREFIX" || (inv.scope === "EXACT" && !inv.queryHash);
+  if (namesQuery && !inv.queryName) {
+    problems.push({
+      code: "MISSING_QUERY_NAME",
+      message: `QueryInvalidation with ${inv.scope} scope must have queryName`,
+      path: `${path}.queryName`,
+    });
+  }
+  if (inv.scope === "PATTERN" && !inv.queryPattern) {
+    problems.push({
+      code: "MISSING_QUERY_PATTERN",
+      message: "QueryInvalidation with PATTERN scope must have queryPattern",
+      path: `${path}.queryPattern`,
+    });
+  }
+  return problems;
+}
 
 /**
  * Type invalidations and the truncation flag were added in specification
@@ -227,14 +273,12 @@ export function validateResponse(
     } else {
       cascade.invalidations.forEach((inv: unknown, i: number) => {
         if (!inv || typeof inv !== "object") return;
-        const v = inv as Record<string, unknown>;
-        if (!v.queryName) {
-          errors.push({
-            code: "MISSING_QUERY_NAME",
-            message: "QueryInvalidation must have queryName",
-            path: `cascade.invalidations[${i}].queryName`,
-          });
-        }
+        errors.push(
+          ...validateQueryInvalidation(
+            inv as Record<string, unknown>,
+            `cascade.invalidations[${i}]`,
+          ),
+        );
       });
     }
 
