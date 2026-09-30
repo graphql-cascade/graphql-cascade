@@ -208,7 +208,7 @@ const builder = new CascadeBuilder(
 | `maxUpdatedEntities` | `number` | `500` | Maximum updated entities in response |
 | `maxDeletedEntities` | `number` | `100` | Maximum deleted entities in response |
 | `maxInvalidations` | `number` | `50` | Maximum invalidation entries in response |
-| `onInvalidationError` | `(error: Error) =&gt; void` | `undefined` | Handler for invalidation computation errors |
+| `onInvalidationError` | `(error: Error) =&gt; void` | `undefined` | Handler for invalidator errors and dropped invalid hints |
 
 When a limit is exceeded, the builder never drops entities silently. It moves whole types, largest first, from `updated`/`deleted` into `typeInvalidations` and sets `metadata.truncated`. Entities dropped by the tracker's `maxEntities` limit are covered the same way. When invalidation hints exceed `maxInvalidations`, every type in the cascade gets a type invalidation.
 
@@ -375,7 +375,7 @@ interface CascadeData {
   /** List of deleted entities */
   deleted: CascadeDeletedEntity[];
   /** List of cache invalidations */
-  invalidations: CascadeInvalidation[];
+  invalidations: QueryInvalidation[];
   /** Types whose affected entities are not listed individually */
   typeInvalidations: CascadeTypeInvalidation[];
   /** Metadata about the cascade operation */
@@ -422,20 +422,28 @@ interface CascadeDeletedEntity {
 }
 ```
 
-### CascadeInvalidation
+### QueryInvalidation
+
+A hint telling clients which cached queries to invalidate, as defined by the specification's `QueryInvalidation`.
 
 ```typescript
-interface CascadeInvalidation {
-  /** GraphQL type name */
-  __typename: string;
-  /** Entity ID or field path */
-  id?: string;
-  /** Field that was invalidated */
-  field?: string;
-  /** Reason for invalidation */
-  reason: string;
+interface QueryInvalidation {
+  /** Query name, e.g. "listUsers"; required for EXACT and PREFIX scopes */
+  queryName?: string;
+  /** Hash of the query, for EXACT matching */
+  queryHash?: string;
+  /** Arguments identifying the query, e.g. { companyId: "123" } */
+  arguments?: Record&lt;string, unknown&gt;;
+  /** Glob such as "list*"; required for PATTERN scope */
+  queryPattern?: string;
+  /** INVALIDATE | REFETCH | REMOVE */
+  strategy: InvalidationStrategy;
+  /** EXACT | PREFIX | PATTERN | ALL */
+  scope: InvalidationScope;
 }
 ```
+
+`InvalidationStrategy` and `InvalidationScope` are exported enums.
 
 ### CascadeMetadata
 
@@ -509,9 +517,11 @@ interface Invalidator {
     updated: CascadeUpdatedEntity[],
     deleted: CascadeDeletedEntity[],
     primaryResult: unknown
-  ): CascadeInvalidation[] | null | undefined;
+  ): QueryInvalidation[] | null | undefined;
 }
 ```
+
+The builder drops hints without a valid `strategy` and `scope`, since clients cannot apply them, and reports the count through `onInvalidationError`.
 
 ---
 
@@ -555,6 +565,8 @@ const resolvers = {
 ### With Custom Invalidator
 
 ```typescript
+import { InvalidationScope, InvalidationStrategy } from '@graphql-cascade/server';
+
 const invalidator = {
   computeInvalidations(updated, deleted, result) {
     const invalidations = [];
@@ -563,9 +575,9 @@ const invalidator = {
     const affectedTypes = new Set(updated.map(e =&gt; e.__typename));
     if (affectedTypes.has('Todo')) {
       invalidations.push({
-        __typename: 'Query',
-        field: 'todos',
-        reason: 'Todo entities modified'
+        queryName: 'listTodos',
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.PREFIX
       });
     }
 

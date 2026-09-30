@@ -8,7 +8,11 @@
 export { CascadeTracker, CascadeTransaction, trackCascade } from "./tracker";
 export { CascadeBuilder, StreamingCascadeBuilder } from "./builder";
 export { CascadeError } from "./errors";
-export { CascadeErrorCode } from "./types";
+export {
+  CascadeErrorCode,
+  InvalidationScope,
+  InvalidationStrategy,
+} from "./types";
 
 // Error convenience functions
 export {
@@ -60,7 +64,7 @@ export type {
   CascadeMetadata,
   CascadeUpdatedEntity,
   CascadeDeletedEntity,
-  CascadeInvalidation,
+  QueryInvalidation,
   CascadeTypeInvalidation,
   CascadeData,
   CascadeErrorInfo,

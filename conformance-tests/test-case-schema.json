@@ -214,10 +214,14 @@
     },
     "InvalidationHint": {
       "type": "object",
+      "required": ["strategy", "scope"],
       "properties": {
-        "type": { "type": "string", "enum": ["entity", "query", "pattern"] },
-        "target": { "type": "string" },
-        "reason": { "type": "string" }
+        "queryName": { "type": "string" },
+        "queryHash": { "type": "string" },
+        "arguments": {},
+        "queryPattern": { "type": "string" },
+        "strategy": { "type": "string", "enum": ["INVALIDATE", "REFETCH", "REMOVE"] },
+        "scope": { "type": "string", "enum": ["EXACT", "PREFIX", "PATTERN", "ALL"] }
       }
     }
   }

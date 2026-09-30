@@ -108,17 +108,45 @@ export interface CascadeDeletedEntity {
 }
 
 /**
- * An invalidation entry in the cascade response.
+ * How a client handles the queries an invalidation selects.
  */
-export interface CascadeInvalidation {
-  /** GraphQL type name */
-  __typename: string;
-  /** Entity ID or field path */
-  id?: string;
-  /** Field that was invalidated */
-  field?: string;
-  /** Reason for invalidation */
-  reason: string;
+export enum InvalidationStrategy {
+  /** Mark stale; refetch on next access */
+  INVALIDATE = "INVALIDATE",
+  /** Refetch immediately */
+  REFETCH = "REFETCH",
+  /** Remove from the cache */
+  REMOVE = "REMOVE",
+}
+
+/**
+ * Which cached queries an invalidation selects.
+ */
+export enum InvalidationScope {
+  /** The query named `queryName` (or matching `queryHash`) */
+  EXACT = "EXACT",
+  /** Queries whose name starts with `queryName` */
+  PREFIX = "PREFIX",
+  /** Queries whose name matches the `queryPattern` glob */
+  PATTERN = "PATTERN",
+  /** Every query */
+  ALL = "ALL",
+}
+
+/**
+ * Instruction to invalidate cached queries after a mutation.
+ */
+export interface QueryInvalidation {
+  /** Query name, e.g. "listUsers"; required for EXACT and PREFIX scopes */
+  queryName?: string;
+  /** Hash of the query, for EXACT matching */
+  queryHash?: string;
+  /** Arguments identifying the query, e.g. `{ companyId: "123" }` */
+  arguments?: Record<string, unknown>;
+  /** Glob such as "list*"; required for PATTERN scope */
+  queryPattern?: string;
+  strategy: InvalidationStrategy;
+  scope: InvalidationScope;
 }
 
 /**
@@ -141,7 +169,7 @@ export interface CascadeData {
   /** List of deleted entities */
   deleted: CascadeDeletedEntity[];
   /** List of cache invalidations */
-  invalidations: CascadeInvalidation[];
+  invalidations: QueryInvalidation[];
   /** Types whose affected entities are not listed individually */
   typeInvalidations: CascadeTypeInvalidation[];
   /** Metadata about the cascade operation */
@@ -364,5 +392,5 @@ export interface Invalidator {
     updated: CascadeUpdatedEntity[],
     deleted: CascadeDeletedEntity[],
     primaryResult: unknown,
-  ): CascadeInvalidation[] | null | undefined;
+  ): QueryInvalidation[] | null | undefined;
 }

@@ -6,7 +6,11 @@ import {
   buildStreamingSuccessResponse,
 } from "./builder";
 import { CascadeTracker } from "./tracker";
-import { CascadeErrorInfo } from "./types";
+import {
+  CascadeErrorInfo,
+  InvalidationScope,
+  InvalidationStrategy,
+} from "./types";
 
 // Mock entities for testing
 class MockEntity {
@@ -31,9 +35,9 @@ class MockInvalidator {
   computeInvalidations(updated: any[], deleted: any[], primaryResult?: any) {
     const invalidations = [
       {
-        __typename: "CacheInvalidation",
-        field: "testField",
-        reason: "entity_updated",
+        queryName: "listMockEntities",
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.EXACT,
       },
     ];
     return invalidations;
@@ -277,9 +281,10 @@ describe("CascadeBuilder", () => {
       const manyHints = {
         computeInvalidations: () =>
           Array.from({ length: 10 }, (_, i) => ({
-            __typename: "Post",
-            id: String(i),
-            reason: "updated",
+            queryName: "getPost",
+            arguments: { id: String(i) },
+            strategy: InvalidationStrategy.REFETCH,
+            scope: InvalidationScope.EXACT,
           })),
       };
       const limitedBuilder = new CascadeBuilder(tracker, manyHints, {
@@ -489,8 +494,47 @@ describe("CascadeBuilder", () => {
 
       const response = builder.buildResponse(null, true);
 
-      expect(response.cascade.invalidations).toHaveLength(1);
-      expect(response.cascade.invalidations[0].reason).toBe("entity_updated");
+      expect(response.cascade.invalidations).toEqual([
+        {
+          queryName: "listMockEntities",
+          strategy: "INVALIDATE",
+          scope: "EXACT",
+        },
+      ]);
+    });
+
+    it("drops hints without a valid strategy and scope, and reports them", () => {
+      const onInvalidationError = jest.fn();
+      const mixedBuilder = new CascadeBuilder(
+        tracker,
+        {
+          computeInvalidations: () =>
+            [
+              {
+                queryName: "listPosts",
+                strategy: "INVALIDATE",
+                scope: "EXACT",
+              },
+              { __typename: "Post", id: "1", reason: "updated" },
+              { queryName: "listPosts", strategy: "SOMETIMES", scope: "EXACT" },
+              { queryName: "listPosts", strategy: "REFETCH", scope: "NEARBY" },
+            ] as any,
+        },
+        { onInvalidationError },
+      );
+      tracker.startTransaction();
+      tracker.trackUpdate(new MockEntity(1, "Test"));
+
+      const response = mixedBuilder.buildResponse();
+
+      expect(response.cascade.invalidations).toEqual([
+        { queryName: "listPosts", strategy: "INVALIDATE", scope: "EXACT" },
+      ]);
+      expect(onInvalidationError).toHaveBeenCalledWith(
+        new Error(
+          "Dropped 3 invalidation hint(s) without a valid strategy and scope",
+        ),
+      );
     });
 
     it("should not include invalidations when operation fails", () => {
@@ -524,8 +568,8 @@ describe("CascadeBuilder", () => {
       const manyInvalidationsInvalidator = {
         computeInvalidations: () =>
           Array(100).fill({
-            __typename: "Invalidation",
-            reason: "many",
+            strategy: InvalidationStrategy.INVALIDATE,
+            scope: InvalidationScope.ALL,
           }),
       };
 
@@ -646,7 +690,12 @@ describe("CascadeBuilder", () => {
       const size = builder["estimateResponseSize"](
         [{ entity: { field: "value" } }],
         [{ __typename: "Type", id: "1", deletedAt: "2023-01-01" }],
-        [{ __typename: "Invalidation", reason: "test" }],
+        [
+          {
+            strategy: InvalidationStrategy.INVALIDATE,
+            scope: InvalidationScope.ALL,
+          },
+        ],
       );
 
       expect(size).toBeGreaterThan(0);
@@ -855,8 +904,8 @@ describe("CascadeBuilder", () => {
       const manyInvalidationsInvalidator = {
         computeInvalidations: () =>
           Array(100).fill({
-            __typename: "Invalidation",
-            reason: "many",
+            strategy: InvalidationStrategy.INVALIDATE,
+            scope: InvalidationScope.ALL,
           }),
       };
 

@@ -19,9 +19,7 @@
     },
     "cascade": {
       "updated": [{ "__typename": "User", "id": "1", "name": "John Updated" }],
-      "invalidations": [
-        { "type": "entity", "target": "User:1", "reason": "entity updated" }
-      ],
+      "invalidations": [],
       "metadata": { "affectedCount": 1, "operationType": "UPDATE" }
     }
   },
