@@ -23,6 +23,7 @@ import {
   cascadeEntryTypename,
   createScopedLogger,
   isRetryableError,
+  normalizeCascade,
   shouldRetry,
   toCascadeResponse,
   RetryOptions,
@@ -74,9 +75,7 @@ export const cascadeExchange = (
         forward(ops$),
         tap((result) => {
           // Check for cascade data in extensions
-          const cascade = result.extensions?.cascade as
-            | CascadeUpdates
-            | undefined;
+          const cascade = extractCascadeData(result);
 
           if (!cascade) {
             return;
@@ -404,7 +403,7 @@ export function extractCascadeData(response: {
   if (!cascade || typeof cascade !== "object") {
     return null;
   }
-  return cascade as CascadeUpdates;
+  return normalizeCascade(cascade as Partial<CascadeUpdates>);
 }
 
 /**

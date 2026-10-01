@@ -17,6 +17,7 @@ import {
 import {
   applyTypeInvalidations,
   cascadeEntryTypename,
+  normalizeCascade,
   toCascadeResponse,
 } from "@graphql-cascade/client";
 import { extractCascadeData } from "./exchange";
@@ -194,7 +195,8 @@ export class URQLCascadeClient {
   /**
    * Apply cascade updates to the cache.
    */
-  applyCascade(cascade: CascadeUpdates): void {
+  applyCascade(selected: CascadeUpdates): void {
+    const cascade = normalizeCascade(selected);
     // Process updated entities
     for (const update of cascade.updated) {
       const typename = cascadeEntryTypename(update);

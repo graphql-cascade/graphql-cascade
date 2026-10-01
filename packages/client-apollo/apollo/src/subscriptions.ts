@@ -1,8 +1,10 @@
 import { ApolloClient, DocumentNode, FetchResult } from "@apollo/client";
 import {
+  CascadeOperation,
   CascadeUpdates,
   CascadeResponse,
   cascadeEntryTypename,
+  normalizeCascade,
 } from "@graphql-cascade/client";
 import { ApolloCascadeClient } from "./client";
 
@@ -317,8 +319,14 @@ export class CascadeSubscriptionManager {
     // Check extensions first (standard location per spec)
     if (result.extensions?.cascade) {
       return {
-        type: this.inferEventType(result.extensions.cascade as CascadeUpdates),
-        cascade: result.extensions.cascade as CascadeUpdates,
+        type: this.inferEventType(
+          normalizeCascade(
+            result.extensions.cascade as Partial<CascadeUpdates>,
+          ),
+        ),
+        cascade: normalizeCascade(
+          result.extensions.cascade as Partial<CascadeUpdates>,
+        ),
         timestamp: new Date().toISOString(),
         source: "extensions",
       };
@@ -331,8 +339,12 @@ export class CascadeSubscriptionManager {
 
     if (subscriptionData?.cascade) {
       return {
-        type: this.inferEventType(subscriptionData.cascade as CascadeUpdates),
-        cascade: subscriptionData.cascade as CascadeUpdates,
+        type: this.inferEventType(
+          normalizeCascade(subscriptionData.cascade as Partial<CascadeUpdates>),
+        ),
+        cascade: normalizeCascade(
+          subscriptionData.cascade as Partial<CascadeUpdates>,
+        ),
         timestamp: new Date().toISOString(),
         source: subscriptionName,
       };
@@ -342,12 +354,6 @@ export class CascadeSubscriptionManager {
     if (subscriptionData && typeof subscriptionData === "object") {
       const entity = subscriptionData as Record<string, unknown>;
       if (entity.__typename && entity.id) {
-        // Import CascadeOperation from types
-        const CascadeOperation = {
-          CREATED: "CREATED",
-          UPDATED: "UPDATED",
-          DELETED: "DELETED",
-        } as const;
         return {
           type: "ENTITY_UPDATED",
           cascade: {
@@ -355,8 +361,7 @@ export class CascadeSubscriptionManager {
               {
                 typename: entity.__typename as string,
                 id: entity.id as string,
-                operation:
-                  CascadeOperation.UPDATED as unknown as import("@graphql-cascade/client").CascadeOperation,
+                operation: CascadeOperation.UPDATED,
                 entity,
               },
             ],

@@ -1,4 +1,5 @@
 import {
+  Environment,
   Network,
   Observable,
   RecordSource,
@@ -10,6 +11,7 @@ import { CascadeOperation, type CascadeUpdates } from "@graphql-cascade/client";
 import {
   createBasicCascadeEnvironment,
   createCascadeRelayEnvironment,
+  commitCascade,
 } from "./environment";
 
 const renamed: CascadeUpdates = {
@@ -173,5 +175,29 @@ describe("createBasicCascadeEnvironment", () => {
     await environment.getNetwork().execute(mutation, {}, {}).toPromise();
 
     expect(source.get("1")).toMatchObject({ name: "New" });
+  });
+});
+
+describe("commitCascade with partial selections", () => {
+  it("applies a cascade whose mutation selected only updated", () => {
+    const environment = new Environment({
+      network: Network.create(() => Observable.from({ data: {} })),
+      store: new Store(new RecordSource()),
+    });
+
+    commitCascade(environment, {
+      updated: [
+        {
+          typename: "User",
+          id: "u1",
+          operation: CascadeOperation.UPDATED,
+          entity: { __typename: "User", id: "u1", name: "Ada" },
+        },
+      ],
+    } as never);
+
+    expect(environment.getStore().getSource().get("u1")).toMatchObject({
+      name: "Ada",
+    });
   });
 });

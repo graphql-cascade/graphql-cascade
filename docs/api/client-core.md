@@ -60,6 +60,10 @@ Normalizes a mutation field's result to a `CascadeResponse`, or returns `undefin
 - a `CascadePayload` becomes `success: true`, with its `warnings` as `errors`;
 - a `CascadeFailure` becomes `success: false` with an empty cascade, since nothing was committed.
 
+### normalizeCascade(cascade)
+
+The cascade with every list present: a list the mutation did not select is empty. `toCascadeResponse` and `applyCascade` normalize cascades; normalize a cascade read from elsewhere, such as `extensions.cascade`, before applying it.
+
 ### cascadeEntryTypename(entry)
 
 The type name of an `updated` or `deleted` entry: `typename`, or `__typename` from servers before specification 1.3.0.

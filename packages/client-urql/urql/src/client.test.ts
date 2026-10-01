@@ -114,7 +114,7 @@ describe("URQLCascadeClient", () => {
 
       const result = await client.mutate({} as any, {});
 
-      expect(result.cascade).toEqual(cascade);
+      expect(result.cascade).toEqual({ ...cascade, typeInvalidations: [] });
     });
 
     it("should apply cascade updates to cache by default", async () => {
@@ -654,5 +654,25 @@ describe("URQLCascadeClient payload cascades", () => {
     });
 
     expect(cache.read("User", "1")?.name).toBe("Payload");
+  });
+});
+
+describe("URQLCascadeClient with partial selections", () => {
+  it("applies a cascade whose mutation selected only updated", () => {
+    const cache = new InMemoryCascadeCache();
+    const client = new URQLCascadeClient({} as Client, cache);
+
+    client.applyCascade({
+      updated: [
+        {
+          typename: "User",
+          id: "1",
+          operation: CascadeOperation.UPDATED,
+          entity: { __typename: "User", id: "1", name: "Ada" },
+        },
+      ],
+    } as never);
+
+    expect(cache.read("User", "1")).toMatchObject({ name: "Ada" });
   });
 });

@@ -2,6 +2,7 @@ import {
   CascadeClient,
   applyTypeInvalidations,
   cascadeEntryTypename,
+  normalizeCascade,
   toCascadeResponse,
 } from "./client";
 import {
@@ -412,13 +413,21 @@ describe("toCascadeResponse", () => {
 
   it("keeps a 1.x CascadeResponse as it is", () => {
     const response = { success: true, errors: [], data: { id: "1" }, cascade };
-    expect(toCascadeResponse(response)).toEqual(response);
+    expect(toCascadeResponse(response)).toEqual({
+      ...response,
+      cascade: { ...cascade, typeInvalidations: [] },
+    });
   });
 
   it("reads a CascadePayload, whose warnings mark a partial success", () => {
     expect(
       toCascadeResponse({ data: { id: "1" }, cascade, warnings: [warning] }),
-    ).toEqual({ success: true, errors: [warning], data: { id: "1" }, cascade });
+    ).toEqual({
+      success: true,
+      errors: [warning],
+      data: { id: "1" },
+      cascade: { ...cascade, typeInvalidations: [] },
+    });
   });
 
   it("turns a CascadeFailure into a failed response with an empty cascade", () => {
@@ -527,5 +536,48 @@ describe("CascadeClient REFETCH hints", () => {
       expect.stringContaining("todos"),
       failure,
     );
+  });
+});
+
+describe("cascades selecting only some lists", () => {
+  const partial = {
+    updated: [
+      {
+        typename: "User",
+        id: "1",
+        operation: CascadeOperation.UPDATED,
+        entity: { __typename: "User", id: "1", name: "Ada" },
+      },
+    ],
+  };
+
+  it("normalizeCascade fills the lists the mutation did not select", () => {
+    expect(normalizeCascade(partial)).toMatchObject({
+      updated: partial.updated,
+      deleted: [],
+      invalidations: [],
+      typeInvalidations: [],
+    });
+  });
+
+  it("applyCascade applies what was selected", () => {
+    const cache = new MockCache();
+
+    new CascadeClient(cache, jest.fn()).applyCascade({
+      success: true,
+      data: null,
+      cascade: partial as never,
+    });
+
+    expect(cache.written).toEqual([
+      { typename: "User", id: "1", data: partial.updated[0].entity },
+    ]);
+  });
+
+  it("toCascadeResponse returns normalized cascades", () => {
+    expect(
+      toCascadeResponse({ success: true, data: null, cascade: partial })
+        ?.cascade.invalidations,
+    ).toEqual([]);
   });
 });
