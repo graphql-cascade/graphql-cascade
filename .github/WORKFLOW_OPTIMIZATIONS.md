@@ -108,7 +108,7 @@ jobs:
           - client-apollo
           - client-react-query
           - conformance
-        node-version: [18, 20, 22]
+        node-version: [22, 24, 26]
     steps:
       - run: pnpm --filter @graphql-cascade/${{ matrix.package }} test
 ```

@@ -4,7 +4,7 @@
 
 The packages are compiled to ES2020 JavaScript as CommonJS modules, with TypeScript declarations. They have no native dependencies.
 
-`@graphql-cascade/server` requires Node.js 18 or later. CI runs every package's tests on Node.js 18, 20 and 22, on Linux, macOS and Windows (Node.js 20 and 22 only on Windows).
+On Node.js, every package requires version 22 or later. CI runs every package's tests on Node.js 22, 24 and 26, on Linux, macOS and Windows.
 
 Client packages run in any environment with ES2020 support: current browsers, React Native, and Node.js. `@graphql-cascade/nuxt` is an ES module targeting ES2022.
 
@@ -23,7 +23,7 @@ Each package supports the current and the previous major of the libraries it wor
 | `@graphql-cascade/nuxt` | `nuxt` 3 or 4, `@apollo/client` 3 or 4, `@vue/apollo-composable` 4 |
 | `@graphql-cascade/codegen` | `graphql` 16 or 17 |
 
-CI runs every package's tests against both: the development dependencies pin the previous majors, and a second job installs the current ones. NestJS 12 is published as ES modules only; the NestJS entry loads it through Node's `require` of ES modules, available from Node.js 20.19 and 22.12.
+CI runs every package's tests against both: the development dependencies pin the previous majors, and a second job installs the current ones. NestJS 12 is published as ES modules only; the NestJS entry loads it through Node's `require` of ES modules, available from Node.js 22.12.
 
 ## Servers in Other Languages
 

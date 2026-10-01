@@ -4,7 +4,7 @@ GraphQL Cascade has a server library, one library per GraphQL client, a code gen
 
 ## Prerequisites
 
-- Node.js 18 or later
+- Node.js 22 or later
 - A GraphQL server you control (to add cascades to mutation payloads)
 - TypeScript is recommended; every package ships its own type definitions
 

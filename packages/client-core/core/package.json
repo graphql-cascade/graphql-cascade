@@ -21,9 +21,12 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "devDependencies": {
     "@types/jest": "^29.0.0",
-    "@types/node": "^18.0.0",
+    "@types/node": "^22.0.0",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
     "eslint": "^8.0.0",

@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -63,7 +63,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -104,10 +104,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: ['18', '20', '22']
-        exclude:
-          - os: windows-latest
-            node-version: '18'
+        node-version: ['22', '24', '26']
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -145,7 +142,7 @@ jobs:
         run: pnpm -r --if-present test
 
       - name: Check coverage threshold
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '24'
         run: |
           node -e "
           const fs = require('fs');
@@ -179,13 +176,13 @@ jobs:
           "
 
       - name: Merge coverage reports
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '24'
         run: |
           mkdir -p coverage
           find packages -name "lcov.info" -exec cat {} \; > coverage/lcov.info
 
       - name: Upload coverage reports to Codecov
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20'
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '24'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -231,7 +228,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -276,7 +273,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -310,7 +307,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -359,7 +356,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -403,7 +400,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

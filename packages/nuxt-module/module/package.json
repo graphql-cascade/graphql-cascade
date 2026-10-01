@@ -33,6 +33,9 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@nuxt/kit": "^3.0.0"
   },
@@ -48,7 +51,7 @@
     "@nuxt/kit": "^3.14.0",
     "@nuxt/schema": "^3.14.0",
     "@nuxt/test-utils": "^3.14.0",
-    "@types/node": "^20.0.0",
+    "@types/node": "^22.0.0",
     "@vue/apollo-composable": "^4.2.2",
     "@vitest/coverage-v8": "^2.0.0",
     "nuxt": "^4.1.2",
