@@ -16,7 +16,7 @@ Each package supports the current and the previous major of the libraries it wor
 |---------|-------------------|
 | `@graphql-cascade/server` | `@apollo/server` 4 or 5, `@nestjs/common` 11 or 12, `express` 4 or 5: each only for its integration entry |
 | `@graphql-cascade/client` | `graphql` 16 or 17 |
-| `@graphql-cascade/apollo` | `@apollo/client` 3 or 4, `graphql` 16 or 17, `react` 18 or 19 |
+| `@graphql-cascade/apollo` | `@apollo/client` 3 or 4, `graphql` 16 or 17, `react` 18 or 19: only for the hooks, which the `/core` entry leaves out |
 | `@graphql-cascade/relay` | `relay-runtime` 20 or 21, `graphql` 16 or 17, `react` 18 or 19 |
 | `@graphql-cascade/react-query` | `@tanstack/react-query` 4 or 5, `graphql` 16 or 17, `react` 18 or 19 |
 | `@graphql-cascade/urql` | `@urql/core` 5 or 6, `graphql` 16 or 17 |

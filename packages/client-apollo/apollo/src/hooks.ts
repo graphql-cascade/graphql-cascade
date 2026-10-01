@@ -1,5 +1,5 @@
 import React from "react";
-import { OperationVariables } from "@apollo/client";
+import { OperationVariables } from "@apollo/client/core";
 import { useApolloClient, useMutation } from "@apollo/client/react";
 import type { DocumentNode, GraphQLFormattedError } from "graphql";
 import {

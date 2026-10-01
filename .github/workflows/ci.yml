@@ -96,6 +96,7 @@ jobs:
         run: |
           npx @arethetypeswrong/cli --pack packages/server-node
           npx @arethetypeswrong/cli --pack packages/client-core/core
+          npx @arethetypeswrong/cli --pack packages/client-apollo/apollo
           npx @arethetypeswrong/cli --pack packages/nuxt-module/module
 
   test:

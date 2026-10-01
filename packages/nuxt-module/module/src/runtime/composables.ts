@@ -16,7 +16,7 @@ import {
   extractCascadeFromMutationResult,
   type UnionCascadeConfig,
   type UnionCascadeResult,
-} from "@graphql-cascade/apollo";
+} from "@graphql-cascade/apollo/core";
 import type { CascadeUpdates } from "@graphql-cascade/client";
 import { ref, computed, type Ref } from "vue";
 

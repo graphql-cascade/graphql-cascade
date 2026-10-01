@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client";
+import { gql } from "@apollo/client/core";
 import { fieldNameFromStoreName } from "@apollo/client/cache";
 import { isReference } from "@apollo/client/utilities";
 import {

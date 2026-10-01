@@ -109,6 +109,12 @@ const todo = await cascade.mutate(TOGGLE_TODO, { id: "1" });
 
 `mutate` returns the payload's `data`. `applyCascade(response)` applies a cascade you received another way.
 
+Apps without React, such as Vue or Nuxt apps, import from `@graphql-cascade/apollo/core`. It exports everything but the React hooks and never loads React, so `react` need not be installed:
+
+```typescript
+import { ApolloCascadeClient } from "@graphql-cascade/apollo/core";
+```
+
 ## How Cascades Map to Apollo's Cache
 
 | Cascade | Apollo cache |

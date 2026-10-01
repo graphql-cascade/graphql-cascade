@@ -1,4 +1,9 @@
-import { ApolloLink, Observable, Operation, FetchResult } from "@apollo/client";
+import {
+  ApolloLink,
+  Observable,
+  Operation,
+  FetchResult,
+} from "@apollo/client/core";
 import type { ForwardFunction } from "./apollo-compat";
 import {
   shouldRetry,

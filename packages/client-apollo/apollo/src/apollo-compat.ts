@@ -1,7 +1,7 @@
 /**
  * Types and helpers that hold for Apollo Client 3 and 4.
  */
-import { ApolloClient, ApolloLink } from "@apollo/client";
+import { ApolloClient, ApolloLink } from "@apollo/client/core";
 import * as ApolloErrors from "@apollo/client/errors";
 import type { GraphQLFormattedError } from "graphql";
 
