@@ -423,6 +423,9 @@ importers:
       '@apollo/server':
         specifier: ^4.9.0
         version: 4.12.2(graphql@16.12.0)
+      '@graphql-cascade/conformance':
+        specifier: workspace:*
+        version: link:../conformance
       '@nestjs/common':
         specifier: ^10.0.0
         version: 10.4.21(reflect-metadata@0.1.14)(rxjs@7.8.2)

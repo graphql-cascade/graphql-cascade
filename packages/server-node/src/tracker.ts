@@ -409,6 +409,7 @@ export class CascadeTracker implements EntityChangeIterator {
     entity: TrackedEntity | Record<string, unknown>,
     operation: "CREATED" | "UPDATED" | "DELETED",
     updatedFields?: readonly string[],
+    direct = true,
   ): void {
     const typename = this.getEntityType(entity);
 
@@ -436,16 +437,29 @@ export class CascadeTracker implements EntityChangeIterator {
       this.validateEntity(entity as TrackedEntity);
     }
 
-    // Skip if already visited, keeping every field an update reported. The
-    // entry is replaced, not mutated, so checkpoints stay valid.
+    // Tracked again: a direct track carries the entity's latest state, which
+    // replaces the stored one (a created entity stays CREATED), and every
+    // field an update reported is kept. An entity met again through a
+    // relationship may be partial, so it changes nothing. The entry is
+    // replaced, not mutated, so checkpoints stay valid.
     if (this.visitedEntities.has(key)) {
       const existing = this.updatedEntities.get(key);
-      if (existing?.operation === "UPDATED" && updatedFields) {
+      if (existing && direct) {
+        const fields =
+          existing.operation === "UPDATED" &&
+          (existing.updatedFields || updatedFields)
+            ? [
+                ...new Set([
+                  ...(existing.updatedFields ?? []),
+                  ...(updatedFields ?? []),
+                ]),
+              ]
+            : undefined;
         this.updatedEntities.set(key, {
           ...existing,
-          updatedFields: [
-            ...new Set([...(existing.updatedFields ?? []), ...updatedFields]),
-          ],
+          entity,
+          timestamp: Date.now(),
+          ...(fields && { updatedFields: fields }),
         });
       }
       return;
@@ -490,7 +504,7 @@ export class CascadeTracker implements EntityChangeIterator {
       for (const relatedEntity of limitedRelated) {
         if (relatedEntity != null) {
           // Related entities are typically UPDATED
-          this.trackEntity(relatedEntity, "UPDATED");
+          this.trackEntity(relatedEntity, "UPDATED", undefined, false);
         }
       }
     } finally {
