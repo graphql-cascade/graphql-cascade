@@ -1,4 +1,4 @@
-import { gql, DocumentNode } from "@apollo/client";
+import { gql, DocumentNode } from "@apollo/client/core";
 import { CascadeUpdates, cascadeEntryTypename } from "@graphql-cascade/client";
 
 /**

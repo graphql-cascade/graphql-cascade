@@ -1,4 +1,4 @@
-import { InMemoryCache, DocumentNode } from "@apollo/client";
+import { InMemoryCache, DocumentNode } from "@apollo/client/core";
 import { CascadeClient, toCascadeResponse } from "@graphql-cascade/client";
 import { ApolloCascadeCache } from "./cache";
 import type { AnyApolloClient } from "./apollo-compat";

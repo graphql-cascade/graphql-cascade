@@ -1,4 +1,4 @@
-import { InMemoryCache, NormalizedCacheObject } from "@apollo/client";
+import { InMemoryCache, NormalizedCacheObject } from "@apollo/client/core";
 import { CascadeUpdates, CascadeResponse } from "@graphql-cascade/client";
 import type { AnyApolloClient } from "./apollo-compat";
 

@@ -18,5 +18,6 @@ export default defineBuildConfig({
     "@apollo/client",
     "@vue/apollo-composable",
     "@graphql-cascade/apollo",
+    "@graphql-cascade/apollo/core",
   ],
 });

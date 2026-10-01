@@ -1,4 +1,4 @@
-import { DocumentNode } from "@apollo/client";
+import { DocumentNode } from "@apollo/client/core";
 import {
   CascadeOperation,
   CascadeUpdates,
