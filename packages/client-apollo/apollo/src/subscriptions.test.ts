@@ -1,4 +1,5 @@
-import { ApolloClient, InMemoryCache, gql } from "@apollo/client";
+import { ApolloClient, ApolloLink, InMemoryCache, gql } from "@apollo/client";
+import type { AnyApolloClient } from "./apollo-compat";
 
 import { ApolloCascadeClient } from "./client";
 import { CascadeSubscriptionManager } from "./subscriptions";
@@ -14,17 +15,17 @@ const mockSubscription = gql`
 `;
 
 describe("CascadeSubscriptionManager", () => {
-  let apolloClient: ApolloClient<unknown>;
+  let apolloClient: AnyApolloClient;
   let cascadeClient: ApolloCascadeClient;
   let manager: CascadeSubscriptionManager;
 
   beforeEach(() => {
     apolloClient = new ApolloClient({
       cache: new InMemoryCache(),
-      devtools: { enabled: false },
+      link: ApolloLink.empty(),
     });
 
-    cascadeClient = new ApolloCascadeClient(apolloClient as ApolloClient<any>);
+    cascadeClient = new ApolloCascadeClient(apolloClient);
     manager = new CascadeSubscriptionManager(cascadeClient, apolloClient);
   });
 

@@ -10,20 +10,20 @@ Client packages run in any environment with ES2020 support: current browsers, Re
 
 ## Peer Dependencies
 
-Each package works with the libraries you already use, declared as peer dependencies:
+Each package supports the current and the previous major of the libraries it works with, declared as peer dependencies:
 
 | Package | Peer dependencies |
 |---------|-------------------|
-| `@graphql-cascade/server` | `@apollo/server` 4, `@nestjs/common` 9 or 10, `express` 4: each only for its integration |
-| `@graphql-cascade/client` | `graphql` 16 |
-| `@graphql-cascade/apollo` | `@apollo/client` 3, `graphql` 16, `react` 16.8 to 18 |
-| `@graphql-cascade/relay` | `relay-runtime` 14 to 16, `graphql` 16, `react` 16.8 to 18 |
-| `@graphql-cascade/react-query` | `@tanstack/react-query` 4 or 5, `graphql` 16, `react` 16.8 to 18 |
-| `@graphql-cascade/urql` | `@urql/core` 4 or later, `graphql` 16 or later |
+| `@graphql-cascade/server` | `@apollo/server` 4 or 5, `@nestjs/common` 11 or 12, `express` 4 or 5: each only for its integration entry |
+| `@graphql-cascade/client` | `graphql` 16 or 17 |
+| `@graphql-cascade/apollo` | `@apollo/client` 3 or 4, `graphql` 16 or 17, `react` 18 or 19 |
+| `@graphql-cascade/relay` | `relay-runtime` 20 or 21, `graphql` 16 or 17, `react` 18 or 19 |
+| `@graphql-cascade/react-query` | `@tanstack/react-query` 4 or 5, `graphql` 16 or 17, `react` 18 or 19 |
+| `@graphql-cascade/urql` | `@urql/core` 5 or 6, `graphql` 16 or 17 |
 | `@graphql-cascade/nuxt` | `nuxt` 3 or 4, `@apollo/client` 3 or 4, `@vue/apollo-composable` 4 |
-| `@graphql-cascade/codegen` | `graphql` 15 or 16 |
+| `@graphql-cascade/codegen` | `graphql` 16 or 17 |
 
-The package manifests are authoritative; `npm ls` reports ranges your project falls outside of.
+CI runs every package's tests against both: the development dependencies pin the previous majors, and a second job installs the current ones. NestJS 12 is published as ES modules only; the NestJS entry loads it through Node's `require` of ES modules, available from Node.js 20.19 and 22.12.
 
 ## Servers in Other Languages
 

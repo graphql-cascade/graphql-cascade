@@ -1,4 +1,4 @@
-import { ApolloError } from "@apollo/client";
+import { graphQLResultError } from "./apollo-compat";
 import { GraphQLError } from "graphql";
 import {
   CascadeError,
@@ -45,9 +45,8 @@ describe("CascadeError", () => {
 
   describe("fromApolloError", () => {
     it("should convert network error", () => {
-      const apolloError = new ApolloError({
-        networkError: new Error("Network failed"),
-        graphQLErrors: [],
+      const apolloError = Object.assign(new Error("Network failed"), {
+        name: "ServerError",
       });
 
       const cascadeError = CascadeError.fromApolloError(apolloError);
@@ -57,14 +56,12 @@ describe("CascadeError", () => {
     });
 
     it("should convert GraphQL error", () => {
-      const apolloError = new ApolloError({
-        graphQLErrors: [
-          new GraphQLError("Field error", {
-            path: ["user", "name"],
-            extensions: { code: "VALIDATION_ERROR" },
-          }),
-        ],
-      });
+      const apolloError = graphQLResultError([
+        new GraphQLError("Field error", {
+          path: ["user", "name"],
+          extensions: { code: "VALIDATION_ERROR" },
+        }),
+      ]);
 
       const cascadeError = CascadeError.fromApolloError(apolloError, {
         mutation: "updateUser",

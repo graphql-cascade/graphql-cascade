@@ -1,12 +1,13 @@
-import { ApolloClient, InMemoryCache, DocumentNode } from "@apollo/client";
+import { InMemoryCache, DocumentNode } from "@apollo/client";
 import { CascadeClient, toCascadeResponse } from "@graphql-cascade/client";
 import { ApolloCascadeCache } from "./cache";
+import type { AnyApolloClient } from "./apollo-compat";
 
 /**
  * Apollo Client integration for GraphQL Cascade.
  */
 export class ApolloCascadeClient extends CascadeClient {
-  constructor(private apollo: ApolloClient<any>) {
+  constructor(private apollo: AnyApolloClient) {
     super(
       new ApolloCascadeCache(apollo.cache as InMemoryCache, apollo),
       (query, variables) => apollo.query({ query, variables }),
@@ -22,10 +23,10 @@ export class ApolloCascadeClient extends CascadeClient {
       variables,
     });
 
-    const mutationName = Object.keys(result.data!)[0];
-    const fieldResult = result.data![mutationName];
+    const data = result.data as Record<string, unknown>;
+    const fieldResult = data[Object.keys(data)[0]];
     const cascadeResponse = toCascadeResponse<T>(fieldResult);
-    if (!cascadeResponse) return fieldResult;
+    if (!cascadeResponse) return fieldResult as T;
 
     this.applyCascade(cascadeResponse);
     return cascadeResponse.data as T;
@@ -39,13 +40,13 @@ export class ApolloCascadeClient extends CascadeClient {
       query,
       variables,
     });
-    return result.data;
+    return result.data as T;
   }
 
   /**
    * Get the underlying Apollo Client instance.
    */
-  getApolloClient(): ApolloClient<any> {
+  getApolloClient(): AnyApolloClient {
     return this.apollo;
   }
 }

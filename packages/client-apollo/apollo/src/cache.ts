@@ -1,4 +1,4 @@
-import { ApolloCache, ApolloClient, gql } from "@apollo/client";
+import { gql } from "@apollo/client";
 import { fieldNameFromStoreName } from "@apollo/client/cache";
 import { isReference } from "@apollo/client/utilities";
 import {
@@ -6,6 +6,7 @@ import {
   QueryInvalidation,
   invalidationMatches,
 } from "@graphql-cascade/client";
+import type { AnyApolloCache, AnyApolloClient } from "./apollo-compat";
 
 // Counter for generating unique fragment names
 let fragmentCounter = 0;
@@ -29,8 +30,8 @@ export class ApolloCascadeCache implements CascadeCache {
    *   their next read
    */
   constructor(
-    private cache: ApolloCache<any>,
-    private client?: ApolloClient<any>,
+    private cache: AnyApolloCache,
+    private client?: AnyApolloClient,
   ) {}
 
   write(typename: string, id: string, data: any): void {
@@ -85,7 +86,10 @@ export class ApolloCascadeCache implements CascadeCache {
    * Queries reading an evicted field refetch on their next read.
    */
   invalidateType(typename: string): void {
-    const store: Record<string, Record<string, unknown>> = this.cache.extract();
+    const store = this.cache.extract() as Record<
+      string,
+      Record<string, unknown>
+    >;
 
     const mayContainType = (value: unknown): boolean => {
       if (Array.isArray(value)) {
@@ -152,7 +156,7 @@ export class ApolloCascadeCache implements CascadeCache {
  * reading an evicted field refetch on their next read.
  */
 function evictQueries(
-  cache: ApolloCache<any>,
+  cache: AnyApolloCache,
   invalidation: QueryInvalidation,
 ): void {
   cache.modify({

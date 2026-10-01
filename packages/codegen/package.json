@@ -39,7 +39,7 @@
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "graphql": "^15.0.0 || ^16.0.0"
+    "graphql": "^16.0.0 || ^17.0.0"
   },
   "keywords": [
     "graphql",

@@ -1,10 +1,5 @@
-import {
-  ApolloLink,
-  Observable,
-  Operation,
-  NextLink,
-  FetchResult,
-} from "@apollo/client";
+import { ApolloLink, Observable, Operation, FetchResult } from "@apollo/client";
+import type { ForwardFunction } from "./apollo-compat";
 import {
   shouldRetry,
   calculateRetryDelay,
@@ -78,7 +73,10 @@ export class CascadeErrorLink extends ApolloLink {
   /**
    * Execute the link with retry logic.
    */
-  request(operation: Operation, forward: NextLink): Observable<FetchResult> {
+  request(
+    operation: Operation,
+    forward: ForwardFunction,
+  ): Observable<FetchResult> {
     return new Observable<FetchResult>((observer) => {
       let attempt = 0;
       let subscription: { unsubscribe: () => void } | null = null;
@@ -89,7 +87,7 @@ export class CascadeErrorLink extends ApolloLink {
         retryPending = false;
 
         subscription = forward(operation).subscribe({
-          next: (result) => {
+          next: (result: FetchResult) => {
             // Extract cascade errors from the response
             if (this.options.extractCascadeErrors) {
               const cascadeError = extractCascadeError(result);
@@ -137,11 +135,19 @@ export class CascadeErrorLink extends ApolloLink {
             observer.next(result);
           },
 
-          error: (error) => {
+          error: (error: unknown) => {
             // Convert Apollo error to CascadeError
-            const cascadeError = CascadeError.fromApolloError(error, {
-              operation: operation.operationName,
-              query: operation.query?.loc?.source.body,
+            // GraphQL errors arrive as results; an error from the rest of
+            // the chain is a transport failure.
+            const cascadeError = new CascadeError({
+              message: error instanceof Error ? error.message : String(error),
+              code: CascadeErrorCode.NETWORK_ERROR,
+              recoverable: true,
+              context: {
+                operation: operation.operationName,
+                query: operation.query?.loc?.source.body,
+              },
+              originalError: error instanceof Error ? error : undefined,
             });
 
             // Convert to core error for retry logic

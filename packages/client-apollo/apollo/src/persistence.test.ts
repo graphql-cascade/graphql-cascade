@@ -1,8 +1,5 @@
-import {
-  ApolloClient,
-  InMemoryCache,
-  NormalizedCacheObject,
-} from "@apollo/client";
+import { ApolloClient, InMemoryCache, ApolloLink } from "@apollo/client";
+import type { AnyApolloClient } from "./apollo-compat";
 import { CascadeOperation } from "@graphql-cascade/client";
 import {
   CascadeCachePersistence,
@@ -29,14 +26,14 @@ const _mockLocalStorage = () => {
 };
 
 describe("CascadeCachePersistence", () => {
-  let apolloClient: ApolloClient<NormalizedCacheObject>;
+  let apolloClient: AnyApolloClient;
   let persistence: CascadeCachePersistence;
   let storage: ReturnType<typeof createInMemoryPersistence>;
 
   beforeEach(() => {
     apolloClient = new ApolloClient({
       cache: new InMemoryCache(),
-      connectToDevTools: false,
+      link: ApolloLink.empty(),
     });
 
     storage = createInMemoryPersistence();
@@ -501,7 +498,7 @@ describe("onCascadeApplied", () => {
   it("should record cascade to persistence", () => {
     const apolloClient = new ApolloClient({
       cache: new InMemoryCache(),
-      connectToDevTools: false,
+      link: ApolloLink.empty(),
     });
 
     const storage = createInMemoryPersistence();

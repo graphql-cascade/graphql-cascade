@@ -5,14 +5,22 @@ import {
   Observable,
   gql,
 } from "@apollo/client";
+import type { AnyApolloClient } from "./apollo-compat";
 import { ApolloCascadeClient } from "./client";
 import {
   InvalidationStrategy,
   InvalidationScope,
 } from "@graphql-cascade/client";
 
+/** An Observable emitting `value`, then completing */
+const observableOf = <T>(value: T) =>
+  new Observable<T>((observer) => {
+    observer.next(value);
+    observer.complete();
+  });
+
 describe("ApolloCascadeClient", () => {
-  let apolloClient: ApolloClient<any>;
+  let apolloClient: AnyApolloClient;
   let client: ApolloCascadeClient;
 
   beforeEach(() => {
@@ -140,7 +148,7 @@ describe("ApolloCascadeClient.mutate with result unions", () => {
     });
     const apollo = new ApolloClient({
       cache,
-      link: new ApolloLink(() => Observable.of({ data: { renameUser } })),
+      link: new ApolloLink(() => observableOf({ data: { renameUser } })),
     });
     return { cache, client: new ApolloCascadeClient(apollo) };
   }
@@ -214,6 +222,11 @@ describe("ApolloCascadeClient REFETCH hints", () => {
             typename
             id
           }
+          invalidations {
+            queryName
+            strategy
+            scope
+          }
         }
       }
     }
@@ -226,11 +239,11 @@ describe("ApolloCascadeClient REFETCH hints", () => {
       link: new ApolloLink((operation) => {
         if (operation.operationName === "Todos") {
           todosFetches++;
-          return Observable.of({
+          return observableOf({
             data: { todos: [{ __typename: "Todo", id: "1", title: "A" }] },
           });
         }
-        return Observable.of({
+        return observableOf({
           data: {
             addTodo: {
               success: true,

@@ -1,12 +1,7 @@
 import React from "react";
-import {
-  ApolloError,
-  useMutation,
-  useApolloClient,
-  MutationHookOptions,
-  OperationVariables,
-} from "@apollo/client";
-import { DocumentNode } from "graphql";
+import { OperationVariables } from "@apollo/client";
+import { useApolloClient, useMutation } from "@apollo/client/react";
+import type { DocumentNode, GraphQLFormattedError } from "graphql";
 import {
   CascadeClient,
   CascadeResponse,
@@ -15,8 +10,15 @@ import {
   cascadeEntryTypename,
   toCascadeResponse,
 } from "@graphql-cascade/client";
+import { graphQLResultError } from "./apollo-compat";
 import { ApolloCascadeCache } from "./cache";
 import { ApolloCascadeClient } from "./client";
+
+/** useMutation's options, in Apollo Client 3 and 4 */
+type MutationHookOptions<
+  TData,
+  TVariables extends OperationVariables,
+> = NonNullable<Parameters<typeof useMutation<TData, TVariables>>[1]>;
 
 let optimisticLayerCount = 0;
 
@@ -26,7 +28,10 @@ const noQueries = () =>
 /**
  * Options for useCascadeMutation hook
  */
-export interface UseCascadeMutationOptions<TData, TVariables> extends Omit<
+export interface UseCascadeMutationOptions<
+  TData,
+  TVariables extends OperationVariables = OperationVariables,
+> extends Omit<
   MutationHookOptions<TData, TVariables>,
   "onCompleted" | "onError" | "update"
 > {
@@ -75,7 +80,10 @@ export type OptimisticResponseGenerator<TData, TVariables> = (
 /**
  * Return type for useCascadeMutation hook
  */
-export type UseCascadeMutationResult<TData, TVariables> = [
+export type UseCascadeMutationResult<
+  TData,
+  TVariables extends OperationVariables = OperationVariables,
+> = [
   (
     options?: MutationHookOptions<TData, TVariables>,
   ) => Promise<CascadeMutationResult<TData>>,
@@ -133,9 +141,14 @@ export function useCascadeMutation<
   >();
 
   // Apollo mutation hook
+  // Apollo's option and result types differ between Apollo Client 3 and 4;
+  // this call only relies on what both share.
   const [mutate, { data, loading, error, called }] = useMutation(mutation, {
     ...apolloOptions,
-    onCompleted: (apolloData, clientOptions) => {
+    onCompleted: (
+      apolloData: Record<string, unknown>,
+      clientOptions?: { variables?: unknown },
+    ) => {
       try {
         // Extract cascade response from mutation result
         const mutationName = Object.keys(apolloData)[0];
@@ -164,14 +177,13 @@ export function useCascadeMutation<
         }
       }
     },
-    onError: (apolloError, clientOptions) => {
+    onError: (apolloError: Error, clientOptions?: { variables?: unknown }) => {
       // Note: Optimistic update rollback is handled in the mutate function
       if (onError) {
         onError(apolloError, clientOptions?.variables as TVariables);
       }
     },
-    update: optimistic ? undefined : undefined, // We handle optimistic updates manually
-  });
+  } as never);
 
   // Enhanced mutate function with cascade support
   const cascadeMutate = React.useCallback(
@@ -188,7 +200,7 @@ export function useCascadeMutation<
       // Apply optimistic update if enabled
       let rollbackFn: RollbackFunction | undefined;
       if (optimistic && optimisticCascadeResponse && variables) {
-        rollbackFn = applyOptimisticUpdate(variables);
+        rollbackFn = applyOptimisticUpdate(variables as TVariables);
       }
 
       try {
@@ -196,19 +208,31 @@ export function useCascadeMutation<
         const result = await mutate(mutateOptions as any);
         // With onError set, Apollo resolves failed mutations instead of
         // rejecting them; surface the error to the caller.
-        if (!result.data) {
-          throw result.errors instanceof Error
-            ? result.errors
-            : new ApolloError({ graphQLErrors: result.errors ?? [] });
+        // Apollo Client 4 reports an `error`; 3 reports `errors`, which with
+        // onError set is the error itself.
+        const failed = result as {
+          data?: unknown;
+          error?: unknown;
+          errors?: readonly GraphQLFormattedError[] | Error;
+        };
+        if (!failed.data) {
+          const reported = failed.error ?? failed.errors;
+          throw reported instanceof Error
+            ? reported
+            : graphQLResultError(
+                (reported as readonly GraphQLFormattedError[] | undefined) ??
+                  [],
+              );
         }
 
         // Extract cascade data
-        const mutationName = Object.keys(result.data!)[0];
+        const resultData = failed.data as Record<string, unknown>;
+        const mutationName = Object.keys(resultData)[0];
         if (mutationName === undefined) {
           throw new Error("Mutation response contains no mutation field");
         }
         const cascadeResponse = toCascadeResponse<TData>(
-          result.data![mutationName],
+          resultData[mutationName],
         ) as CascadeResponse<TData> | undefined;
 
         // Compare the optimistic view with the server's, while it is visible
@@ -316,7 +340,7 @@ export function useCascadeMutation<
   return [
     cascadeMutate,
     {
-      data,
+      data: data as TData | undefined,
       loading,
       error,
       called,

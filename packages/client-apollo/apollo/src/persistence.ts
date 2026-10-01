@@ -1,9 +1,6 @@
-import {
-  ApolloClient,
-  InMemoryCache,
-  NormalizedCacheObject,
-} from "@apollo/client";
+import { InMemoryCache, NormalizedCacheObject } from "@apollo/client";
 import { CascadeUpdates, CascadeResponse } from "@graphql-cascade/client";
+import type { AnyApolloClient } from "./apollo-compat";
 
 /**
  * Storage interface for cache persistence
@@ -136,7 +133,7 @@ export class CascadeCachePersistence {
   private isRestoring = false;
 
   constructor(
-    private apolloClient: ApolloClient<NormalizedCacheObject>,
+    private apolloClient: AnyApolloClient,
     options: CachePersistenceOptions,
   ) {
     this.options = {
