@@ -38,7 +38,16 @@ The repository's checks keep the two in step: every case follows [`test-case-sch
 
 ## Checking an Implementation
 
-No tool yet runs these cases against an implementation; the runner in `@graphql-cascade/conformance` does not test the implementation it is given ([#65](https://github.com/graphql-cascade/graphql-cascade/issues/65)). Until it does, check an implementation against the cases in your own test suite: set up each case's `input`, run it, and compare the result with `expected`.
+[`@graphql-cascade/conformance`](https://github.com/graphql-cascade/graphql-cascade/tree/main/packages/conformance) runs the cases against an implementation and reports the level it achieves:
+
+- **Servers** implement the conformance domain once, then give the runner a target: `setup(state, limits)` loads a case's data, and `execute(operation, variables)` runs its operation.
+- **Clients** provide a small harness around their cache: seed it, apply a mutation result, read an entity, read a query.
+
+```bash
+npx cascade-conformance --config conformance.config.mjs --level standard
+```
+
+Every package in this repository runs the cases in CI: `@graphql-cascade/server`, with payload cascades and with the Apollo Server plugin's extensions cascade, and the Apollo, Relay, TanStack Query and urql clients, each through a `conformance.test.ts` that doubles as an example.
 
 ## Next Steps
 

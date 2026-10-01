@@ -54,4 +54,4 @@ Each case has the level of its requirement in the [Conformance](../specification
 
 ## Running the Cases
 
-The cases are not yet executed by a runner: `@graphql-cascade/conformance` is being rebuilt to run them against a server endpoint or a client cache ([#65](https://github.com/graphql-cascade/graphql-cascade/issues/65)). Until then, run them in your implementation's own test suite.
+[`@graphql-cascade/conformance`](../packages/conformance) runs the cases against a server or a client: `runServerCases(target)`, `runClientCases(createHarness)`, or the `cascade-conformance` CLI.

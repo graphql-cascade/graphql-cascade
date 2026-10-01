@@ -359,16 +359,6 @@ importers:
         version: 5.9.3
 
   packages/conformance:
-    dependencies:
-      chalk:
-        specifier: ^4.1.2
-        version: 4.1.2
-      commander:
-        specifier: ^11.0.0
-        version: 11.1.0
-      graphql:
-        specifier: ^16.0.0
-        version: 16.12.0
     devDependencies:
       '@graphql-cascade/client':
         specifier: workspace:*

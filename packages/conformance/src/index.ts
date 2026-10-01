@@ -1,62 +1,29 @@
 /**
- * GraphQL Cascade Conformance Test Suite
- *
- * Validates implementations against the GraphQL Cascade specification.
+ * GraphQL Cascade conformance: runs the specification's conformance cases
+ * against a server or a client.
  */
 
-// Export all types
-export { runClientCases, type ClientHarness } from "./client-runner";
-export { httpTarget, runServerCases, type ServerTarget } from "./server-runner";
+export { runServerCases, httpTarget } from "./server-runner";
+export type { ServerTarget, GraphQLResponse } from "./server-runner";
+export { runClientCases } from "./client-runner";
+export type { ClientHarness } from "./client-runner";
+export { summarize, formatReport, getExitCode } from "./report";
+export type { Summary, ReportOptions } from "./report";
+export { runCli, parseArgs } from "./cli";
+export type { ConformanceConfig, CliOptions } from "./cli";
 export type {
   CaseResult,
   ConformanceCase,
-  ClientCase,
+  ConformanceLevel,
   ServerCase,
+  ClientCase,
+  ServerState,
+  CascadeLimits,
   ClientState,
   CachedQuery,
   QueryState,
-  ServerState,
-  CascadeLimits,
+  EntryPattern,
+  CascadeExpectation,
+  FieldExpectation,
 } from "./cases";
 export { CASES, DOMAIN_SCHEMA, REFERENCE_SCHEMA } from "./generated/cases";
-
-export type {
-  ConformanceLevel,
-  TestResult,
-  TestCategory,
-  LevelResults,
-  ConformanceReport,
-  ValidationError,
-  SchemaValidationResult,
-  ResponseValidationResult,
-  ServerConformanceOptions,
-  ClientConformanceOptions,
-} from "./types";
-
-// Export validators
-export { validateSchema } from "./validators/schema";
-export { validateResponse } from "./validators/response";
-
-// Export server test runners
-export { runBasicTests, runStandardTests, runCompleteTests } from "./server";
-
-// Export client test runners
-export {
-  runClientBasicTests,
-  runClientStandardTests,
-  runClientCompleteTests,
-} from "./client";
-
-// Export main conformance runners
-export { runServerConformance, runClientConformance } from "./runner";
-
-// Export reporter utilities
-export {
-  formatReport,
-  printReport,
-  getExitCode,
-  type ReporterOptions,
-} from "./reporter";
-
-// Export CLI utilities
-export { parseArgs, main as runCli } from "./cli";

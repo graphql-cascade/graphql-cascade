@@ -1,211 +1,170 @@
 #!/usr/bin/env node
 /**
- * GraphQL Cascade Conformance CLI
- *
- * Command-line interface for running conformance tests.
+ * cascade-conformance: run the specification's conformance cases against
+ * the server and client a configuration file exports.
  */
+import { resolve } from "path";
+import { pathToFileURL } from "url";
+import type { CaseResult, ConformanceLevel } from "./cases";
+import { runClientCases, type ClientHarness } from "./client-runner";
+import { formatReport, getExitCode, type ReportOptions } from "./report";
+import { runServerCases, type ServerTarget } from "./server-runner";
 
-import { runServerConformance, runClientConformance } from "./runner";
-import { formatReport, getExitCode, type ReporterOptions } from "./reporter";
-import type {
-  ConformanceLevel,
-  ServerConformanceOptions,
-  ClientConformanceOptions,
-} from "./types";
+type MaybePromise<T> = T | Promise<T>;
 
-interface CLIOptions {
-  target: "server" | "client";
-  level: ConformanceLevel;
-  format: ReporterOptions["format"];
+/** What a configuration file exports, as its default export */
+export interface ConformanceConfig {
+  /** The server under test, or a function returning it */
+  server?: ServerTarget | (() => MaybePromise<ServerTarget>);
+  /** Creates a fresh harness around the client under test */
+  client?: () => MaybePromise<ClientHarness>;
+}
+
+export interface CliOptions {
+  config: string;
+  target?: "server" | "client";
+  level?: ConformanceLevel;
+  format: ReportOptions["format"];
   verbose: boolean;
   colors: boolean;
-  config?: string;
 }
 
-function printUsage(): void {
-  console.log(`
-GraphQL Cascade Conformance Test Suite
+const USAGE = `Usage: cascade-conformance --config <file> [options]
 
-Usage:
-  cascade-conformance [options]
+Runs the GraphQL Cascade conformance cases against the server and client
+that <file> exports: { server?: ServerTarget, client?: () => ClientHarness }.
 
 Options:
-  --target <server|client>   Target to test (required)
-  --level <level>            Conformance level: basic, standard, complete (default: complete)
-  --format <format>          Output format: console, json, markdown (default: console)
-  --verbose                  Show detailed failure information
-  --no-colors                Disable colored output
-  --config <path>            Path to configuration file
-  --help                     Show this help message
+  --target <server|client>                Run one side only
+  --level <basic|standard|complete>       Fail only for cases up to this level
+  --format <console|json|markdown>        Output format (default: console)
+  --verbose                               List passed and skipped cases too
+  --no-colors                             Plain console output`;
 
-Examples:
-  cascade-conformance --target server --level basic
-  cascade-conformance --target client --level complete --format json
-  cascade-conformance --target server --verbose --format markdown
-`);
+function oneOf<T extends string>(
+  flag: string,
+  value: string | undefined,
+  values: readonly T[],
+): T {
+  if (!values.includes(value as T)) {
+    throw new Error(
+      `${flag} must be one of ${values.join(", ")}; got "${value}"`,
+    );
+  }
+  return value as T;
 }
 
-function parseArgs(args: string[]): CLIOptions {
-  const options: CLIOptions = {
-    target: "server",
-    level: "complete",
+export function parseArgs(argv: string[]): CliOptions {
+  const options: Partial<CliOptions> = {
     format: "console",
     verbose: false,
     colors: true,
   };
-
-  let hasTarget = false;
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-
-    switch (arg) {
+  for (let i = 0; i < argv.length; i++) {
+    const flag = argv[i];
+    switch (flag) {
+      case "--config":
+        options.config = argv[++i];
+        break;
       case "--target":
-        const target = args[++i];
-        if (target !== "server" && target !== "client") {
-          console.error(
-            `Invalid target: ${target}. Must be 'server' or 'client'.`,
-          );
-          process.exit(1);
-        }
-        options.target = target;
-        hasTarget = true;
+        options.target = oneOf(flag, argv[++i], ["server", "client"] as const);
         break;
-
       case "--level":
-        const level = args[++i] as ConformanceLevel;
-        if (!["basic", "standard", "complete"].includes(level)) {
-          console.error(
-            `Invalid level: ${level}. Must be 'basic', 'standard', or 'complete'.`,
-          );
-          process.exit(1);
-        }
-        options.level = level;
+        options.level = oneOf(flag, argv[++i], [
+          "basic",
+          "standard",
+          "complete",
+        ] as const);
         break;
-
       case "--format":
-        const format = args[++i] as ReporterOptions["format"];
-        if (!["console", "json", "markdown"].includes(format)) {
-          console.error(
-            `Invalid format: ${format}. Must be 'console', 'json', or 'markdown'.`,
-          );
-          process.exit(1);
-        }
-        options.format = format;
+        options.format = oneOf(flag, argv[++i], [
+          "console",
+          "json",
+          "markdown",
+        ] as const);
         break;
-
       case "--verbose":
         options.verbose = true;
         break;
-
       case "--no-colors":
         options.colors = false;
         break;
-
-      case "--config":
-        options.config = args[++i];
-        break;
-
-      case "--help":
-      case "-h":
-        printUsage();
-        process.exit(0);
-        break;
-
       default:
-        if (arg.startsWith("-")) {
-          console.error(`Unknown option: ${arg}`);
-          printUsage();
-          process.exit(1);
-        }
+        throw new Error(`Unknown option ${flag}\n\n${USAGE}`);
     }
   }
-
-  if (!hasTarget) {
-    console.error("Error: --target is required");
-    printUsage();
-    process.exit(1);
-  }
-
-  return options;
+  if (!options.config)
+    throw new Error(`--config <file> is required\n\n${USAGE}`);
+  return options as CliOptions;
 }
 
-async function loadConfig(
-  configPath: string,
-): Promise<Record<string, unknown>> {
-  try {
-    // Dynamic import for ESM compatibility
-    const config = await import(configPath);
-    return config.default || config;
-  } catch {
-    console.error(`Failed to load config from: ${configPath}`);
-    process.exit(1);
-  }
+/** Native import, which TypeScript's CommonJS output would turn into require. */
+const importModule = new Function("specifier", "return import(specifier)") as (
+  specifier: string,
+) => Promise<{ default?: unknown }>;
+
+async function loadConfig(path: string): Promise<unknown> {
+  const module = await importModule(pathToFileURL(resolve(path)).href);
+  return module.default ?? module;
 }
 
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-
-  if (args.length === 0) {
-    printUsage();
-    process.exit(1);
-  }
-
-  const options = parseArgs(args);
-
-  // Load configuration if specified
-  let serverFactory: (() => unknown) | undefined;
-  let clientFactory: (() => unknown) | undefined;
-
-  if (options.config) {
-    const config = await loadConfig(options.config);
-    serverFactory = config.createServer as (() => unknown) | undefined;
-    clientFactory = config.createClient as (() => unknown) | undefined;
-  }
-
-  const reporterOptions: ReporterOptions = {
-    format: options.format,
-    verbose: options.verbose,
-    colors: options.colors,
-  };
-
+/**
+ * Run the CLI; returns the exit code.
+ */
+export async function runCli(
+  argv: string[],
+  {
+    load = loadConfig,
+    write = (text: string) => console.log(text),
+  }: {
+    load?: (path: string) => Promise<unknown>;
+    write?: (text: string) => void;
+  } = {},
+): Promise<number> {
+  let options: CliOptions;
   try {
-    if (options.target === "server") {
-      const serverOptions: ServerConformanceOptions = {
-        level: options.level,
-        createServer: serverFactory,
-      };
-
-      const report = await runServerConformance(serverOptions);
-      console.log(formatReport(report, reporterOptions));
-      process.exit(getExitCode(report));
-    } else {
-      if (!clientFactory) {
-        console.error(
-          "Error: Client conformance requires a createClient factory in config",
-        );
-        process.exit(1);
-      }
-
-      const clientOptions: ClientConformanceOptions = {
-        level: options.level,
-        createClient: clientFactory,
-      };
-
-      const report = await runClientConformance(clientOptions);
-      console.log(formatReport(report, reporterOptions));
-      process.exit(getExitCode(report));
-    }
+    options = parseArgs(argv);
   } catch (error) {
-    console.error("Error running conformance tests:", error);
-    process.exit(1);
+    write((error as Error).message);
+    return 1;
   }
+
+  const config = (await load(options.config)) as ConformanceConfig;
+  const targets = options.target
+    ? [options.target]
+    : (["server", "client"] as const);
+  const missing = targets.filter((target) => !config[target]);
+  if (options.target && missing.length > 0) {
+    write(`${options.config} exports no ${options.target}`);
+    return 1;
+  }
+
+  const results: CaseResult[] = [];
+  if (targets.includes("server") && config.server) {
+    const server =
+      typeof config.server === "function"
+        ? await config.server()
+        : config.server;
+    results.push(...(await runServerCases(server)));
+  }
+  if (targets.includes("client") && config.client) {
+    results.push(...(await runClientCases(config.client)));
+  }
+  if (results.length === 0) {
+    write(`${options.config} exports neither a server nor a client`);
+    return 1;
+  }
+
+  write(formatReport(results, options));
+  return getExitCode(results, options.level);
 }
 
-// Export for programmatic use
-export { parseArgs, main };
-
-// Run CLI when executed directly
 if (require.main === module) {
-  main();
+  runCli(process.argv.slice(2)).then(
+    (code) => process.exit(code),
+    (error) => {
+      console.error(error);
+      process.exit(1);
+    },
+  );
 }
