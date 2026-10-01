@@ -386,6 +386,8 @@ const transaction = trackCascade(config?: CascadeTrackerConfig): CascadeTransact
 
 ## Integrations
 
+Each integration is imported from its own entry: `@graphql-cascade/server/apollo`, `/express` and `/nestjs`.
+
 ### AsyncEntityFilterError
 
 Thrown by `buildResponse` and `endTransaction` when `entityFilter` returns a promise. Build with `buildResponseAsync` instead.

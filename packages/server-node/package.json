@@ -4,6 +4,38 @@
   "description": "GraphQL Cascade server implementation for Node.js/TypeScript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./nestjs": {
+      "types": "./dist/integrations/nestjs.d.ts",
+      "default": "./dist/integrations/nestjs.js"
+    },
+    "./express": {
+      "types": "./dist/integrations/express.d.ts",
+      "default": "./dist/integrations/express.js"
+    },
+    "./apollo": {
+      "types": "./dist/integrations/apollo.d.ts",
+      "default": "./dist/integrations/apollo.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "nestjs": [
+        "dist/integrations/nestjs.d.ts"
+      ],
+      "express": [
+        "dist/integrations/express.d.ts"
+      ],
+      "apollo": [
+        "dist/integrations/apollo.d.ts"
+      ]
+    }
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",

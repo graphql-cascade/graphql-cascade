@@ -10,7 +10,7 @@ This directory contains optional integrations for popular Node.js frameworks and
 
 ```typescript
 import { Module } from "@nestjs/common";
-import { CascadeModule } from "@graphql-cascade/server";
+import { CascadeModule } from "@graphql-cascade/server/nestjs";
 
 @Module({
   imports: [
@@ -28,7 +28,7 @@ export class AppModule {}
 
 ```typescript
 import { Resolver, Mutation, Args } from "@nestjs/graphql";
-import { CascadeService } from "@graphql-cascade/server";
+import { CascadeService } from "@graphql-cascade/server/nestjs";
 
 @Resolver()
 export class UserResolver {
@@ -55,7 +55,7 @@ export class UserResolver {
 
 ```typescript
 import { ApolloServer } from "@apollo/server";
-import { createCascadePlugin } from "@graphql-cascade/server";
+import { createCascadePlugin } from "@graphql-cascade/server/apollo";
 
 const server = new ApolloServer({
   typeDefs,
@@ -108,7 +108,7 @@ const resolvers = {
 
 ```typescript
 import express from "express";
-import { cascadeMiddleware } from "@graphql-cascade/server";
+import { cascadeMiddleware } from "@graphql-cascade/server/express";
 
 const app = express();
 
@@ -131,7 +131,10 @@ app.post("/graphql", (req, res) => {
 **Helper Functions:**
 
 ```typescript
-import { getCascadeData, buildCascadeResponse } from "@graphql-cascade/server";
+import {
+  getCascadeData,
+  buildCascadeResponse,
+} from "@graphql-cascade/server/express";
 
 app.post("/api/users", async (req, res) => {
   req.cascadeTracker.startTransaction();

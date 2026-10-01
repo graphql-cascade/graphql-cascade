@@ -163,7 +163,8 @@ The builder drops hints without a valid `strategy` and `scope` and reports them 
 ### Apollo Server Integration
 
 ```typescript
-import { createCascadePlugin, CascadeTracker } from "@graphql-cascade/server";
+import { createCascadePlugin } from "@graphql-cascade/server/apollo";
+import { CascadeTracker } from "@graphql-cascade/server";
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
 
@@ -184,7 +185,7 @@ The plugin writes one cascade for the whole operation to `extensions.cascade`. A
 ### NestJS Integration
 
 ```typescript
-import { CascadeModule } from "@graphql-cascade/server";
+import { CascadeModule } from "@graphql-cascade/server/nestjs";
 import { Module } from "@nestjs/common";
 
 @Module({
@@ -221,7 +222,10 @@ export class UserService {
 ### Express Integration
 
 ```typescript
-import { cascadeMiddleware, getCascadeData } from "@graphql-cascade/server";
+import {
+  cascadeMiddleware,
+  getCascadeData,
+} from "@graphql-cascade/server/express";
 import express from "express";
 
 const app = express();
