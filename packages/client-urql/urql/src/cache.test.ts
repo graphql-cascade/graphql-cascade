@@ -447,6 +447,72 @@ describe("InMemoryCascadeCache", () => {
     });
   });
 
+  describe("normalized query results", () => {
+    it("show entity updates in every query holding the entity", () => {
+      cache.storeQuery("users", undefined, [
+        { __typename: "User", id: "1", name: "Ada" },
+      ]);
+      cache.write("User", "1", { name: "Ada Lovelace" });
+
+      expect(cache.getQuery("users")?.data).toEqual([
+        { __typename: "User", id: "1", name: "Ada Lovelace" },
+      ]);
+    });
+
+    it("drop evicted entities from lists and read them as null elsewhere", () => {
+      cache.storeQuery("post", undefined, {
+        __typename: "Post",
+        id: "p1",
+        author: { __typename: "User", id: "1" },
+        readers: [{ __typename: "User", id: "1" }],
+      });
+      cache.evict("User", "1");
+
+      expect(cache.getQuery("post")?.data).toEqual({
+        __typename: "Post",
+        id: "p1",
+        author: null,
+        readers: [],
+      });
+    });
+
+    it("read cycles without recursing forever", () => {
+      cache.storeQuery(
+        "user",
+        { id: "1" },
+        {
+          __typename: "User",
+          id: "1",
+          manager: {
+            __typename: "User",
+            id: "2",
+            manager: { __typename: "User", id: "1" },
+          },
+        },
+      );
+
+      expect(cache.getQuery("user", { id: "1" })?.data).toEqual({
+        __typename: "User",
+        id: "1",
+        manager: {
+          __typename: "User",
+          id: "2",
+          manager: { __typename: "User", id: "1" },
+        },
+      });
+    });
+
+    it("merge written fields into the cached entity", () => {
+      cache.write("User", "1", { name: "Ada", email: "ada@example.com" });
+      cache.write("User", "1", { name: "Ada Lovelace" });
+
+      expect(cache.read("User", "1")).toMatchObject({
+        name: "Ada Lovelace",
+        email: "ada@example.com",
+      });
+    });
+  });
+
   describe("nested entity writes", () => {
     it("should write entities with nested data structures", () => {
       const nestedData = {

@@ -23,6 +23,12 @@ export type GetDataID = (
 export interface CascadeUpdaterOptions {
   /** The environment's getDataID, when it isn't Relay's default */
   getDataID?: GetDataID;
+  /**
+   * Storage keys of the root record's fields, such as `user(id:"1")`, so
+   * hints can unset the root fields of the queries they name. Without them,
+   * a hint marks every query stale. `commitCascade` reads them from the store.
+   */
+  rootFields?: readonly string[];
 }
 
 /**

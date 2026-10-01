@@ -30,6 +30,7 @@
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0"
   },
   "devDependencies": {
+    "@graphql-cascade/conformance": "workspace:*",
     "@tanstack/react-query": "^5.90.11",
     "@types/jest": "^29.0.0",
     "@types/node": "^18.0.0",

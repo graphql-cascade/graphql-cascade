@@ -1,14 +1,18 @@
 import {
   Environment,
   Network,
+  ROOT_ID,
   RecordSource,
   Store,
   type GraphQLResponse,
   type INetwork,
 } from "relay-runtime";
-import type { CascadeResponse } from "@graphql-cascade/client";
+import type { CascadeResponse, CascadeUpdates } from "@graphql-cascade/client";
 import { createCascadeUpdater } from "./updater";
-import { RelayCascadeEnvironmentConfig } from "./types";
+import type {
+  CascadeUpdaterOptions,
+  RelayCascadeEnvironmentConfig,
+} from "./types";
 
 /**
  * Create a Relay Environment configured for GraphQL Cascade integration.
@@ -60,9 +64,7 @@ function applyMutationCascades(
     const cascade = (result as Partial<CascadeResponse> | null)?.cascade;
     if (!cascade) continue;
     try {
-      environment.commitUpdate(
-        createCascadeUpdater(cascade, { getDataID: config.getDataID }),
-      );
+      commitCascade(environment, cascade, { getDataID: config.getDataID });
       if (config.debug) {
         console.log("Applied cascade updates:", cascade);
       }
@@ -70,6 +72,25 @@ function applyMutationCascades(
       console.error("Failed to apply cascade updates:", error);
     }
   }
+}
+
+/**
+ * Apply a cascade to an environment's store, as cascade environments do for
+ * every mutation response. Hints unset the root fields of the queries they
+ * name, read from the store.
+ */
+export function commitCascade(
+  environment: Environment,
+  cascade: CascadeUpdates,
+  options: Omit<CascadeUpdaterOptions, "rootFields"> = {},
+): void {
+  const root = environment.getStore().getSource().get(ROOT_ID);
+  environment.commitUpdate(
+    createCascadeUpdater(cascade, {
+      ...options,
+      rootFields: root ? Object.keys(root) : [],
+    }),
+  );
 }
 
 /**

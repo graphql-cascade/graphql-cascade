@@ -1,8 +1,10 @@
 import type { RecordProxy, RecordSourceProxy } from "relay-runtime";
 import {
   CascadeUpdates,
+  QueryInvalidation,
   UpdatedEntity,
   cascadeEntryTypename,
+  invalidationMatches,
 } from "@graphql-cascade/client";
 import type {
   CascadeStoreUpdater,
@@ -16,7 +18,9 @@ import type {
  * This function handles:
  * - Updated entities: writes new data to the store
  * - Deleted entities: removes records from the store
- * - Invalidations: marks every query stale, via the root record
+ * - Invalidations: unsets the root fields of the queries hints select, so
+ *   those queries refetch on their next read; without `rootFields`, marks
+ *   every query stale via the root record
  * - Type invalidations: marks the whole store stale via invalidateStore()
  */
 export function createCascadeUpdater(
@@ -37,10 +41,8 @@ export function createCascadeUpdater(
       );
     });
 
-    // Relay marks records stale, not queries, so a hint naming any query
-    // marks every query stale: always correct, only less precise.
     if (cascade.invalidations.length > 0) {
-      store.getRoot().invalidateRecord();
+      applyInvalidations(store, cascade.invalidations, options.rootFields);
     }
 
     // Relay cannot enumerate records by type, so a type invalidation marks
@@ -53,6 +55,71 @@ export function createCascadeUpdater(
       ).invalidateStore();
     }
   };
+}
+
+/**
+ * Unset the root fields the hints select, so the queries reading them miss
+ * and refetch on their next read. Without the root fields, no query can be
+ * singled out, so every query is marked stale: always correct, only less
+ * precise.
+ */
+function applyInvalidations(
+  store: RecordSourceProxy,
+  invalidations: QueryInvalidation[],
+  rootFields: readonly string[] | undefined,
+): void {
+  const root = store.getRoot();
+  if (rootFields === undefined) {
+    root.invalidateRecord();
+    return;
+  }
+  for (const storageKey of rootFields) {
+    const field = parseStorageKey(storageKey);
+    if (
+      field &&
+      invalidations.some((hint) =>
+        invalidationMatches(hint, field.name, field.args),
+      )
+    ) {
+      root.setValue(undefined as never, field.name, field.args);
+    }
+  }
+}
+
+/**
+ * A field's name and arguments from its Relay storage key, such as
+ * `user(id:"1")`; null for Relay's own keys.
+ */
+function parseStorageKey(
+  storageKey: string,
+): { name: string; args?: Record<string, unknown> } | null {
+  if (storageKey.startsWith("__")) return null;
+  const open = storageKey.indexOf("(");
+  if (open === -1) return { name: storageKey };
+  const args: Record<string, unknown> = {};
+  const body = storageKey.slice(open + 1, -1);
+  let depth = 0;
+  let inString = false;
+  let start = 0;
+  for (let i = 0; i <= body.length; i++) {
+    const char = body[i];
+    if (inString) {
+      if (char === "\\") i++;
+      else if (char === '"') inString = false;
+    } else if (char === '"') {
+      inString = true;
+    } else if (char === "{" || char === "[") {
+      depth++;
+    } else if (char === "}" || char === "]") {
+      depth--;
+    } else if ((char === "," && depth === 0) || i === body.length) {
+      const argument = body.slice(start, i);
+      const colon = argument.indexOf(":");
+      args[argument.slice(0, colon)] = JSON.parse(argument.slice(colon + 1));
+      start = i + 1;
+    }
+  }
+  return { name: storageKey.slice(0, open), args };
 }
 
 /**

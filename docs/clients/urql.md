@@ -45,7 +45,7 @@ It applies the cascade of every mutation field, and falls back to `extensions.ca
 
 ## InMemoryCascadeCache
 
-A `CascadeCache` holding entities by type name and `id`, and query results by name and arguments. Pass `refetchFn(queryName, args)` to act on `REFETCH` hints; without it they mark queries stale like `INVALIDATE`:
+A normalized `CascadeCache`: entities are stored once by type name and `id`, query results by name and arguments refer to them, so an entity update shows in every stored query that holds the entity. Pass `refetchFn(queryName, args)` to act on `REFETCH` hints; without it they mark queries stale like `INVALIDATE`:
 
 ```typescript
 const cache = new InMemoryCascadeCache({

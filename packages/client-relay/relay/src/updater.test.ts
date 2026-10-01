@@ -274,7 +274,7 @@ describe("createCascadeUpdater", () => {
       [InvalidationStrategy.REMOVE, InvalidationScope.PATTERN],
       [InvalidationStrategy.INVALIDATE, InvalidationScope.ALL],
     ])(
-      "marks every query stale for %s %s hints, since Relay cannot target one query",
+      "marks every query stale for %s %s hints when the root fields are unknown",
       (strategy, scope) => {
         const root = rootAfter({
           queryName: "todos",
@@ -288,6 +288,67 @@ describe("createCascadeUpdater", () => {
         expect(root).not.toHaveProperty("__refetch_todos");
       },
     );
+  });
+
+  describe("query invalidation hints with the root fields", () => {
+    const ROOT = {
+      __typename: "__Root",
+      'user(id:"1")': { __ref: "1" },
+      'user(id:"2")': { __ref: "2" },
+      users: { __refs: ["1", "2"] },
+      usersByManager: { __refs: ["2"] },
+      'search(filter:{"a":"x,y","b":1},first:2)': { __refs: ["1"] },
+    };
+    const rootAfter = (invalidation: QueryInvalidation) => {
+      const environment = environmentWith({
+        "client:root": ROOT,
+        "1": alice,
+        "2": { __typename: "User", id: "2", name: "Bob" },
+      });
+      environment.commitUpdate(
+        createCascadeUpdater(cascadeOf({ invalidations: [invalidation] }), {
+          rootFields: Object.keys(ROOT),
+        }),
+      );
+      return record(environment, "client:root") as Record<string, unknown>;
+    };
+    const missing = (root: Record<string, unknown>) =>
+      Object.keys(ROOT).filter((field) => root[field] === undefined);
+
+    it("unsets only the root field an EXACT hint names", () => {
+      const root = rootAfter({
+        queryName: "user",
+        arguments: { id: "1" },
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.EXACT,
+      });
+
+      expect(missing(root)).toEqual(['user(id:"1")']);
+      expect(root.__invalidated_at).toBeUndefined();
+    });
+
+    it("reads object arguments from storage keys", () => {
+      const root = rootAfter({
+        queryName: "search",
+        arguments: { first: 2, filter: { b: 1, a: "x,y" } },
+        strategy: InvalidationStrategy.INVALIDATE,
+        scope: InvalidationScope.EXACT,
+      });
+
+      expect(missing(root)).toEqual([
+        'search(filter:{"a":"x,y","b":1},first:2)',
+      ]);
+    });
+
+    it("unsets every root field a PREFIX hint selects", () => {
+      const root = rootAfter({
+        queryName: "users",
+        strategy: InvalidationStrategy.REFETCH,
+        scope: InvalidationScope.PREFIX,
+      });
+
+      expect(missing(root)).toEqual(["users", "usersByManager"]);
+    });
   });
 
   describe("type invalidations", () => {

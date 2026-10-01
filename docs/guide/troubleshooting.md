@@ -42,7 +42,7 @@ return new CascadeBuilder(tracker, invalidator).buildResponse(user);
 
 - **Apollo** matches `queryName` against root query field names (`todos`), not operation names (`GetTodos`).
 - **React Query** matches the first element of query keys; key queries `[queryName, variables]`.
-- **Relay** cannot target one query: any hint marks every query stale.
+- **Relay** matches hints against root fields; `@connection` fields live under handle keys and need `@appendEdge` / `@deleteEdge` or an `updater`.
 - **urql** applies hints to a `CascadeCache` you give `URQLCascadeClient` or `cascadeExchange`, not to urql's document cache.
 
 ## Some Entities Are Missing

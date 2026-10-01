@@ -16,6 +16,20 @@
           "name": "Ada",
           "email": "ada@example.com"
         }
+      ],
+      "queries": [
+        {
+          "name": "user",
+          "arguments": {
+            "id": "u1"
+          },
+          "result": {
+            "__typename": "User",
+            "id": "u1",
+            "name": "Ada",
+            "email": "ada@example.com"
+          }
+        }
       ]
     },
     "result": {
@@ -58,7 +72,19 @@
       "User:u1": {
         "name": "Ada Lovelace"
       }
-    }
+    },
+    "queries": [
+      {
+        "name": "user",
+        "arguments": {
+          "id": "u1"
+        },
+        "state": "fresh",
+        "result": {
+          "name": "Ada Lovelace"
+        }
+      }
+    ]
   },
   "tags": [
     "result-unions"

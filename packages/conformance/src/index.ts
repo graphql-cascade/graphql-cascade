@@ -5,6 +5,23 @@
  */
 
 // Export all types
+export {
+  runClientCases,
+  type ClientHarness,
+  type CaseResult,
+} from "./client-runner";
+export type {
+  ConformanceCase,
+  ClientCase,
+  ServerCase,
+  ClientState,
+  CachedQuery,
+  QueryState,
+  ServerState,
+  CascadeLimits,
+} from "./cases";
+export { CASES, DOMAIN_SCHEMA, REFERENCE_SCHEMA } from "./generated/cases";
+
 export type {
   ConformanceLevel,
   TestResult,

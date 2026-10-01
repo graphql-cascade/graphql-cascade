@@ -31,6 +31,7 @@
     "wonka": "^6.3.4"
   },
   "devDependencies": {
+    "@graphql-cascade/conformance": "workspace:*",
     "@types/jest": "^29.5.14",
     "@types/node": "^18.0.0",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
