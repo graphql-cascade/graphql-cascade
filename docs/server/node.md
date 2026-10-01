@@ -46,7 +46,7 @@ Tracking the same entity twice keeps one entry; the `updatedFields` of repeated 
 
 ### Entity Types and Data
 
-The tracker reads an entity's type from `__typename`, then `_typename`, then the class name, and its ID from `id`. Entity data is the object's own fields, minus fields starting with `_` (except `__typename`); an entity with a `toDict()` method is serialized through it. Nested entities are serialized as `{ __typename, id }` references.
+The tracker reads an entity's type from `__typename`, then `_typename`, then the class name, and its ID from `id`. Entity data is the object's own fields, minus fields starting with `_` (except `__typename`); an entity with a `toDict()` method is serialized through it. Nested entities, any object with a type name and an `id`, plain objects included, are serialized as `{ __typename, id }` references; they get entries of their own. An entity that cannot be serialized is never dropped: its type goes into `typeInvalidations`, and `onSerializationError` is called.
 
 ## Relationships
 

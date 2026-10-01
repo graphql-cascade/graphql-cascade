@@ -333,6 +333,7 @@ exports[`Cascade Response Snapshots Streaming Response should match streaming re
       {
         "__typename": "User",
         "entity": {
+          "__typename": "User",
           "id": "1",
           "name": "User 1",
         },
@@ -343,6 +344,7 @@ exports[`Cascade Response Snapshots Streaming Response should match streaming re
       {
         "__typename": "Post",
         "entity": {
+          "__typename": "Post",
           "id": "101",
           "title": "Post 1",
         },

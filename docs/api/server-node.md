@@ -29,7 +29,7 @@ const tracker = new CascadeTracker(config?: CascadeTrackerConfig);
 | `enableRelationshipTracking` | `boolean` | `true` | Whether to automatically traverse and track related entities |
 | `maxEntities` | `number` | `1000` | Maximum total entities to track (prevents memory exhaustion) |
 | `maxRelatedPerEntity` | `number` | `100` | Maximum related entities to traverse per entity (breadth limit) |
-| `onSerializationError` | `(entity: unknown, error: Error) => void` | `undefined` | Handler called when entity serialization fails |
+| `onSerializationError` | `(entity: unknown, error: Error) => void` | `undefined` | Called when an entity cannot be serialized; its type is covered by a type invalidation |
 | `fieldFilter` | `(typename, fieldName, value) => boolean` | `undefined` | Leave fields out of entity data |
 | `entityFilter` | `(entity, context) => boolean \| Promise<boolean>` | `undefined` | Leave out entities the viewer may not see; when async, build with `buildResponseAsync` |
 | `validateEntity` | `(entity) => void` | `undefined` | Throw to reject an entity before tracking |

@@ -5,7 +5,7 @@ import {
   buildErrorResponse,
   buildStreamingSuccessResponse,
 } from "./builder";
-import { CascadeTracker } from "./tracker";
+import { AsyncEntityFilterError, CascadeTracker } from "./tracker";
 import {
   CascadeErrorInfo,
   InvalidationScope,
@@ -380,6 +380,44 @@ describe("CascadeBuilder", () => {
       expect(response.cascade.updated).toHaveLength(2);
       expect(response.cascade.metadata.streaming).toBe(true);
       expect(response.cascade.metadata.affectedCount).toBe(2);
+    });
+
+    it("applies the tracker's filters and keeps __typename", () => {
+      const filtered = new CascadeTracker({
+        entityFilter: (entity) => entity.id !== "hidden",
+        fieldFilter: (_typename, field) => field !== "secret",
+      });
+      filtered.startTransaction();
+      filtered.trackUpdate({
+        __typename: "User",
+        id: "shown",
+        secret: "s",
+        name: "A",
+      });
+      filtered.trackUpdate({ __typename: "User", id: "hidden", name: "B" });
+
+      const response = new StreamingCascadeBuilder(
+        filtered,
+      ).buildStreamingResponse();
+
+      expect(response.cascade.updated).toEqual([
+        expect.objectContaining({
+          id: "shown",
+          entity: { __typename: "User", id: "shown", name: "A" },
+        }),
+      ]);
+    });
+
+    it("refuses async entity filters", () => {
+      const asyncFiltered = new CascadeTracker({
+        entityFilter: async () => true,
+      });
+      asyncFiltered.startTransaction();
+      asyncFiltered.trackUpdate({ __typename: "User", id: "1" });
+
+      expect(() =>
+        new StreamingCascadeBuilder(asyncFiltered).buildStreamingResponse(),
+      ).toThrow(AsyncEntityFilterError);
     });
 
     it("should build streaming response with deleted entities", () => {

@@ -342,6 +342,73 @@ describe("CascadeTracker", () => {
     });
   });
 
+  describe("Plain-object entities", () => {
+    const user = (id: string, extra: Record<string, unknown> = {}) => ({
+      __typename: "User",
+      id,
+      name: `User ${id}`,
+      ...extra,
+    });
+
+    it("follows related entities that are plain objects", () => {
+      tracker.startTransaction();
+      tracker.trackUpdate({
+        __typename: "Post",
+        id: "p1",
+        title: "Notes",
+        author: user("u1"),
+      });
+
+      const result = tracker.endTransaction();
+
+      expect(result.updated.map((u: any) => `${u.typename}:${u.id}`)).toEqual([
+        "Post:p1",
+        "User:u1",
+      ]);
+      expect(result.updated[0].entity.author).toEqual({
+        __typename: "User",
+        id: "u1",
+      });
+    });
+
+    it("serializes cyclic graphs, with each entity once", () => {
+      const ada: Record<string, unknown> = user("u1");
+      const grace: Record<string, unknown> = user("u2", { manager: ada });
+      ada.manager = grace;
+      tracker.startTransaction();
+      tracker.trackUpdate(ada);
+
+      const result = tracker.endTransaction();
+
+      expect(result.updated.map((u: any) => u.id)).toEqual(["u1", "u2"]);
+      expect(result.updated[0].entity.manager).toEqual({
+        __typename: "User",
+        id: "u2",
+      });
+      expect(result.metadata.serializationErrors).toBeUndefined();
+    });
+
+    it("covers entities that cannot be serialized with a type invalidation", () => {
+      const onSerializationError = jest.fn();
+      const strict = new CascadeTracker({ onSerializationError });
+      strict.startTransaction();
+      strict.trackUpdate({
+        __typename: "Report",
+        id: "r1",
+        toDict: () => {
+          throw new Error("unreadable");
+        },
+      });
+
+      const result = strict.endTransaction();
+
+      expect(result.updated).toEqual([]);
+      expect(result.overflow).toEqual({ Report: 1 });
+      expect(result.metadata.truncated).toBe(true);
+      expect(onSerializationError).toHaveBeenCalled();
+    });
+  });
+
   describe("Configuration Options", () => {
     it("should respect excludeTypes configuration", () => {
       const configuredTracker = new CascadeTracker({
