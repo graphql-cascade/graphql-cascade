@@ -1,5 +1,9 @@
-import { ApolloError } from "@apollo/client";
 import { CascadeUpdates } from "@graphql-cascade/client";
+import {
+  graphQLErrorsOf,
+  isApolloError,
+  isNetworkError,
+} from "./apollo-compat";
 
 /**
  * Cascade error codes - aligned with core v1.1 error codes
@@ -112,27 +116,27 @@ export class CascadeError extends Error {
    * Create a CascadeError from an Apollo error
    */
   static fromApolloError(
-    error: ApolloError,
+    error: unknown,
     context?: Partial<CascadeErrorContext>,
   ): CascadeError {
-    const code = error.networkError
+    const code = isNetworkError(error)
       ? CascadeErrorCode.NETWORK_ERROR
       : CascadeErrorCode.UNKNOWN_ERROR;
 
     return new CascadeError({
-      message: error.message,
+      message: error instanceof Error ? error.message : String(error),
       code,
       severity: CascadeErrorSeverity.ERROR,
       recoverable: true,
       context: {
         ...context,
-        graphQLErrors: error.graphQLErrors?.map((e) => ({
+        graphQLErrors: graphQLErrorsOf(error).map((e) => ({
           message: e.message,
           path: e.path,
           extensions: e.extensions,
         })),
       },
-      originalError: error,
+      originalError: error instanceof Error ? error : undefined,
     });
   }
 
@@ -147,7 +151,7 @@ export class CascadeError extends Error {
       return error;
     }
 
-    if (error instanceof ApolloError) {
+    if (isApolloError(error)) {
       return CascadeError.fromApolloError(error);
     }
 

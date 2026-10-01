@@ -1,4 +1,4 @@
-import { ApolloClient, DocumentNode, FetchResult } from "@apollo/client";
+import { DocumentNode } from "@apollo/client";
 import {
   CascadeOperation,
   CascadeUpdates,
@@ -7,6 +7,7 @@ import {
   normalizeCascade,
 } from "@graphql-cascade/client";
 import { ApolloCascadeClient } from "./client";
+import type { AnyApolloClient } from "./apollo-compat";
 
 /**
  * Subscription cascade event types
@@ -103,7 +104,7 @@ export class CascadeSubscriptionManager {
 
   constructor(
     private cascadeClient: ApolloCascadeClient,
-    private apolloClient: ApolloClient<unknown>,
+    private apolloClient: AnyApolloClient,
   ) {}
 
   /**
@@ -136,11 +137,13 @@ export class CascadeSubscriptionManager {
     });
 
     const subscription$ = observable.subscribe({
-      next: (result: FetchResult<TData>) => {
+      next: (result: unknown) => {
         if (!isActive || isPaused) return;
 
         try {
-          const cascadeEvent = this.extractCascadeEvent(result);
+          const cascadeEvent = this.extractCascadeEvent(
+            result as Parameters<typeof this.extractCascadeEvent>[0],
+          );
 
           if (!cascadeEvent) return;
 
@@ -305,9 +308,10 @@ export class CascadeSubscriptionManager {
   /**
    * Extract cascade event from subscription result.
    */
-  private extractCascadeEvent<TData>(
-    result: FetchResult<TData>,
-  ): CascadeSubscriptionEvent | null {
+  private extractCascadeEvent(result: {
+    data?: Record<string, any> | null;
+    extensions?: Record<string, unknown>;
+  }): CascadeSubscriptionEvent | null {
     if (!result.data) return null;
 
     // Try to find cascade data in the result

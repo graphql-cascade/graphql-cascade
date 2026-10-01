@@ -1,10 +1,4 @@
-import {
-  ApolloLink,
-  Observable,
-  FetchResult,
-  Operation,
-  ApolloError,
-} from "@apollo/client";
+import { ApolloLink, Observable, FetchResult, Operation } from "@apollo/client";
 import { gql } from "@apollo/client/core";
 import {
   CascadeErrorLink,
@@ -26,7 +20,7 @@ function createMockOperation(operationName = "TestQuery"): Operation {
     extensions: {},
     getContext: () => ({}),
     setContext: () => ({}),
-  } as Operation;
+  } as unknown as Operation;
 }
 
 // Helper to create a mock forward link that returns specific results
@@ -37,15 +31,7 @@ function createMockForward(results: Array<FetchResult | Error>) {
       const result = results[callCount++];
 
       if (result instanceof Error) {
-        // Convert plain Error to ApolloError for proper handling
-        const apolloError =
-          result instanceof ApolloError
-            ? result
-            : new ApolloError({
-                errorMessage: result.message,
-                networkError: result,
-              });
-        setTimeout(() => observer.error(apolloError), 10);
+        setTimeout(() => observer.error(result), 10);
       } else {
         setTimeout(() => {
           observer.next(result);

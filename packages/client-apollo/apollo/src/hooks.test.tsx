@@ -1,12 +1,8 @@
 import React from "react";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import {
-  ApolloClient,
-  InMemoryCache,
-  ApolloProvider,
-  gql,
-} from "@apollo/client";
-import { MockedProvider, MockedResponse } from "@apollo/client/testing";
+import { ApolloClient, InMemoryCache, gql } from "@apollo/client";
+import { ApolloProvider } from "@apollo/client/react";
+import { MockLink, type MockedResponse } from "@apollo/client/testing";
 import {
   useCascadeMutation,
   UseCascadeMutationOptions,
@@ -38,11 +34,30 @@ const UPDATE_USER_MUTATION = gql`
 `;
 
 // Helper to wrap hook with Apollo provider
+/** A client answering operations with `mocks`, for Apollo Client 3 and 4 */
+function mockedClient(
+  mocks: MockedResponse[],
+  cache: InMemoryCache = new InMemoryCache(),
+) {
+  return new ApolloClient({ cache, link: new MockLink(mocks) });
+}
+
+function MockedProvider({
+  mocks,
+  cache,
+  children,
+}: {
+  mocks: MockedResponse[];
+  cache?: InMemoryCache;
+  children: React.ReactNode;
+}) {
+  const [client] = React.useState(() => mockedClient(mocks, cache));
+  return <ApolloProvider client={client}>{children}</ApolloProvider>;
+}
+
 function createWrapper(mocks: MockedResponse[] = []) {
   return ({ children }: { children: React.ReactNode }) => (
-    <MockedProvider mocks={mocks} addTypename={false}>
-      {children}
-    </MockedProvider>
+    <MockedProvider mocks={mocks}>{children}</MockedProvider>
   );
 }
 
