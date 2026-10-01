@@ -1,27 +1,58 @@
-import { useNuxtApp } from "#app";
-import {
-  useMutation,
-  useApolloClient,
-  useQuery,
-  useSubscription,
-} from "@vue/apollo-composable";
-import type { DocumentNode, TypedDocumentNode } from "@apollo/client";
+import { useMutation, useApolloClient, useQuery } from "@vue/apollo-composable";
 import type {
-  MutationOptions,
-  MutationResult,
+  UseMutationOptions,
   UseQueryOptions,
-  UseSubscriptionOptions,
 } from "@vue/apollo-composable";
+import type {
+  ApolloClient,
+  DocumentNode,
+  MutationOptions,
+  OperationVariables,
+  TypedDocumentNode,
+} from "@apollo/client/core";
 import {
+  ApolloCascadeCache,
+  ApolloCascadeClient,
   extractCascadeFromMutationResult,
   type UnionCascadeConfig,
+  type UnionCascadeResult,
 } from "@graphql-cascade/apollo";
-import { ref, unref, computed, watch, type Ref } from "vue";
+import type { CascadeUpdates } from "@graphql-cascade/client";
+import { ref, computed, type Ref } from "vue";
+
+/**
+ * The client type `@graphql-cascade/apollo` applies cascades with. It is
+ * typed against the Apollo Client it was installed with, which can be a
+ * later major than this package's; it only uses what both share.
+ */
+type CascadeApolloClient = ConstructorParameters<typeof ApolloCascadeClient>[0];
+
+/**
+ * Extract the cascade from a mutation result and, unless the result is an
+ * error, apply it to the client's cache.
+ */
+function applyMutationCascade<T>(
+  client: ApolloClient<unknown>,
+  data: unknown,
+  config?: UnionCascadeConfig,
+): UnionCascadeResult<T> {
+  const extracted = extractCascadeFromMutationResult<T>(data, config);
+  if (extracted.cascade && !extracted.isError) {
+    new ApolloCascadeClient(
+      client as unknown as CascadeApolloClient,
+    ).applyCascade({
+      success: true,
+      data: extracted.data,
+      cascade: extracted.cascade,
+    });
+  }
+  return extracted;
+}
 
 export interface CascadeMutationOptions<
   TResult,
-  TVariables,
-> extends MutationOptions<TResult, TVariables> {
+  TVariables extends OperationVariables,
+> extends UseMutationOptions<TResult, TVariables> {
   /**
    * Configuration for extracting cascade data from union types
    */
@@ -30,11 +61,12 @@ export interface CascadeMutationOptions<
   /**
    * Callback when cascade updates are applied
    */
-  onCascade?: (cascade: any) => void;
+  onCascade?: (cascade: CascadeUpdates) => void;
 }
 
 /**
- * Enhanced useMutation hook with automatic cascade support
+ * Enhanced useMutation hook that applies the cascade of every successful
+ * mutation to the Apollo cache
  *
  * @example
  * ```vue
@@ -60,60 +92,45 @@ export interface CascadeMutationOptions<
  * </script>
  * ```
  */
-export function useCascadeMutation<TResult = any, TVariables = any>(
+export function useCascadeMutation<
+  TResult = any,
+  TVariables extends OperationVariables = OperationVariables,
+>(
   document: DocumentNode | TypedDocumentNode<TResult, TVariables>,
-  options?: CascadeMutationOptions<TResult, TVariables>,
+  options: CascadeMutationOptions<TResult, TVariables> = {},
 ) {
-  const { cascadeConfig, onCascade, ...mutationOptions } = options || {};
-
-  // Use the standard Vue Apollo useMutation
+  const { cascadeConfig, onCascade, ...mutationOptions } = options;
   const mutation = useMutation<TResult, TVariables>(document, mutationOptions);
+  const { resolveClient } = useApolloClient();
 
-  // Create a wrapped mutate function that processes cascade data
-  const originalMutate = mutation.mutate;
-  const cascadeData = ref<any>(null);
+  const cascadeData = ref<CascadeUpdates | null>(null);
   const extractedData = ref<any>(null);
   const isError = ref(false);
   const errors = ref<any[]>([]);
 
-  const mutate = async (variables?: TVariables, overrideOptions?: any) => {
-    try {
-      const result = await originalMutate(variables, overrideOptions);
+  const mutate = async (
+    variables?: TVariables | null,
+    overrideOptions?: Parameters<typeof mutation.mutate>[1],
+  ) => {
+    const result = await mutation.mutate(variables, overrideOptions);
+    if (!result?.data) return result;
 
-      if (result?.data) {
-        // Extract cascade data from the result
-        const extracted = extractCascadeFromMutationResult(
-          result.data,
-          cascadeConfig,
-        );
+    const extracted = applyMutationCascade(
+      resolveClient(overrideOptions?.clientId ?? mutationOptions.clientId),
+      result.data,
+      cascadeConfig,
+    );
 
-        cascadeData.value = extracted.cascade;
-        extractedData.value = extracted.data;
-        isError.value = extracted.isError;
-        errors.value = extracted.errors || [];
+    cascadeData.value = extracted.cascade;
+    extractedData.value = extracted.data;
+    isError.value = extracted.isError;
+    errors.value = extracted.errors || [];
 
-        if (extracted.cascade && !extracted.isError) {
-          // Call the onCascade callback if provided
-          onCascade?.(extracted.cascade);
-
-          if (process.dev) {
-            console.log(
-              "[useCascadeMutation] Cascade updates:",
-              extracted.cascade,
-            );
-          }
-        }
-
-        return extracted;
-      }
-
-      return result;
-    } catch (error) {
-      if (process.dev) {
-        console.error("[useCascadeMutation] Mutation failed:", error);
-      }
-      throw error;
+    if (extracted.cascade && !extracted.isError) {
+      onCascade?.(extracted.cascade);
     }
+
+    return extracted;
   };
 
   return {
@@ -198,7 +215,8 @@ export function useCascadeTracker() {
 }
 
 /**
- * Enhanced query hook that automatically refetches when cascade invalidations occur
+ * useQuery for queries that cascades invalidate: when a cascade evicts the
+ * fields a query reads, the query refetches them
  *
  * @example
  * ```vue
@@ -206,35 +224,27 @@ export function useCascadeTracker() {
  * const { result, loading, error, refetch } = useCascadeQuery(
  *   GET_USERS_QUERY,
  *   { limit: 10 },
- *   {
- *     // Automatically refetch when these queries are invalidated
- *     watchInvalidations: ['getUsers', 'listUsers']
- *   }
  * )
  * </script>
  * ```
  */
-export function useCascadeQuery<TResult = any, TVariables = any>(
+export function useCascadeQuery<
+  TResult = any,
+  TVariables extends OperationVariables = OperationVariables,
+>(
   document: DocumentNode | TypedDocumentNode<TResult, TVariables>,
   variables?: TVariables | Ref<TVariables>,
-  options?: UseQueryOptions<TResult, TVariables> & {
-    watchInvalidations?: string[];
-  },
+  options?: UseQueryOptions<TResult, TVariables>,
 ) {
-  const { watchInvalidations, ...queryOptions } = options || {};
-  const query = useQuery<TResult, TVariables>(
+  return useQuery<TResult, TVariables>(
     document,
-    variables,
-    queryOptions,
+    variables as TVariables,
+    options as UseQueryOptions<TResult, TVariables>,
   );
-
-  // TODO: Implement cascade invalidation watching when cascade client is available
-  // For now, just return the standard query
-  return query;
 }
 
 /**
- * Batch multiple mutations with cascade tracking
+ * Batch multiple mutations, applying the cascade of each
  *
  * @example
  * ```vue
@@ -280,7 +290,8 @@ export function useCascadeBatch() {
             });
 
             if (result.data) {
-              const extracted = extractCascadeFromMutationResult(
+              const extracted = applyMutationCascade(
+                apollo.client,
                 result.data,
                 cascadeConfig,
               );
@@ -317,8 +328,11 @@ export function useCascadeBatch() {
   };
 }
 
+let optimisticLayerCount = 0;
+
 /**
- * Optimistic updates helper that works with cascade
+ * Optimistic updates, each in its own Apollo optimistic layer, that the
+ * mutation removes when it settles
  *
  * @example
  * ```vue
@@ -333,7 +347,7 @@ export function useCascadeBatch() {
  *     name
  *   })
  *
- *   // Execute the mutation (will be reverted if it fails)
+ *   // Execute the mutation (reverted if it fails)
  *   await mutate(UPDATE_USER_MUTATION, {
  *     variables: { id, name }
  *   })
@@ -343,47 +357,47 @@ export function useCascadeBatch() {
  */
 export function useCascadeOptimistic() {
   const apollo = useApolloClient();
-  const optimisticUpdates = ref<any[]>([]);
+  const optimisticUpdates = ref<Array<{ layerId: string; data: any }>>([]);
 
   const optimisticUpdate = (data: {
     __typename: string;
     id: string;
     [key: string]: any;
   }) => {
-    const cacheId = apollo.client.cache.identify(data);
-    if (cacheId) {
-      apollo.client.cache.writeFragment({
-        id: cacheId,
-        fragment: require("@apollo/client").gql`
-          fragment OptimisticUpdate on ${data.__typename} {
-            ${Object.keys(data)
-              .filter((k) => k !== "__typename")
-              .join("\n            ")}
-          }
-        `,
-        data,
-      });
-      optimisticUpdates.value.push({ cacheId, data });
-    }
+    const layerId = `cascade-nuxt-optimistic-${++optimisticLayerCount}`;
+    apollo.client.cache.recordOptimisticTransaction((layer) => {
+      new ApolloCascadeCache(
+        layer as unknown as ConstructorParameters<typeof ApolloCascadeCache>[0],
+      ).write(data.__typename, data.id, data);
+    }, layerId);
+    optimisticUpdates.value.push({ layerId, data });
   };
 
   const clearOptimisticUpdates = () => {
+    for (const { layerId } of optimisticUpdates.value) {
+      apollo.client.cache.removeOptimistic(layerId);
+    }
     optimisticUpdates.value = [];
   };
 
-  const mutate = async (mutation: DocumentNode, options: any) => {
-    const apollo = useApolloClient();
+  const mutate = async (
+    mutation: DocumentNode,
+    options: Omit<MutationOptions, "mutation"> & {
+      cascadeConfig?: UnionCascadeConfig;
+    } = {},
+  ) => {
+    const { cascadeConfig, ...mutationOptions } = options;
     try {
       const result = await apollo.client.mutate({
-        ...options,
+        ...mutationOptions,
         mutation,
       });
-      clearOptimisticUpdates();
+      if (result.data) {
+        applyMutationCascade(apollo.client, result.data, cascadeConfig);
+      }
       return result;
-    } catch (error) {
-      // Revert optimistic updates on error
+    } finally {
       clearOptimisticUpdates();
-      throw error;
     }
   };
 
@@ -415,7 +429,10 @@ export function useCascadeOptimistic() {
  * </script>
  * ```
  */
-export function useCascadeUnionQuery<TResult = any, TVariables = any>(
+export function useCascadeUnionQuery<
+  TResult = any,
+  TVariables extends OperationVariables = OperationVariables,
+>(
   document: DocumentNode | TypedDocumentNode<TResult, TVariables>,
   variables?: TVariables | Ref<TVariables>,
   options?: UseQueryOptions<TResult, TVariables> & {
@@ -423,10 +440,10 @@ export function useCascadeUnionQuery<TResult = any, TVariables = any>(
   },
 ) {
   const { unionConfig, ...queryOptions } = options || {};
-  const query = useQuery<TResult, TVariables>(
+  const query = useCascadeQuery<TResult, TVariables>(
     document,
     variables,
-    queryOptions,
+    queryOptions as UseQueryOptions<TResult, TVariables>,
   );
 
   const data = computed(() => {
