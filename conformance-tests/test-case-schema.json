@@ -4,45 +4,128 @@
   "title": "GraphQL Cascade Conformance Test Case",
   "description": "An executable conformance case. Server and transport cases run an operation against the conformance domain (schema.graphql); client cases apply a mutation result to a seeded cache.",
   "type": "object",
-  "required": ["id", "name", "description", "category", "requirement", "level", "input", "expected"],
+  "required": [
+    "id",
+    "name",
+    "description",
+    "category",
+    "requirement",
+    "level",
+    "input",
+    "expected"
+  ],
   "properties": {
-    "id": { "type": "string", "pattern": "^TC-[SCT]-\\d{3}$" },
-    "name": { "type": "string", "minLength": 1 },
-    "description": { "type": "string", "minLength": 10 },
-    "category": { "enum": ["server", "client", "transport"] },
-    "subcategory": { "type": "string" },
-    "requirement": { "type": "string", "pattern": "^REQ-\\d{3}$" },
+    "id": {
+      "type": "string",
+      "pattern": "^TC-[SCT]-\\d{3}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10
+    },
+    "category": {
+      "enum": [
+        "server",
+        "client",
+        "transport"
+      ]
+    },
+    "subcategory": {
+      "type": "string"
+    },
+    "requirement": {
+      "type": "string",
+      "pattern": "^REQ-\\d{3}$"
+    },
     "level": {
       "description": "Conformance level the requirement belongs to",
-      "enum": ["basic", "standard", "complete"]
+      "enum": [
+        "basic",
+        "standard",
+        "complete"
+      ]
     },
-    "priority": { "enum": ["critical", "high", "medium", "low"] },
+    "priority": {
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ]
+    },
     "requires": {
       "description": "Capabilities the implementation must declare for the case to run; cases it lacks are skipped",
       "type": "array",
-      "items": { "enum": ["extensions"] }
+      "items": {
+        "enum": [
+          "extensions"
+        ]
+      }
     },
-    "tags": { "type": "array", "items": { "type": "string" } },
-    "input": { "type": "object" },
-    "expected": { "type": "object" }
+    "cache": {
+      "description": "For client cases whose requirement holds for one kind of cache: the kind it applies to; cases for another kind are skipped",
+      "enum": [
+        "normalized",
+        "document"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "input": {
+      "type": "object"
+    },
+    "expected": {
+      "type": "object"
+    }
   },
   "additionalProperties": false,
   "allOf": [
     {
-      "if": { "properties": { "category": { "enum": ["server", "transport"] } } },
+      "if": {
+        "properties": {
+          "category": {
+            "enum": [
+              "server",
+              "transport"
+            ]
+          }
+        }
+      },
       "then": {
         "properties": {
-          "input": { "$ref": "#/definitions/ServerInput" },
-          "expected": { "$ref": "#/definitions/ServerExpected" }
+          "input": {
+            "$ref": "#/definitions/ServerInput"
+          },
+          "expected": {
+            "$ref": "#/definitions/ServerExpected"
+          }
         }
       }
     },
     {
-      "if": { "properties": { "category": { "const": "client" } } },
+      "if": {
+        "properties": {
+          "category": {
+            "const": "client"
+          }
+        }
+      },
       "then": {
         "properties": {
-          "input": { "$ref": "#/definitions/ClientInput" },
-          "expected": { "$ref": "#/definitions/ClientExpected" }
+          "input": {
+            "$ref": "#/definitions/ClientInput"
+          },
+          "expected": {
+            "$ref": "#/definitions/ClientExpected"
+          }
         }
       }
     }
@@ -50,7 +133,10 @@
   "definitions": {
     "ServerInput": {
       "type": "object",
-      "required": ["state", "operation"],
+      "required": [
+        "state",
+        "operation"
+      ],
       "properties": {
         "state": {
           "description": "The domain data the server holds before the operation",
@@ -60,12 +146,27 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["id", "name", "email"],
+                "required": [
+                  "id",
+                  "name",
+                  "email"
+                ],
                 "properties": {
-                  "id": { "type": "string" },
-                  "name": { "type": "string" },
-                  "email": { "type": "string" },
-                  "managerId": { "type": ["string", "null"] }
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "managerId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
                 },
                 "additionalProperties": false
               }
@@ -74,12 +175,25 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["id", "title", "published", "authorId"],
+                "required": [
+                  "id",
+                  "title",
+                  "published",
+                  "authorId"
+                ],
                 "properties": {
-                  "id": { "type": "string" },
-                  "title": { "type": "string" },
-                  "published": { "type": "boolean" },
-                  "authorId": { "type": "string" }
+                  "id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "published": {
+                    "type": "boolean"
+                  },
+                  "authorId": {
+                    "type": "string"
+                  }
                 },
                 "additionalProperties": false
               }
@@ -91,13 +205,24 @@
           "description": "Cascade limits the server applies for this case",
           "type": "object",
           "properties": {
-            "maxUpdatedEntities": { "type": "integer", "minimum": 0 },
-            "maxDeletedEntities": { "type": "integer", "minimum": 0 }
+            "maxUpdatedEntities": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "maxDeletedEntities": {
+              "type": "integer",
+              "minimum": 0
+            }
           },
           "additionalProperties": false
         },
-        "operation": { "type": "string", "description": "GraphQL operation against the conformance domain" },
-        "variables": { "type": "object" }
+        "operation": {
+          "type": "string",
+          "description": "GraphQL operation against the conformance domain"
+        },
+        "variables": {
+          "type": "object"
+        }
       },
       "additionalProperties": false
     },
@@ -107,12 +232,20 @@
         "fields": {
           "description": "Expectations for each mutation field, keyed by response key",
           "type": "object",
-          "additionalProperties": { "$ref": "#/definitions/FieldExpectation" }
+          "additionalProperties": {
+            "$ref": "#/definitions/FieldExpectation"
+          }
         },
         "extensions": {
           "type": "object",
-          "required": ["cascade"],
-          "properties": { "cascade": { "$ref": "#/definitions/CascadeExpectation" } },
+          "required": [
+            "cascade"
+          ],
+          "properties": {
+            "cascade": {
+              "$ref": "#/definitions/CascadeExpectation"
+            }
+          },
           "additionalProperties": false
         }
       },
@@ -121,17 +254,30 @@
     "FieldExpectation": {
       "type": "object",
       "properties": {
-        "typename": { "type": "string", "description": "The result's __typename, for result unions" },
-        "success": { "type": "boolean" },
+        "typename": {
+          "type": "string",
+          "description": "The result's __typename, for result unions"
+        },
+        "success": {
+          "type": "boolean"
+        },
         "errors": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["code"],
-            "properties": { "code": { "type": "string" } }
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              }
+            }
           }
         },
-        "cascade": { "$ref": "#/definitions/CascadeExpectation" }
+        "cascade": {
+          "$ref": "#/definitions/CascadeExpectation"
+        }
       },
       "additionalProperties": false
     },
@@ -139,77 +285,172 @@
       "description": "Lists hold entries that must be present (others may be too); noChanges requires empty updated, deleted and typeInvalidations; absent lists entities that must not appear",
       "type": "object",
       "properties": {
-        "updated": { "type": "array", "items": { "$ref": "#/definitions/EntryPattern" } },
-        "deleted": { "type": "array", "items": { "$ref": "#/definitions/EntryPattern" } },
-        "absent": { "type": "array", "items": { "$ref": "#/definitions/EntryPattern" } },
-        "invalidations": { "type": "array", "items": { "$ref": "#/definitions/InvalidationHint" } },
+        "updated": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/EntryPattern"
+          }
+        },
+        "deleted": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/EntryPattern"
+          }
+        },
+        "absent": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/EntryPattern"
+          }
+        },
+        "invalidations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InvalidationHint"
+          }
+        },
         "typeInvalidations": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["typename"],
+            "required": [
+              "typename"
+            ],
             "properties": {
-              "typename": { "type": "string" },
-              "affectedCount": { "type": "integer", "minimum": 0 }
+              "typename": {
+                "type": "string"
+              },
+              "affectedCount": {
+                "type": "integer",
+                "minimum": 0
+              }
             },
             "additionalProperties": false
           }
         },
-        "noChanges": { "const": true },
-        "metadata": { "type": "object" }
+        "noChanges": {
+          "const": true
+        },
+        "metadata": {
+          "type": "object"
+        }
       },
       "additionalProperties": false
     },
     "EntryPattern": {
       "type": "object",
-      "required": ["typename"],
+      "required": [
+        "typename"
+      ],
       "properties": {
-        "typename": { "type": "string" },
-        "id": { "type": "string" },
-        "operation": { "enum": ["CREATED", "UPDATED", "DELETED"] },
-        "entity": { "type": "object", "description": "Fields the entry's entity must have, with these values" }
+        "typename": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "operation": {
+          "enum": [
+            "CREATED",
+            "UPDATED",
+            "DELETED"
+          ]
+        },
+        "entity": {
+          "type": "object",
+          "description": "Fields the entry's entity must have, with these values"
+        }
       },
       "additionalProperties": false
     },
     "InvalidationHint": {
       "type": "object",
-      "required": ["strategy", "scope"],
+      "required": [
+        "strategy",
+        "scope"
+      ],
       "properties": {
-        "queryName": { "type": "string" },
-        "queryHash": { "type": "string" },
-        "arguments": { "type": "object" },
-        "queryPattern": { "type": "string" },
-        "strategy": { "enum": ["INVALIDATE", "REFETCH", "REMOVE"] },
-        "scope": { "enum": ["EXACT", "PREFIX", "PATTERN", "ALL"] }
+        "queryName": {
+          "type": "string"
+        },
+        "queryHash": {
+          "type": "string"
+        },
+        "arguments": {
+          "type": "object"
+        },
+        "queryPattern": {
+          "type": "string"
+        },
+        "strategy": {
+          "enum": [
+            "INVALIDATE",
+            "REFETCH",
+            "REMOVE"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "EXACT",
+            "PREFIX",
+            "PATTERN",
+            "ALL"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "Entity": {
       "type": "object",
-      "required": ["__typename", "id"],
+      "required": [
+        "__typename",
+        "id"
+      ],
       "properties": {
-        "__typename": { "type": "string" },
-        "id": { "type": "string" }
+        "__typename": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
       }
     },
     "ClientInput": {
       "type": "object",
-      "required": ["state", "result"],
+      "required": [
+        "state",
+        "result"
+      ],
       "properties": {
         "state": {
           "description": "What the client's cache holds before the mutation",
           "type": "object",
           "properties": {
-            "entities": { "type": "array", "items": { "$ref": "#/definitions/Entity" } },
+            "entities": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Entity"
+              }
+            },
             "queries": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["name", "result"],
+                "required": [
+                  "name",
+                  "result"
+                ],
                 "properties": {
-                  "name": { "type": "string", "description": "The query's root field" },
-                  "arguments": { "type": "object" },
-                  "result": { "description": "The root field's cached value; entities in it carry __typename and id" }
+                  "name": {
+                    "type": "string",
+                    "description": "The query's root field"
+                  },
+                  "arguments": {
+                    "type": "object"
+                  },
+                  "result": {
+                    "description": "The root field's cached value; entities in it carry __typename and id"
+                  }
                 },
                 "additionalProperties": false
               }
@@ -230,21 +471,38 @@
         "entities": {
           "description": "Keyed Type:id: fields the cached entity must have, or null for an entity no longer cached",
           "type": "object",
-          "additionalProperties": { "type": ["object", "null"] }
+          "additionalProperties": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
         },
         "queries": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["name", "state"],
+            "required": [
+              "name",
+              "state"
+            ],
             "properties": {
-              "name": { "type": "string" },
-              "arguments": { "type": "object" },
+              "name": {
+                "type": "string"
+              },
+              "arguments": {
+                "type": "object"
+              },
               "state": {
                 "description": "fresh: served from the cache as is; invalidated: refetched, or stale until refetched, or removed",
-                "enum": ["fresh", "invalidated"]
+                "enum": [
+                  "fresh",
+                  "invalidated"
+                ]
               },
-              "result": { "description": "For a fresh query, values its result must contain" }
+              "result": {
+                "description": "For a fresh query, values its result must contain"
+              }
             },
             "additionalProperties": false
           }
