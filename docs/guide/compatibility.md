@@ -4,7 +4,7 @@
 
 The packages are compiled to ES2020 JavaScript as CommonJS modules, with TypeScript declarations. They have no native dependencies.
 
-On Node.js, every package requires version 22 or later. CI runs every package's tests on Node.js 22, 24 and 26, on Linux, macOS and Windows.
+On Node.js, every package requires version 22 or later, and `@graphql-cascade/server` 22.12 or later. CI runs every package's tests on Node.js 22, 24 and 26, on Linux, macOS and Windows.
 
 Client packages run in any environment with ES2020 support: current browsers, React Native, and Node.js. `@graphql-cascade/nuxt` is an ES module targeting ES2022.
 

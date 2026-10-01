@@ -11,4 +11,4 @@
 "@graphql-cascade/urql": minor
 ---
 
-**Breaking:** Requires Node.js 22 or later. Every package declares `engines.node` `>=22`; CI tests Node.js 22, 24 and 26.
+**Breaking:** Requires Node.js 22 or later. Every package declares `engines.node` `>=22`, and `@graphql-cascade/server` `>=22.12`, the first Node.js 22 release that can `require` the ES modules NestJS 12 ships; CI tests Node.js 22, 24 and 26.
