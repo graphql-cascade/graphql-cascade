@@ -1,13 +1,14 @@
 {
   "name": "@graphql-cascade/conformance",
   "version": "0.3.1",
-  "description": "Conformance test suite for GraphQL Cascade specification",
+  "description": "Runs the GraphQL Cascade specification's conformance cases against servers and clients",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
     "cascade-conformance": "./dist/cli.js"
   },
   "scripts": {
+    "prebuild": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "jest --maxWorkers=50% --coverage",
@@ -22,14 +23,8 @@
   "author": "GraphQL Cascade Team",
   "license": "MIT",
   "files": [
-    "dist",
-    "fixtures"
+    "dist"
   ],
-  "dependencies": {
-    "chalk": "^4.1.2",
-    "commander": "^11.0.0",
-    "graphql": "^16.0.0"
-  },
   "devDependencies": {
     "@graphql-cascade/client": "workspace:*",
     "@types/jest": "^29.0.0",

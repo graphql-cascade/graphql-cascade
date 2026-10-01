@@ -308,13 +308,15 @@ jobs:
           name: dist
           path: packages/
 
-      - name: Run conformance tests
+      - name: Test the conformance runner
+        run: pnpm --filter @graphql-cascade/conformance test
+
+      # Each implementation runs the specification's cases in its own suite
+      - name: Run the conformance cases against every package
         run: |
-          if [ -d "packages/conformance" ]; then
-            cd packages/conformance && npm test
-          else
-            echo "Conformance package not found, skipping"
-          fi
+          for package in server-node client-apollo/apollo client-react-query/react-query client-urql/urql client-relay/relay; do
+            (cd "packages/$package" && npx jest src/conformance.test.ts --coverage=false)
+          done
 
   docs:
     name: Build Documentation

@@ -1,216 +1,112 @@
 # @graphql-cascade/conformance
 
-Conformance test suite for validating GraphQL Cascade implementations against the specification.
-
-## Installation
+Runs the GraphQL Cascade specification's conformance cases against a server or a client. Each case tests one requirement (`REQ-NNN`) and belongs to a conformance level; the report gives the level an implementation achieves.
 
 ```bash
-npm install @graphql-cascade/conformance
+npm install -D @graphql-cascade/conformance
 ```
 
-## Purpose
+The cases, their formats and the conformance domain are described in [`conformance-tests/`](https://github.com/graphql-cascade/graphql-cascade/tree/main/conformance-tests). The package ships them, with the domain and reference schemas (`CASES`, `DOMAIN_SCHEMA`, `REFERENCE_SCHEMA`).
 
-The conformance test suite ensures that your GraphQL Cascade implementation (server or client) correctly follows the specification. It validates:
+## Testing a Server
 
-- Schema structure and required types
-- Response format compliance
-- Entity tracking behavior
-- Cache invalidation patterns
-
-## Conformance Levels
-
-The test suite supports three conformance levels:
-
-| Level        | Description                                                      |
-| ------------ | ---------------------------------------------------------------- |
-| **Basic**    | Core cascade functionality - entity tracking and response format |
-| **Standard** | Basic + relationship tracking and invalidation hints             |
-| **Complete** | Standard + optimistic updates, streaming, and advanced features  |
-
-## Usage
-
-### CLI Usage
-
-```bash
-# Run conformance tests via CLI
-npx cascade-conformance --target server --level standard
-
-# Test a client implementation
-npx cascade-conformance --target client --level basic
-```
-
-### Programmatic Usage
-
-#### Server Conformance Testing
+Server cases run against a server implementing the **conformance domain**: users and posts, defined in `DOMAIN_SCHEMA`, merged with `REFERENCE_SCHEMA`, with the behavior the cases README describes. Implement it once with your server stack, then give the runner a target:
 
 ```typescript
 import {
-  runServerConformance,
-  formatReport,
-  printReport,
+  runServerCases,
+  type ServerTarget,
 } from "@graphql-cascade/conformance";
 
-const report = await runServerConformance({
-  endpoint: "http://localhost:4000/graphql",
-  level: "standard",
-});
+const target: ServerTarget = {
+  // Replace the server's data with the case's, and apply its cascade limits
+  setup: async (state, limits) => {
+    await db.reset(state.users ?? [], state.posts ?? []);
+    cascadeLimits.set(limits ?? {});
+  },
+  // Execute an operation, returning the GraphQL response
+  execute: (query, variables) => server.execute({ query, variables }),
+  // Add "extensions" if the server sends cascades in extensions.cascade
+  capabilities: [],
+};
 
-// Print formatted report
-printReport(report);
-
-// Check conformance level achieved
-console.log(`Achieved level: ${report.level.achieved}`);
+const results = await runServerCases(target);
 ```
 
-#### Client Conformance Testing
+For a server reached over HTTP, `httpTarget(endpoint, { setup, headers })` builds the target; `setup` puts the server into a case's state, for example through a test-only endpoint or the database.
+
+Besides each case's expectations, every cascade is checked for the requirements that always hold: its fields (REQ-010), entities listed once (REQ-005), no entity both updated and deleted (REQ-003), and type invalidations whenever it is truncated (REQ-050).
+
+## Testing a Client
+
+Client cases seed a cache, apply one mutation result, and inspect the cache. Give the runner a function creating a fresh harness around your client for each case:
 
 ```typescript
 import {
-  runClientConformance,
-  formatReport,
+  runClientCases,
+  type ClientHarness,
 } from "@graphql-cascade/conformance";
 
-const report = await runClientConformance({
-  createClient: () => new YourCascadeClient(),
-  level: "standard",
-});
-
-// Format as string
-const output = formatReport(report);
-console.log(output);
+const results = await runClientCases(
+  (): ClientHarness => ({
+    cache: "normalized", // or "document": cases for the other kind are skipped
+    seed: ({ entities, queries }) => {
+      // write the entities, and each query's result under its name and arguments
+    },
+    apply: (result) => {
+      // apply a mutation field's result as the client does on a response
+    },
+    entity: (typename, id) => {
+      // the cached entity's fields, or null
+      return null;
+    },
+    query: (name, args) => {
+      // "fresh" with its data, or "invalidated" if stale, refetched or removed
+      return { state: "invalidated" };
+    },
+  }),
+);
 ```
 
-### Schema Validation
+The client libraries in this repository run the cases this way in their test suites; their `conformance.test.ts` files are worked examples for Apollo Client, Relay, TanStack Query and urql.
+
+## Reports
 
 ```typescript
-import { validateSchema } from "@graphql-cascade/conformance";
+import {
+  formatReport,
+  getExitCode,
+  summarize,
+} from "@graphql-cascade/conformance";
 
-const result = validateSchema(schemaSDL);
-
-if (result.valid) {
-  console.log(`Schema conforms to: ${result.level}`);
-} else {
-  console.log("Validation errors:", result.errors);
-}
+summarize(results).achieved; // "none" | "basic" | "standard" | "complete"
+console.log(formatReport(results, { format: "console" })); // or "json", "markdown"
+process.exitCode = getExitCode(results, "standard"); // 1 if a case up to that level fails
 ```
 
-### Response Validation
+A level is achieved when every case of that level and the levels below passes; skipped cases don't count against it.
 
-```typescript
-import { validateResponse } from "@graphql-cascade/conformance";
+## CLI
 
-const result = validateResponse(mutationResponse);
-
-if (!result.valid) {
-  console.log("Response validation errors:", result.errors);
-}
+```bash
+npx cascade-conformance --config conformance.config.mjs --level standard
 ```
 
-## Test Categories
+The configuration file exports the server and the client to test:
 
-### Basic Level Tests
-
-- Schema has required CascadeResponse type
-- Mutations return cascade metadata
-- Entity updates include `__typename` and `id`
-- Deleted entities have proper structure
-
-### Standard Level Tests
-
-- All Basic tests
-- Relationship tracking works correctly
-- Invalidation hints are properly formatted
-- Transaction IDs are unique and consistent
-
-### Complete Level Tests
-
-- All Standard tests
-- Optimistic update support
-- Streaming response handling
-- Complex nested entity tracking
-- Performance under load
-
-## API Reference
-
-### `runServerConformance(options)`
-
-Run conformance tests against a server implementation.
-
-**Options:**
-
-- `endpoint`: URL of the GraphQL endpoint
-- `level`: Target conformance level (`'basic'` | `'standard'` | `'complete'`)
-
-**Returns:** `Promise<ConformanceReport>`
-
-### `runClientConformance(options)`
-
-Run conformance tests against a client implementation.
-
-**Options:**
-
-- `createClient`: Factory function returning your client instance
-- `level`: Target conformance level
-
-**Returns:** `Promise<ConformanceReport>`
-
-### `validateSchema(schema)`
-
-Validate a GraphQL schema against the Cascade specification.
-
-**Returns:** `SchemaValidationResult`
-
-### `validateResponse(response)`
-
-Validate a mutation response against the Cascade specification.
-
-**Returns:** `ResponseValidationResult`
-
-### `formatReport(report, options?)`
-
-Format a conformance report as a string.
-
-### `printReport(report, options?)`
-
-Print a conformance report to stdout.
-
-### `getExitCode(report)`
-
-Get an appropriate exit code based on report results.
-
-## CI Integration
-
-```yaml
-# GitHub Actions example
-- name: Run Conformance Tests
-  run: npx cascade-conformance --target server --level standard
-  env:
-    CASCADE_ENDPOINT: http://localhost:4000/graphql
+```javascript
+// conformance.config.mjs
+export default {
+  server: { setup, execute }, // a ServerTarget, or a function returning one
+  client: () => createHarness(), // a ClientHarness factory
+};
 ```
 
-## Report Format
-
-```typescript
-interface ConformanceReport {
-  timestamp: string;
-  target: "server" | "client";
-  level: {
-    achieved: ConformanceLevel; // Highest level passed
-    tested: ConformanceLevel; // Level that was tested
-  };
-  results: {
-    basic: { passed: number; failed: number; skipped: number };
-    standard: { passed: number; failed: number; skipped: number };
-    complete: { passed: number; failed: number; skipped: number };
-  };
-  failures: Array<{
-    test: string;
-    level: ConformanceLevel;
-    message: string;
-  }>;
-}
-```
-
-## License
-
-MIT
+| Option                                | Description                          |
+| ------------------------------------- | ------------------------------------ |
+| `--config <file>`                     | Configuration file (required)        |
+| `--target <server\|client>`           | Run one side only                    |
+| `--level <basic\|standard\|complete>` | Fail only for cases up to this level |
+| `--format <console\|json\|markdown>`  | Output format (default `console`)    |
+| `--verbose`                           | List passed and skipped cases too    |
+| `--no-colors`                         | Plain console output                 |
