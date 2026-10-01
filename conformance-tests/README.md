@@ -46,6 +46,8 @@ Client cases seed a cache and apply one mutation field's result to it. `input.st
 
 `expected.entities` gives, by `Type:id`, fields the cached entity must have, or `null` for an entity no longer cached. `expected.queries` gives each listed query's `state`: `fresh` if the cache still serves it as is, `invalidated` if it was marked stale, refetched or removed; a fresh query's `result` must contain the values given. Queries a case doesn't list may be in either state: a client that cannot tell which queries hold a type may invalidate all of them.
 
+A case with `cache: "normalized"` or `cache: "document"` tests a requirement that holds for that kind of cache only, such as REQ-101 for normalized caches; it is skipped for clients with the other kind.
+
 ## Levels
 
 Each case has the level of its requirement in the [Conformance](../specification/01_conformance.md) chapter: `basic`, `standard` or `complete`. An implementation achieves a level when it passes every case of that level and the levels below.
