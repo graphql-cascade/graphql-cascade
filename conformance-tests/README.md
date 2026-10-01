@@ -75,25 +75,7 @@ Each test case is a JSON file following the schema defined in `test-case-schema.
 
 ## Running Conformance Tests
 
-### Using the Python Test Runner
-
-The compliance test suite includes a Python-based test runner that can execute these JSON test cases:
-
-```bash
-# Install the test runner
-pip install -e compliance-tests/
-
-# Run all server tests against your implementation
-cascade-compliance check-server http://localhost:4000/graphql
-
-# Run specific test categories
-cascade-compliance check-server http://localhost:4000/graphql \
-  --categories server/tracking
-
-# Run individual test cases
-cascade-compliance check-server http://localhost:4000/graphql \
-  --tests TC-S-001,TC-S-002
-```
+The cases are not yet executed by a runner: `@graphql-cascade/conformance` is being rebuilt to run them against a server endpoint or a client cache ([#65](https://github.com/graphql-cascade/graphql-cascade/issues/65)). Until then, run them in your implementation's own test suite.
 
 ### Manual Test Execution
 

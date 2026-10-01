@@ -219,21 +219,10 @@ class StructureValidator:
         if not reference_dir.exists():
             return False
 
-        # Required reference implementations
-        required_refs = [
-            "server-python",
-            "server-node",
-            "compliance-suite"
-        ]
-
-        missing_refs = []
-        for ref in required_refs:
-            ref_dir = reference_dir / ref
-            if not ref_dir.exists():
-                missing_refs.append(ref)
-                self.errors.append(f"Missing reference directory: reference/{ref}")
-
-        return len(missing_refs) == 0
+        if not (reference_dir / "cascade_base.graphql").exists():
+            self.errors.append("Missing reference/cascade_base.graphql")
+            return False
+        return True
 
     def validate_github_structure(self) -> bool:
         """Validate .github directory structure."""
@@ -280,9 +269,7 @@ class StructureValidator:
             "packages/client-relay/src",
             "packages/client-react-query/src",
             "packages/client-urql/src",
-            "reference/server-python",
-            "reference/server-node/src",
-            "reference/compliance-suite/tests",
+            "reference",
             "research",
             "design",
             ".github/workflows",
