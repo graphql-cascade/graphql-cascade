@@ -16,13 +16,13 @@
 
 ```bash
 # npm
-npm install @graphql-cascade/nuxt @graphql-cascade/apollo
+npm install @graphql-cascade/nuxt @graphql-cascade/apollo @apollo/client@3 @vue/apollo-composable graphql
 
 # pnpm
-pnpm add @graphql-cascade/nuxt @graphql-cascade/apollo
+pnpm add @graphql-cascade/nuxt @graphql-cascade/apollo @apollo/client@3 @vue/apollo-composable graphql
 
 # yarn
-yarn add @graphql-cascade/nuxt @graphql-cascade/apollo
+yarn add @graphql-cascade/nuxt @graphql-cascade/apollo @apollo/client@3 @vue/apollo-composable graphql
 ```
 
 ## Setup
@@ -129,41 +129,18 @@ async function createServer() {
 </template>
 ```
 
-### Manual Apollo Client Setup
+### Providing the Apollo Client
 
-If you're setting up Apollo Client from scratch, add the cascade link to your link chain:
+The composables use the Apollo Client that `@vue/apollo-composable` provides. If your app does not provide one yet, add a plugin:
 
 ```typescript
-// plugins/1.apollo.client.ts
-import { ApolloClient, InMemoryCache, HttpLink } from "@apollo/client";
-import { SetContextLink } from "@apollo/client/link/context";
-import { ErrorLink } from "@apollo/client/link/error";
+// plugins/apollo.ts
+import { ApolloClient, HttpLink, InMemoryCache } from "@apollo/client/core";
 import { DefaultApolloClient } from "@vue/apollo-composable";
 
-export default defineNuxtPlugin(({ vueApp, $cascadeLink }) => {
-  const httpLink = new HttpLink({
-    uri: "https://api.example.com/graphql",
-  });
-
-  const authLink = new SetContextLink(async (_, { headers }) => {
-    const token = await getAuthToken();
-    return {
-      headers: {
-        ...headers,
-        authorization: token ? `Bearer ${token}` : "",
-      },
-    };
-  });
-
-  const errorLink = new ErrorLink(({ graphQLErrors, networkError }) => {
-    // Handle errors
-  });
-
+export default defineNuxtPlugin(({ vueApp }) => {
   const apolloClient = new ApolloClient({
-    link: authLink
-      .concat(errorLink)
-      .concat($cascadeLink) // Add cascade link here
-      .concat(httpLink),
+    link: new HttpLink({ uri: "https://api.example.com/graphql" }),
     cache: new InMemoryCache(),
   });
 
@@ -208,7 +185,7 @@ async function updateUser() {
     input: { name: "John Doe" },
   });
 
-  // Cascade data is automatically extracted and available
+  // The cascade is applied to the Apollo cache, and available
   console.log("Cascade:", cascadeData.value);
 }
 </script>
@@ -274,11 +251,11 @@ interface UnionCascadeConfig {
 
 ### `useCascadeMutation(document, options)`
 
-Enhanced mutation hook with automatic cascade processing.
+`useMutation` that applies the cascade of every successful mutation to the Apollo cache: it writes the updated entities, evicts the deleted ones and applies the invalidations, so queries reading invalidated fields refetch.
 
 **Returns:**
 
-- `mutate(variables)` - Execute the mutation
+- `mutate(variables)` - Execute the mutation and apply its cascade
 - `loading` - Loading state
 - `error` - Error state
 - `cascadeData` - Extracted cascade updates
@@ -322,18 +299,14 @@ watch(lastCascade, (cascade) => {
 
 ### `useCascadeQuery(document, variables, options)`
 
-Enhanced query hook that can automatically refetch when cascade invalidations occur.
+`useQuery` for queries that cascades invalidate: when a cascade evicts fields the query reads, the query refetches them.
 
 **Returns:**
 Same as `useQuery` from `@vue/apollo-composable`
 
-**Options:**
-
-- `watchInvalidations` - Array of query names to watch for invalidation
-
 ### `useCascadeBatch()`
 
-Execute multiple mutations in parallel with cascade tracking.
+Execute multiple mutations in parallel, applying the cascade of each.
 
 **Returns:**
 
@@ -363,13 +336,13 @@ async function updateMultiple() {
 
 ### `useCascadeOptimistic()`
 
-Helper for optimistic UI updates that work with cascade.
+Optimistic updates, each written to its own Apollo optimistic layer.
 
 **Returns:**
 
-- `optimisticUpdate(data)` - Apply optimistic update to cache
-- `clearOptimisticUpdates()` - Clear all optimistic updates
-- `mutate(mutation, options)` - Execute mutation (reverts optimistic updates on error)
+- `optimisticUpdate(data)` - Write an entity to an optimistic layer
+- `clearOptimisticUpdates()` - Remove every optimistic layer
+- `mutate(mutation, options)` - Execute the mutation, apply its cascade and remove the optimistic layers when it settles, so a failed mutation reverts them
 - `optimisticUpdates` - Array of current optimistic updates
 
 **Example:**
@@ -500,10 +473,10 @@ const config: ModuleOptions = {
 
 ## Requirements
 
-- Nuxt 3.0+ or Nuxt 4.0+
-- Vue 3.0+
-- Apollo Client 3.0+ or 4.0+
-- @vue/apollo-composable 4.0+
+- Node.js 22+
+- Nuxt 3 or 4
+- Apollo Client 3 (3.4.13+): `@vue/apollo-composable` 4 does not support Apollo Client 4
+- @vue/apollo-composable 4
 
 ## License
 
@@ -511,5 +484,5 @@ MIT
 
 ## Related
 
-- [@graphql-cascade/apollo](../client-apollo) - Apollo Client integration
+- [@graphql-cascade/apollo](../../client-apollo/apollo) - Apollo Client integration
 - [GraphQL Cascade](../../) - Main repository

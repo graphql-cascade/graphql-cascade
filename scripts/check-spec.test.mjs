@@ -580,4 +580,36 @@ describe("packageExports", () => {
       ],
     );
   });
+
+  it("follows nested conditions to an entry's JavaScript file", () => {
+    const manifest = JSON.stringify({
+      name: "@graphql-cascade/nuxt",
+      main: "./dist/module.cjs",
+      exports: {
+        ".": {
+          import: {
+            types: "./dist/module.d.mts",
+            default: "./dist/module.mjs",
+          },
+          require: {
+            types: "./dist/module.d.cts",
+            default: "./dist/module.cjs",
+          },
+        },
+      },
+    });
+
+    const packages = packageExports(
+      [{ path: "packages/nuxt/module/package.json", content: manifest }],
+      (path) =>
+        ({ "packages/nuxt/module/src/module.ts": "export const meta = 1;" })[
+          path
+        ],
+    );
+
+    assert.deepEqual(
+      [...packages].map(([specifier, names]) => [specifier, [...names]]),
+      [["@graphql-cascade/nuxt", ["meta"]]],
+    );
+  });
 });

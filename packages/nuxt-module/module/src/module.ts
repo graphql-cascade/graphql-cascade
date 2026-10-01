@@ -1,9 +1,4 @@
-import {
-  defineNuxtModule,
-  addPlugin,
-  createResolver,
-  addImports,
-} from "@nuxt/kit";
+import { defineNuxtModule, createResolver, addImports } from "@nuxt/kit";
 
 export interface ModuleOptions {
   /**
@@ -25,6 +20,17 @@ export interface ModuleOptions {
   autoImports?: boolean;
 }
 
+/** The composables the module auto-imports */
+export const composables = [
+  "useCascadeMutation",
+  "useCascadeClient",
+  "useCascadeTracker",
+  "useCascadeQuery",
+  "useCascadeBatch",
+  "useCascadeOptimistic",
+  "useCascadeUnionQuery",
+] as const;
+
 export default defineNuxtModule<ModuleOptions>({
   meta: {
     name: "@graphql-cascade/nuxt",
@@ -45,21 +51,7 @@ export default defineNuxtModule<ModuleOptions>({
 
     const resolver = createResolver(import.meta.url);
 
-    // Add runtime plugin
-    addPlugin(resolver.resolve("./runtime/plugin"));
-
-    // Add auto-imports for composables
     if (options.autoImports) {
-      const composables = [
-        "useCascadeMutation",
-        "useCascadeClient",
-        "useCascadeTracker",
-        "useCascadeQuery",
-        "useCascadeBatch",
-        "useCascadeOptimistic",
-        "useCascadeUnionQuery",
-      ];
-
       addImports(
         composables.map((name) => ({
           name,
@@ -69,7 +61,6 @@ export default defineNuxtModule<ModuleOptions>({
       );
     }
 
-    // Add type declarations
     nuxt.hook("prepare:types", ({ references }) => {
       references.push({ types: "@graphql-cascade/nuxt" });
     });
@@ -82,3 +73,12 @@ export default defineNuxtModule<ModuleOptions>({
     }
   },
 });
+
+declare module "@nuxt/schema" {
+  interface NuxtConfig {
+    graphqlCascade?: ModuleOptions;
+  }
+  interface NuxtOptions {
+    graphqlCascade?: ModuleOptions;
+  }
+}

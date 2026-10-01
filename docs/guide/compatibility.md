@@ -20,10 +20,10 @@ Each package supports the current and the previous major of the libraries it wor
 | `@graphql-cascade/relay` | `relay-runtime` 20 or 21, `graphql` 16 or 17, `react` 18 or 19 |
 | `@graphql-cascade/react-query` | `@tanstack/react-query` 4 or 5, `graphql` 16 or 17, `react` 18 or 19 |
 | `@graphql-cascade/urql` | `@urql/core` 5 or 6, `graphql` 16 or 17 |
-| `@graphql-cascade/nuxt` | `nuxt` 3 or 4, `@apollo/client` 3 or 4, `@vue/apollo-composable` 4 |
+| `@graphql-cascade/nuxt` | `nuxt` 3 or 4, `@apollo/client` 3, `@vue/apollo-composable` 4 |
 | `@graphql-cascade/codegen` | `graphql` 16 or 17 |
 
-CI runs every package's tests against both: the development dependencies pin the previous majors, and a second job installs the current ones. NestJS 12 is published as ES modules only; the NestJS entry loads it through Node's `require` of ES modules, available from Node.js 22.12.
+CI runs every package's tests against both: the development dependencies pin the previous majors, and a second job installs the current ones. NestJS 12 is published as ES modules only; the NestJS entry loads it through Node's `require` of ES modules, available from Node.js 22.12. `@graphql-cascade/nuxt` supports Apollo Client 3 only: its composables build on `@vue/apollo-composable` 4, which does not support Apollo Client 4.
 
 ## Servers in Other Languages
 

@@ -616,7 +616,19 @@ const CHECKED_DOCS = [
   /^docs\/.+\.md$/,
 ];
 
-/** Exported names of every package, keyed by package name. */
+/**
+ * The file an export's conditions lead to, following nested conditions.
+ * @param {unknown} target
+ * @returns {string | undefined}
+ */
+function conditionTarget(target) {
+  if (typeof target === "string") return target;
+  if (typeof target !== "object" || target === null) return undefined;
+  return ["default", "require", "import"]
+    .map((condition) => conditionTarget(target[condition]))
+    .find((file) => file !== undefined);
+}
+
 /**
  * @param {{ path: string, content: string }[]} files tracked files
  * @param {(path: string) => string} readFile
@@ -634,9 +646,7 @@ export function packageExports(files, readFile) {
       ? Object.entries(exports)
           .map(([subpath, target]) => [
             subpath === "." ? name : `${name}/${subpath.slice(2)}`,
-            typeof target === "object"
-              ? (target.default ?? target.require ?? target.import)
-              : undefined,
+            typeof target === "object" ? conditionTarget(target) : undefined,
           ])
           .filter(
             ([, file]) => typeof file === "string" && /\.[cm]?js$/.test(file),

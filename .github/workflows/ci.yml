@@ -96,6 +96,7 @@ jobs:
         run: |
           npx @arethetypeswrong/cli --pack packages/server-node
           npx @arethetypeswrong/cli --pack packages/client-core/core
+          npx @arethetypeswrong/cli --pack packages/nuxt-module/module
 
   test:
     name: Test (${{ matrix.os }}-${{ matrix.node-version }})
@@ -156,7 +157,8 @@ jobs:
             'packages/client-apollo/apollo',
             'packages/client-react-query/react-query',
             'packages/client-relay/relay',
-            'packages/client-urql/urql'
+            'packages/client-urql/urql',
+            'packages/nuxt-module/module'
           ];
           for (const pkg of packages) {
             const summaryPath = path.join(pkg, 'coverage', 'coverage-summary.json');
