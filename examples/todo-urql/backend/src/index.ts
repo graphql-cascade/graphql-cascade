@@ -1,6 +1,6 @@
 import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
-import { createCascadePlugin } from '@graphql-cascade/server';
+import { createCascadePlugin } from '@graphql-cascade/server/apollo';
 import { typeDefs } from './schema';
 import { resolvers } from './resolvers';
 

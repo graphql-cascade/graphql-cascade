@@ -560,18 +560,23 @@ export function checkDocImports(files, packages) {
           .split("\n").length;
         const specifier = match[2];
         const packageName = specifier.split("/").slice(0, 2).join("/");
-        const exports = packages.get(packageName);
-        if (!exports) {
+        if (!packages.has(packageName)) {
           problems.push(
             `${path}:${line}: ${packageName} is not a package in this repository`,
           );
           continue;
         }
-        if (specifier !== packageName) continue; // subpath exports
+        const exports = packages.get(specifier);
+        if (!exports) {
+          problems.push(
+            `${path}:${line}: ${packageName} has no entry ${specifier}`,
+          );
+          continue;
+        }
         for (const name of listedNames(match[1], "imported")) {
           if (!exports.has(name)) {
             problems.push(
-              `${path}:${line}: ${packageName} does not export ${name}`,
+              `${path}:${line}: ${specifier} does not export ${name}`,
             );
           }
         }
@@ -612,18 +617,38 @@ const CHECKED_DOCS = [
 ];
 
 /** Exported names of every package, keyed by package name. */
-function packageExports(files, readFile) {
+/**
+ * @param {{ path: string, content: string }[]} files tracked files
+ * @param {(path: string) => string} readFile
+ * @returns {Map<string, Set<string>>} the names each entry exports, keyed by
+ *   import specifier: the package name, or the name and a subpath entry
+ */
+export function packageExports(files, readFile) {
   const packages = new Map();
   for (const { path, content } of files) {
     if (!/^packages\/(?:[^/]+\/)?[^/]+\/package\.json$/.test(path)) continue;
-    const { name, main } = JSON.parse(content);
+    const { name, main, exports } = JSON.parse(content);
     if (!name || !main) continue;
     const dir = path.slice(0, -"package.json".length);
-    const entry = `${dir}${main.replace(/^(\.\/)?dist\//, "src/").replace(/\.m?js$/, ".ts")}`;
-    try {
-      packages.set(name, exportedNames(readFile, entry));
-    } catch {
-      packages.set(name, new Set());
+    const entries = exports
+      ? Object.entries(exports)
+          .map(([subpath, target]) => [
+            subpath === "." ? name : `${name}/${subpath.slice(2)}`,
+            typeof target === "object"
+              ? (target.default ?? target.require ?? target.import)
+              : undefined,
+          ])
+          .filter(
+            ([, file]) => typeof file === "string" && /\.[cm]?js$/.test(file),
+          )
+      : [[name, main]];
+    for (const [specifier, file] of entries) {
+      const source = `${dir}${file.replace(/^(\.\/)?dist\//, "src/").replace(/\.[cm]?js$/, ".ts")}`;
+      try {
+        packages.set(specifier, exportedNames(readFile, source));
+      } catch {
+        packages.set(specifier, new Set());
+      }
     }
   }
   return packages;

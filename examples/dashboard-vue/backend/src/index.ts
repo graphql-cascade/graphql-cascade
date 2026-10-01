@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { createHandler } from 'graphql-http/lib/use/express';
 import { buildSchema } from 'graphql';
-import { cascadeMiddleware } from '@graphql-cascade/server';
+import { cascadeMiddleware } from '@graphql-cascade/server/express';
 import { resolvers } from './resolvers';
 import { typeDefs } from './schema';
 

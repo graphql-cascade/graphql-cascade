@@ -12,6 +12,7 @@ import {
   checkExampleSchemas,
   checkDocImports,
   exportedNames,
+  packageExports,
 } from "./check-spec.mjs";
 
 // Built from parts so this file never matches the pattern it tests.
@@ -430,6 +431,8 @@ describe("exportedNames", () => {
 describe("checkDocImports", () => {
   const packages = new Map([
     ["@graphql-cascade/client", new Set(["CascadeClient", "UpdatedEntity"])],
+    ["@graphql-cascade/server", new Set(["CascadeTracker"])],
+    ["@graphql-cascade/server/nestjs", new Set(["CascadeModule"])],
   ]);
   const doc = (code, lang = "typescript") => ({
     path: "docs/page.md",
@@ -456,6 +459,20 @@ describe("checkDocImports", () => {
     ]);
   });
 
+  it("checks imports from subpath entries", () => {
+    const code = `import { CascadeModule, CascadeTracker } from "@graphql-cascade/server/nestjs";`;
+    assert.deepEqual(checkDocImports([doc(code)], packages), [
+      "docs/page.md:4: @graphql-cascade/server/nestjs does not export CascadeTracker",
+    ]);
+  });
+
+  it("reports subpath entries a package does not have", () => {
+    const code = `import { X } from "@graphql-cascade/server/koa";`;
+    assert.deepEqual(checkDocImports([doc(code)], packages), [
+      "docs/page.md:4: @graphql-cascade/server has no entry @graphql-cascade/server/koa",
+    ]);
+  });
+
   it("reports packages that do not exist", () => {
     const code = `import { X } from '@graphql-cascade/client-apollo';`;
     assert.deepEqual(checkDocImports([doc(code, "js")], packages), [
@@ -466,7 +483,10 @@ describe("checkDocImports", () => {
 
 describe("checkGeneratedModules", () => {
   const modules = [
-    { path: "out.ts", render: (readFile) => `export const A = ${readFile("a.txt")};\n` },
+    {
+      path: "out.ts",
+      render: (readFile) => `export const A = ${readFile("a.txt")};\n`,
+    },
   ];
   const files = (out) => (path) => ({ "a.txt": "1", "out.ts": out })[path];
 
@@ -484,7 +504,6 @@ describe("checkGeneratedModules", () => {
     );
   });
 });
-
 
 describe("checkCaseOperations", () => {
   const reference = "interface Node { id: ID! }";
@@ -524,6 +543,41 @@ describe("checkCaseOperations", () => {
         },
       ]),
       [],
+    );
+  });
+});
+
+describe("packageExports", () => {
+  it("maps each entry of a package's exports to its source module's exports", () => {
+    const manifest = JSON.stringify({
+      name: "@graphql-cascade/server",
+      main: "dist/index.js",
+      exports: {
+        ".": { types: "./dist/index.d.ts", default: "./dist/index.js" },
+        "./nestjs": {
+          types: "./dist/integrations/nestjs.d.ts",
+          default: "./dist/integrations/nestjs.js",
+        },
+        "./package.json": "./package.json",
+      },
+    });
+    const sources = {
+      "packages/server/src/index.ts": "export const CascadeTracker = 1;",
+      "packages/server/src/integrations/nestjs.ts":
+        "export class CascadeModule {}",
+    };
+
+    const packages = packageExports(
+      [{ path: "packages/server/package.json", content: manifest }],
+      (path) => sources[path],
+    );
+
+    assert.deepEqual(
+      [...packages].map(([specifier, names]) => [specifier, [...names]]),
+      [
+        ["@graphql-cascade/server", ["CascadeTracker"]],
+        ["@graphql-cascade/server/nestjs", ["CascadeModule"]],
+      ],
     );
   });
 });

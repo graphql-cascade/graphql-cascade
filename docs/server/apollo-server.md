@@ -10,7 +10,8 @@ Apollo Server works with Cascade in two ways:
 ```typescript
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
-import { CascadeTracker, createCascadePlugin } from "@graphql-cascade/server";
+import { CascadeTracker } from "@graphql-cascade/server";
+import { createCascadePlugin } from "@graphql-cascade/server/apollo";
 
 const server = new ApolloServer({
   typeDefs,

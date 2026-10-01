@@ -12,7 +12,7 @@ npm install @graphql-cascade/server @nestjs/common @nestjs/graphql
 
 ```typescript
 import { Module } from "@nestjs/common";
-import { CascadeModule } from "@graphql-cascade/server";
+import { CascadeModule } from "@graphql-cascade/server/nestjs";
 
 @Module({
   imports: [
@@ -34,7 +34,7 @@ Inject `CascadeService` and use it the way you would use a tracker and a builder
 
 ```typescript
 import { Args, Mutation, Resolver } from "@nestjs/graphql";
-import { CascadeService } from "@graphql-cascade/server";
+import { CascadeService } from "@graphql-cascade/server/nestjs";
 
 @Resolver()
 export class TodoResolver {

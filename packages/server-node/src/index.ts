@@ -84,26 +84,18 @@ export type {
   CascadeLoggerInterface,
 } from "./types";
 
-// Integrations (optional - require peer dependencies)
-export {
-  CascadeModule,
-  CascadeService,
-  CascadeModuleOptions,
-  createCascadePlugin,
-  CascadePluginOptions,
-  cascadeMiddleware,
-  getCascadeData,
-  buildCascadeResponse,
-  CascadeMiddlewareOptions,
-  OpenTelemetryMetricsCollector,
-} from "./integrations";
+// OpenTelemetry metrics (no runtime dependency on @opentelemetry/api).
+// Framework integrations have their own entries, so this one loads without
+// their peer dependencies: @graphql-cascade/server/nestjs, /express and
+// /apollo.
+export { OpenTelemetryMetricsCollector } from "./integrations/opentelemetry";
 export type {
   OpenTelemetryConfig,
   OTelMeter,
   OTelCounter,
   OTelHistogram,
   OTelUpDownCounter,
-} from "./integrations";
+} from "./integrations/opentelemetry";
 
 // Version
 export const VERSION = "0.3.0";

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { CascadeModule } from '@graphql-cascade/server';
+import { CascadeModule } from '@graphql-cascade/server/nestjs';
 import { PostsModule } from './posts/posts.module';
 import { UsersModule } from './users/users.module';
 import { CommentsModule } from './comments/comments.module';

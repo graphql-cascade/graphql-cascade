@@ -104,7 +104,7 @@ Pass an `Invalidator` to the builder; see [Server Implementation](/server/#inval
 
 ```typescript
 import express from "express";
-import { cascadeMiddleware } from "@graphql-cascade/server";
+import { cascadeMiddleware } from "@graphql-cascade/server/express";
 
 const app = express();
 app.use(cascadeMiddleware({ maxDepth: 2, invalidator }));

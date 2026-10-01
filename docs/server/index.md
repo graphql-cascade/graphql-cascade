@@ -32,9 +32,11 @@ Pick how trackers reach your resolvers:
 | Setup | What it does | Page |
 |-------|--------------|------|
 | Per resolver | Create a tracker and builder in each mutation resolver, as above | [Node.js](/server/node) |
-| Express | `cascadeMiddleware()` puts a tracker and builder on each request | [Node.js](/server/node#express) |
-| NestJS | `CascadeModule` provides a request-scoped `CascadeService` | [NestJS](/server/nestjs) |
-| Apollo Server | `createCascadePlugin()` sends one cascade per operation in `extensions.cascade` | [Apollo Server](/server/apollo-server) |
+| Express | `cascadeMiddleware()` from `@graphql-cascade/server/express` puts a tracker and builder on each request | [Node.js](/server/node#express) |
+| NestJS | `CascadeModule` from `@graphql-cascade/server/nestjs` provides a request-scoped `CascadeService` | [NestJS](/server/nestjs) |
+| Apollo Server | `createCascadePlugin()` from `@graphql-cascade/server/apollo` sends one cascade per operation in `extensions.cascade` | [Apollo Server](/server/apollo-server) |
+
+Each integration has its own entry point, so `@graphql-cascade/server` loads without the frameworks you don't use installed.
 
 The payload `cascade` field is the normative place for a cascade. The Apollo Server plugin's `extensions.cascade` delivery is an optional alternative for schemas whose payload types cannot carry a `cascade` field.
 
