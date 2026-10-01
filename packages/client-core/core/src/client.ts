@@ -27,6 +27,27 @@ export function cascadeEntryTypename(entry: {
 }
 
 /**
+ * A cascade with every list present. Clients apply what a mutation selects,
+ * so a list the mutation did not select is empty.
+ */
+export function normalizeCascade(
+  cascade: Partial<CascadeUpdates> | null | undefined,
+): CascadeUpdates {
+  return {
+    ...cascade,
+    updated: cascade?.updated ?? [],
+    deleted: cascade?.deleted ?? [],
+    invalidations: cascade?.invalidations ?? [],
+    typeInvalidations: cascade?.typeInvalidations ?? [],
+    metadata: cascade?.metadata ?? {
+      timestamp: new Date().toISOString(),
+      depth: 0,
+      affectedCount: 0,
+    },
+  };
+}
+
+/**
  * Normalize a mutation field's result to a CascadeResponse, whichever form
  * the server uses:
  * - a 1.x CascadeResponse (`success`, `errors`, `data`, `cascade`);
@@ -46,7 +67,7 @@ export function toCascadeResponse<T = unknown>(
       success: (fields.success as boolean | undefined) ?? true,
       errors: (fields.errors ?? fields.warnings ?? []) as CascadeError[],
       data: (fields.data ?? null) as T | null,
-      cascade: fields.cascade as CascadeUpdates,
+      cascade: normalizeCascade(fields.cascade as Partial<CascadeUpdates>),
     };
   }
   if (Array.isArray(fields.errors)) {
@@ -105,7 +126,8 @@ export class CascadeClient {
    * Apply a cascade response to the cache.
    */
   applyCascade<T = unknown>(response: CascadeResponse<T>): void {
-    const { data, cascade } = response;
+    const { data } = response;
+    const cascade = normalizeCascade(response.cascade);
 
     // 1. Write primary result
     if (

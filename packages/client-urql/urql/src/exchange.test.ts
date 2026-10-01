@@ -46,7 +46,10 @@ describe("extractCascadeData", () => {
       },
     };
     const response = { extensions: { cascade } };
-    expect(extractCascadeData(response)).toEqual(cascade);
+    expect(extractCascadeData(response)).toEqual({
+      ...cascade,
+      typeInvalidations: [],
+    });
   });
 
   it("should return null for non-object cascade", () => {

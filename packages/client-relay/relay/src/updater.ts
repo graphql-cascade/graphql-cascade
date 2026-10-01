@@ -5,6 +5,7 @@ import {
   UpdatedEntity,
   cascadeEntryTypename,
   invalidationMatches,
+  normalizeCascade,
 } from "@graphql-cascade/client";
 import type {
   CascadeStoreUpdater,
@@ -24,10 +25,11 @@ import type {
  * - Type invalidations: marks the whole store stale via invalidateStore()
  */
 export function createCascadeUpdater(
-  cascade: CascadeUpdates,
+  selected: CascadeUpdates,
   options: CascadeUpdaterOptions = {},
 ): CascadeStoreUpdater {
   const getDataID = options.getDataID ?? defaultGetDataID;
+  const cascade = normalizeCascade(selected);
   return (store: RecordSourceProxy) => {
     // Apply entity updates
     cascade.updated.forEach((entity) => {
