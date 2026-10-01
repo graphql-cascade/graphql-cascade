@@ -21,6 +21,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@graphql-codegen/plugin-helpers": "^5.0.0",
     "@graphql-codegen/visitor-plugin-common": "^5.0.0",
@@ -30,7 +33,7 @@
   "devDependencies": {
     "@graphql-codegen/testing": "^3.0.0",
     "@types/jest": "^29.0.0",
-    "@types/node": "^18.0.0",
+    "@types/node": "^22.0.0",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
     "eslint": "^8.0.0",

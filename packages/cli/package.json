@@ -24,6 +24,9 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@types/inquirer": "^9.0.9",
     "commander": "^11.0.0",
@@ -32,7 +35,7 @@
   },
   "devDependencies": {
     "@types/jest": "^29.0.0",
-    "@types/node": "^18.0.0",
+    "@types/node": "^22.0.0",
     "jest": "^29.0.0",
     "ts-jest": "^29.0.0",
     "typescript": "^5.0.0"

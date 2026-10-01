@@ -25,7 +25,7 @@ Thank you for your interest in contributing to GraphQL Cascade! We welcome contr
 ## Development Setup
 
 ### Prerequisites
-- **Node.js 18+** for development
+- **Node.js 22+** for development
 - **pnpm 8+** for package management
 - **Git** for version control
 

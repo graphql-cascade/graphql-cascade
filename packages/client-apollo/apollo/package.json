@@ -21,6 +21,9 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@graphql-cascade/client": "workspace:*"
   },
@@ -34,7 +37,7 @@
     "@graphql-cascade/conformance": "workspace:*",
     "@testing-library/react": "^13.4.0",
     "@types/jest": "^29.0.0",
-    "@types/node": "^18.0.0",
+    "@types/node": "^22.0.0",
     "@types/react": "^18.0.0",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
