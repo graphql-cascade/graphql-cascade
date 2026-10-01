@@ -25,7 +25,7 @@ return new CascadeBuilder(tracker, invalidator).buildResponse(user);
 | `Transaction already in progress` | `startTransaction()` twice on one tracker; use one tracker per mutation |
 | `No transaction in progress` | Ending or reading a transaction that was never started |
 | `Entity has no 'id' attribute` | A tracked entity without `id` |
-| `Cannot serialize entity` | An entity that cannot be turned into plain data; give it a `toDict()` method, or handle it with `onSerializationError` |
+| `Cannot serialize entity` | An entity that cannot be turned into plain data; give it a `toDict()` method. Its type is covered by a type invalidation meanwhile |
 | `AsyncEntityFilterError` | An async `entityFilter` with a synchronous build; use `buildResponseAsync()` |
 
 ## The Cache Doesn't Update
@@ -50,7 +50,7 @@ return new CascadeBuilder(tracker, invalidator).buildResponse(user);
 - The builder moved them into `typeInvalidations` because a limit was reached: `metadata.truncated` is `true`. Raise `maxUpdatedEntities`, `maxDeletedEntities` or `maxResponseSizeMb`, or accept the type invalidation.
 - Their type is in `excludeTypes`, or they lie beyond `maxDepth` or `maxRelatedPerEntity`.
 - `entityFilter` or `fieldFilter` removed them for this viewer.
-- They failed to serialize: `onSerializationError` was called for each.
+- They failed to serialize: `onSerializationError` was called for each, and their type is in `typeInvalidations`.
 
 ## Inspecting Cascades
 

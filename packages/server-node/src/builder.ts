@@ -442,29 +442,34 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
       return true;
     };
 
-    // Stream updated entities
-    for (const {
-      entity,
-      operation,
-      updatedFields,
-    } of this.tracker.getUpdatedChanges()) {
-      try {
-        const typename = this.getEntityType(entity);
-        if (cover(typename, cascadeData.updated, this.maxUpdatedEntities)) {
-          continue;
+    // Stream updated entities, through the tracker's filters
+    for (const change of this.tracker.getUpdatedChanges()) {
+      const prepared = this.tracker.prepareUpdated(change);
+      if ("excluded" in prepared) continue;
+      if ("unserializable" in prepared) {
+        // Never dropped: the whole type is covered by a type invalidation
+        const typename = prepared.unserializable;
+        if (!counts.has(typename)) {
+          collapseType(
+            typename,
+            cascadeData.updated,
+            cascadeData.deleted,
+            counts,
+          );
         }
-        cascadeData.updated.push({
-          typename,
-          __typename: typename,
-          id: this.getEntityId(entity),
-          operation,
-          entity: this.entityToDict(entity),
-          ...(updatedFields && { updatedFields }),
-        });
-      } catch (e) {
-        // Skip problematic entities
+        counts.set(typename, (counts.get(typename) ?? 0) + 1);
         continue;
       }
+      if (
+        cover(
+          prepared.entry.typename,
+          cascadeData.updated,
+          this.maxUpdatedEntities,
+        )
+      ) {
+        continue;
+      }
+      cascadeData.updated.push(prepared.entry);
     }
 
     // Stream deleted entities
@@ -528,76 +533,6 @@ export class StreamingCascadeBuilder extends CascadeBuilder {
       cascade: cascadeData,
       errors,
     };
-  }
-
-  /**
-   * Convert entity to dictionary (streaming version).
-   */
-  private entityToDict(entity: any): Record<string, any> {
-    if (typeof entity.toDict === "function") {
-      return entity.toDict();
-    } else if (entity && typeof entity === "object") {
-      const result: Record<string, any> = {};
-      for (const [key, value] of Object.entries(entity)) {
-        if (!key.startsWith("_")) {
-          result[key] = this.serializeValue(value);
-        }
-      }
-      return result;
-    } else {
-      throw new Error(`Cannot serialize entity ${entity}`);
-    }
-  }
-
-  /**
-   * Serialize a value for JSON (streaming version).
-   */
-  private serializeValue(value: any): any {
-    if (value == null) {
-      return null;
-    } else if (
-      typeof value === "string" ||
-      typeof value === "number" ||
-      typeof value === "boolean"
-    ) {
-      return value;
-    } else if (value instanceof Date) {
-      return value.toISOString();
-    } else if (Array.isArray(value)) {
-      return value.map((item) => this.serializeValue(item));
-    } else if (typeof value === "object" && value.constructor === Object) {
-      const result: Record<string, any> = {};
-      for (const [k, v] of Object.entries(value)) {
-        result[k] = this.serializeValue(v);
-      }
-      return result;
-    } else {
-      return String(value);
-    }
-  }
-
-  /**
-   * Get entity type name.
-   */
-  private getEntityType(entity: any): string {
-    if (entity.__typename) {
-      return entity.__typename;
-    } else if (entity._typename) {
-      return entity._typename;
-    } else {
-      return entity.constructor?.name ?? "Unknown";
-    }
-  }
-
-  /**
-   * Get entity ID.
-   */
-  private getEntityId(entity: any): string {
-    if (entity.id !== undefined) {
-      return String(entity.id);
-    } else {
-      throw new Error(`Entity ${entity} has no 'id' attribute`);
-    }
   }
 }
 
