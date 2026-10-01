@@ -5,12 +5,10 @@
  */
 
 // Export all types
-export {
-  runClientCases,
-  type ClientHarness,
-  type CaseResult,
-} from "./client-runner";
+export { runClientCases, type ClientHarness } from "./client-runner";
+export { httpTarget, runServerCases, type ServerTarget } from "./server-runner";
 export type {
+  CaseResult,
   ConformanceCase,
   ClientCase,
   ServerCase,

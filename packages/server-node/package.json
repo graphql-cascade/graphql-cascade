@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@apollo/server": "^4.9.0",
+    "@graphql-cascade/conformance": "workspace:*",
     "@nestjs/common": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
     "@stryker-mutator/core": "^9.4.0",

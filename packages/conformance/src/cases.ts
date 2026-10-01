@@ -106,3 +106,14 @@ export interface ClientCase extends CaseHeader {
 }
 
 export type ConformanceCase = ServerCase | ClientCase;
+
+/** The outcome of running one case */
+export interface CaseResult {
+  id: string;
+  name: string;
+  requirement: string;
+  level: ConformanceLevel;
+  status: "passed" | "failed" | "skipped";
+  /** What differed from the case's expectations */
+  failures: string[];
+}

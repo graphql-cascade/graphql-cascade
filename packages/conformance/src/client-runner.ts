@@ -1,8 +1,8 @@
 import type {
+  CaseResult,
   ClientCase,
   ClientState,
   ConformanceCase,
-  ConformanceLevel,
   QueryState,
 } from "./cases";
 import { CASES } from "./generated/cases";
@@ -31,16 +31,6 @@ export interface ClientHarness {
     name: string,
     args?: Record<string, unknown>,
   ): MaybePromise<{ state: QueryState; data?: unknown }>;
-}
-
-export interface CaseResult {
-  id: string;
-  name: string;
-  requirement: string;
-  level: ConformanceLevel;
-  status: "passed" | "failed" | "skipped";
-  /** What differed from the case's expectations */
-  failures: string[];
 }
 
 /**

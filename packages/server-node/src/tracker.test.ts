@@ -342,6 +342,56 @@ describe("CascadeTracker", () => {
     });
   });
 
+  describe("Tracking an entity again", () => {
+    const user = (name: string) => ({ __typename: "User", id: "u1", name });
+
+    it("keeps the state from the last update", () => {
+      tracker.startTransaction();
+      tracker.trackUpdate(user("Ada King"), { updatedFields: ["name"] });
+      tracker.trackUpdate(user("Ada Lovelace"), { updatedFields: ["name"] });
+
+      const [entry] = tracker.endTransaction().updated;
+
+      expect(entry).toMatchObject({
+        operation: "UPDATED",
+        entity: { name: "Ada Lovelace" },
+        updatedFields: ["name"],
+      });
+    });
+
+    it("keeps a created entity CREATED, with its latest state", () => {
+      tracker.startTransaction();
+      tracker.trackCreate(user("Ada"));
+      tracker.trackUpdate(user("Ada Lovelace"));
+
+      const [entry] = tracker.endTransaction().updated;
+
+      expect(entry).toMatchObject({
+        operation: "CREATED",
+        entity: { name: "Ada Lovelace" },
+      });
+    });
+
+    it("does not replace a tracked entity with one met through a relationship", () => {
+      tracker.startTransaction();
+      tracker.trackUpdate({
+        ...user("Ada Lovelace"),
+        email: "ada@example.com",
+      });
+      tracker.trackUpdate({
+        __typename: "Post",
+        id: "p1",
+        author: { __typename: "User", id: "u1" },
+      });
+
+      const entry = tracker
+        .endTransaction()
+        .updated.find((u: any) => u.id === "u1");
+
+      expect(entry?.entity).toMatchObject({ email: "ada@example.com" });
+    });
+  });
+
   describe("Plain-object entities", () => {
     const user = (id: string, extra: Record<string, unknown> = {}) => ({
       __typename: "User",
