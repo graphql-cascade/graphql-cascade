@@ -1,38 +1,52 @@
 {
   "id": "TC-S-003",
-  "name": "Entity Deletion Tracking",
-  "description": "Servers MUST track entity deletions during mutation execution and include deletion information in the cascade response",
+  "name": "Deleted Entities Are Listed in deleted Only",
+  "description": "An entity the mutation deletes appears in cascade.deleted, and not in cascade.updated.",
   "category": "server",
   "subcategory": "tracking",
   "requirement": "REQ-003",
+  "level": "basic",
   "priority": "critical",
   "input": {
-    "mutation": "mutation DeleteUser($id: ID!) { deleteUser(id: $id) { success } }",
-    "context": {
-      "variables": {
-        "id": "user_123"
-      },
-      "entities": [
+    "state": {
+      "users": [
         {
-          "__typename": "User",
-          "id": "user_123",
-          "name": "John Doe",
-          "email": "john@example.com"
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
+        },
+        {
+          "id": "u3",
+          "name": "Hedy",
+          "email": "hedy@example.com"
         }
-      ],
-      "schema": "type Mutation { deleteUser(id: ID!): DeleteResult } type DeleteResult { success: Boolean! } type User { id: ID! name: String! email: String! }"
-    }
+      ]
+    },
+    "operation": "mutation DeleteUser {\n  deleteUser(id: \"u3\") {\n    success\n    errors { code message }\n    data { id }\n    cascade {\n      updated {\n        typename\n        id\n        operation\n        entity {\n          __typename\n          id\n          ... on User { name email postCount }\n          ... on Post { title published }\n        }\n      }\n      deleted { typename id deletedAt }\n      invalidations { queryName arguments strategy scope }\n      typeInvalidations { typename affectedCount }\n      metadata { timestamp depth affectedCount truncated }\n    }\n  }\n}",
+    "variables": {}
   },
   "expected": {
-    "cascade": {
-      "updated": [],
-      "deleted": [{ "typename": "User", "id": "user_123" }],
-      "invalidations": [],
-      "metadata": {
-        "affectedCount": 1,
-        "operationType": "DELETE"
+    "fields": {
+      "deleteUser": {
+        "success": true,
+        "cascade": {
+          "deleted": [
+            {
+              "typename": "User",
+              "id": "u3"
+            }
+          ],
+          "absent": [
+            {
+              "typename": "User",
+              "id": "u1"
+            }
+          ]
+        }
       }
     }
   },
-  "tags": ["entity-deletion", "tracking", "mutation", "invalidation"]
+  "tags": [
+    "tracking"
+  ]
 }

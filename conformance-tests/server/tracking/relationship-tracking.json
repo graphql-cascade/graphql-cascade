@@ -1,53 +1,61 @@
 {
   "id": "TC-S-004",
-  "name": "Relationship Cascade Tracking",
-  "description": "Servers MUST track changes that cascade through entity relationships and include all affected entities in the cascade response",
+  "name": "Changes Cascade to Related Entities",
+  "description": "Creating a post changes its author's postCount, so the author appears in cascade.updated with the new count.",
   "category": "server",
   "subcategory": "tracking",
   "requirement": "REQ-004",
+  "level": "standard",
   "priority": "high",
   "input": {
-    "mutation": "mutation UpdatePost($id: ID!, $input: UpdatePostInput!) { updatePost(id: $id, input: $input) { id title author { id name } } }",
-    "context": {
-      "variables": {
-        "id": "post_456",
-        "input": {
-          "title": "Updated Title"
-        }
-      },
-      "entities": [
+    "state": {
+      "users": [
         {
-          "__typename": "Post",
-          "id": "post_456",
-          "title": "Original Title",
-          "authorId": "user_123"
-        },
-        {
-          "__typename": "User",
-          "id": "user_123",
-          "name": "John Doe",
-          "postCount": 5
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
         }
       ],
-      "schema": "type Mutation { updatePost(id: ID!, input: UpdatePostInput!): Post } type Post { id: ID! title: String! author: User! } type User { id: ID! name: String! postCount: Int! } input UpdatePostInput { title: String }"
-    }
+      "posts": [
+        {
+          "id": "p1",
+          "title": "Notes",
+          "published": true,
+          "authorId": "u1"
+        }
+      ]
+    },
+    "operation": "mutation CreatePost {\n  createPost(input: { title: \"Sketch\", authorId: \"u1\" }) {\n    success\n    errors { code message }\n    data { id }\n    cascade {\n      updated {\n        typename\n        id\n        operation\n        entity {\n          __typename\n          id\n          ... on User { name email postCount }\n          ... on Post { title published }\n        }\n      }\n      deleted { typename id deletedAt }\n      invalidations { queryName arguments strategy scope }\n      typeInvalidations { typename affectedCount }\n      metadata { timestamp depth affectedCount truncated }\n    }\n  }\n}",
+    "variables": {}
   },
   "expected": {
-    "cascade": {
-      "updated": [
-        {
-          "typename": "Post",
-          "id": "post_456",
-          "title": "Updated Title",
-          "authorId": "user_123"
+    "fields": {
+      "createPost": {
+        "success": true,
+        "cascade": {
+          "updated": [
+            {
+              "typename": "Post",
+              "operation": "CREATED",
+              "entity": {
+                "title": "Sketch",
+                "published": false
+              }
+            },
+            {
+              "typename": "User",
+              "id": "u1",
+              "operation": "UPDATED",
+              "entity": {
+                "postCount": 2
+              }
+            }
+          ]
         }
-      ],
-      "invalidations": [],
-      "metadata": {
-        "affectedCount": 1,
-        "operationType": "UPDATE"
       }
     }
   },
-  "tags": ["relationship-tracking", "cascade", "mutation"]
+  "tags": [
+    "relationships"
+  ]
 }

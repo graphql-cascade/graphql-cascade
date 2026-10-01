@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  checkCaseOperations,
   checkReferenceModule,
   findCorruption,
   checkVersionConsistency,
@@ -486,6 +487,48 @@ describe("checkReferenceModule", () => {
         reading(renderReferenceModule("type Query { b: Int }\n")),
       ).length,
       1,
+    );
+  });
+});
+
+describe("checkCaseOperations", () => {
+  const reference = "interface Node { id: ID! }";
+  const domain = `
+    type Query { user(id: ID!): User }
+    type User implements Node { id: ID! name: String! }
+    type Mutation { renameUser(id: ID!, name: String!): User! }
+  `;
+  const serverCase = (operation) => ({
+    path: "conformance-tests/server/rename.json",
+    content: JSON.stringify({ category: "server", input: { operation } }),
+  });
+
+  it("accepts operations valid against the conformance domain", () => {
+    assert.deepEqual(
+      checkCaseOperations(reference, domain, [
+        serverCase('mutation { renameUser(id: "1", name: "A") { id name } }'),
+      ]),
+      [],
+    );
+  });
+
+  it("reports operations the domain does not support", () => {
+    const problems = checkCaseOperations(reference, domain, [
+      serverCase('mutation { renameUser(id: "1", name: "A") { id email } }'),
+    ]);
+    assert.equal(problems.length, 1);
+    assert.match(problems[0], /rename\.json: .*email/);
+  });
+
+  it("ignores client cases", () => {
+    assert.deepEqual(
+      checkCaseOperations(reference, domain, [
+        {
+          path: "conformance-tests/client/x.json",
+          content: JSON.stringify({ category: "client", input: {} }),
+        },
+      ]),
+      [],
     );
   });
 });

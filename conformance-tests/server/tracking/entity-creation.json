@@ -1,39 +1,52 @@
 {
   "id": "TC-S-001",
-  "name": "Entity Creation Tracking",
-  "description": "Servers MUST track newly created entities during mutation execution and include them in the cascade response",
+  "name": "Created Entities Are CREATED Entries",
+  "description": "An entity the mutation creates appears in cascade.updated with operation CREATED and its full data.",
   "category": "server",
   "subcategory": "tracking",
   "requirement": "REQ-001",
+  "level": "basic",
   "priority": "critical",
   "input": {
-    "mutation": "mutation CreateUser($input: CreateUserInput!) { createUser(input: $input) { id name email } }",
-    "context": {
-      "variables": {
-        "input": {
-          "name": "John Doe",
-          "email": "john@example.com"
-        }
-      },
-      "schema": "type Mutation { createUser(input: CreateUserInput!): User } type User { id: ID! name: String! email: String! } input CreateUserInput { name: String! email: String! }"
-    }
-  },
-  "expected": {
-    "cascade": {
-      "updated": [
+    "state": {
+      "users": [
         {
-          "typename": "User",
-          "id": "user_123",
-          "name": "John Doe",
-          "email": "john@example.com"
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
         }
-      ],
-      "invalidations": [],
-      "metadata": {
-        "affectedCount": 1,
-        "operationType": "CREATE"
+      ]
+    },
+    "operation": "mutation CreateUser($input: CreateUserInput!) {\n  createUser(input: $input) {\n    success\n    errors { code message }\n    data { id }\n    cascade {\n      updated {\n        typename\n        id\n        operation\n        entity {\n          __typename\n          id\n          ... on User { name email postCount }\n          ... on Post { title published }\n        }\n      }\n      deleted { typename id deletedAt }\n      invalidations { queryName arguments strategy scope }\n      typeInvalidations { typename affectedCount }\n      metadata { timestamp depth affectedCount truncated }\n    }\n  }\n}",
+    "variables": {
+      "input": {
+        "name": "Hedy",
+        "email": "hedy@example.com"
       }
     }
   },
-  "tags": ["entity-creation", "tracking", "mutation"]
+  "expected": {
+    "fields": {
+      "createUser": {
+        "success": true,
+        "cascade": {
+          "updated": [
+            {
+              "typename": "User",
+              "operation": "CREATED",
+              "entity": {
+                "__typename": "User",
+                "name": "Hedy",
+                "email": "hedy@example.com",
+                "postCount": 0
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "tags": [
+    "tracking"
+  ]
 }

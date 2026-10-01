@@ -1,34 +1,38 @@
 {
   "id": "TC-S-010",
-  "name": "Basic Cascade Response Structure",
-  "description": "Servers MUST return a cascade response with updated, invalidations, and metadata fields in the correct structure",
+  "name": "Responses Carry a Complete Cascade",
+  "description": "A mutation payload reports success and carries a cascade with updated, deleted, invalidations, typeInvalidations and metadata.",
   "category": "server",
   "subcategory": "response-building",
   "requirement": "REQ-010",
+  "level": "basic",
   "priority": "critical",
   "input": {
-    "mutation": "mutation UpdateUser($id: ID!, $name: String!) { updateUser(id: $id, name: $name) { id name } }",
-    "context": {
-      "variables": {
-        "id": "user_1",
-        "name": "Updated Name"
-      },
-      "entities": [
-        { "__typename": "User", "id": "user_1", "name": "Original Name" }
+    "state": {
+      "users": [
+        {
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
+        }
       ]
-    }
+    },
+    "operation": "mutation RenameUser {\n  updateUser(id: \"u1\", input: { name: \"Ada Lovelace\" }) {\n    success\n    errors { code message }\n    data { id }\n    cascade {\n      updated {\n        typename\n        id\n        operation\n        entity {\n          __typename\n          id\n          ... on User { name email postCount }\n          ... on Post { title published }\n        }\n      }\n      deleted { typename id deletedAt }\n      invalidations { queryName arguments strategy scope }\n      typeInvalidations { typename affectedCount }\n      metadata { timestamp depth affectedCount truncated }\n    }\n  }\n}",
+    "variables": {}
   },
   "expected": {
-    "cascade": {
-      "updated": [
-        { "typename": "User", "id": "user_1", "name": "Updated Name" }
-      ],
-      "invalidations": [],
-      "metadata": {
-        "affectedCount": 1,
-        "operationType": "UPDATE"
+    "fields": {
+      "updateUser": {
+        "success": true,
+        "cascade": {
+          "metadata": {
+            "truncated": false
+          }
+        }
       }
     }
   },
-  "tags": ["response-structure", "basic", "mutation"]
+  "tags": [
+    "response-format"
+  ]
 }

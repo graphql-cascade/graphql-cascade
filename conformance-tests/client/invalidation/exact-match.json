@@ -1,54 +1,108 @@
 {
   "id": "TC-C-003",
-  "name": "Exact Match Invalidation",
-  "description": "Clients MUST invalidate cached queries that exactly match invalidation hints from cascade responses",
+  "name": "EXACT Hints Select One Query",
+  "description": "An EXACT hint applies to the cached queries with its name and arguments, and to no other query.",
   "category": "client",
   "subcategory": "invalidation",
   "requirement": "REQ-103",
+  "level": "basic",
   "priority": "high",
   "input": {
-    "clientState": {
-      "cache": {
-        "User:user_123": {
-          "__typename": "User",
-          "id": "user_123",
-          "name": "John Doe",
-          "email": "john@example.com"
+    "state": {
+      "queries": [
+        {
+          "name": "user",
+          "arguments": {
+            "id": "u1"
+          },
+          "result": {
+            "__typename": "User",
+            "id": "u1",
+            "name": "Ada",
+            "email": "ada@example.com"
+          }
         },
-        "query:GetUserList:{}": {
-          "users": [
+        {
+          "name": "user",
+          "arguments": {
+            "id": "u2"
+          },
+          "result": {
+            "__typename": "User",
+            "id": "u2",
+            "name": "Grace",
+            "email": "grace@example.com"
+          }
+        },
+        {
+          "name": "users",
+          "result": [
             {
               "__typename": "User",
-              "id": "user_123",
-              "name": "John Doe"
+              "id": "u1",
+              "name": "Ada",
+              "email": "ada@example.com"
+            },
+            {
+              "__typename": "User",
+              "id": "u2",
+              "name": "Grace",
+              "email": "grace@example.com"
             }
           ]
         }
-      },
-      "queries": [
-        {
-          "query": "query GetUserList { users { id name } }",
-          "variables": {},
-          "result": {
-            "users": [
-              {
-                "__typename": "User",
-                "id": "user_123",
-                "name": "John Doe"
-              }
-            ]
-          }
-        }
       ]
+    },
+    "result": {
+      "success": true,
+      "errors": [],
+      "data": null,
+      "cascade": {
+        "updated": [],
+        "deleted": [],
+        "invalidations": [
+          {
+            "queryName": "user",
+            "arguments": {
+              "id": "u1"
+            },
+            "strategy": "INVALIDATE",
+            "scope": "EXACT"
+          }
+        ],
+        "typeInvalidations": [],
+        "metadata": {
+          "timestamp": "2026-01-01T00:00:00Z",
+          "depth": 1,
+          "affectedCount": 0,
+          "truncated": false
+        }
+      }
     }
   },
   "expected": {
-    "clientState": {
-      "cache": {
-        "query:GetUserList:{}": null
+    "queries": [
+      {
+        "name": "user",
+        "arguments": {
+          "id": "u1"
+        },
+        "state": "invalidated"
       },
-      "invalidatedQueries": ["query:GetUserList:{}"]
-    }
+      {
+        "name": "user",
+        "arguments": {
+          "id": "u2"
+        },
+        "state": "fresh"
+      },
+      {
+        "name": "users",
+        "state": "fresh"
+      }
+    ]
   },
-  "tags": ["exact-match", "invalidation", "client"]
+  "tags": [
+    "exact-match"
+  ]
 }

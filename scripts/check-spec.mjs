@@ -33,6 +33,7 @@ import {
   isTypeSystemDefinitionNode,
   parse,
   print,
+  validate,
   validateSchema,
   visit,
 } from "graphql";
@@ -43,6 +44,8 @@ const TRANSCRIPT_MARKER = ["xai", "function_call"].join(":");
 const SEMVER = /^\d+\.\d+\.\d+$/;
 
 const REFERENCE_PATH = "reference/cascade_base.graphql";
+
+const CONFORMANCE_SCHEMA_PATH = "conformance-tests/schema.graphql";
 // The reference defines types for implementers' schemas, which own the Query root.
 const MISSING_QUERY_ROOT = "Query root type must be provided.";
 // Implementers own their root operation types; examples show their own.
@@ -231,6 +234,34 @@ export function checkExampleSchemas(sdl, files) {
       return validateSchema(
         buildASTSchema(merged, { assumeValidSDL: false }),
       ).map((e) => `${path}: ${e.message}`);
+    } catch (e) {
+      return [`${path}: ${e.message}`];
+    }
+  });
+}
+
+/**
+ * @param {string} sdl the reference schema
+ * @param {string} domainSdl the conformance domain schema
+ * @param {{ path: string, content: string }[]} caseFiles conformance cases
+ * @returns {string[]} one message per server or transport case whose
+ *   operation the conformance domain does not support
+ */
+export function checkCaseOperations(sdl, domainSdl, caseFiles) {
+  const schema = buildASTSchema(
+    {
+      kind: Kind.DOCUMENT,
+      definitions: [...parse(sdl).definitions, ...parse(domainSdl).definitions],
+    },
+    { assumeValidSDL: true },
+  );
+  return caseFiles.flatMap(({ path, content }) => {
+    const { category, input } = JSON.parse(content);
+    if (category === "client") return [];
+    try {
+      return validate(schema, parse(input.operation)).map(
+        (e) => `${path}: ${e.message}`,
+      );
     } catch (e) {
       return [`${path}: ${e.message}`];
     }
@@ -621,13 +652,18 @@ function main() {
     ...schemaProblems,
     ...(schemaProblems.length > 0 ? [] : checkSnippets(sdl, specFiles)),
     ...checkRequirements(specFiles, caseFiles),
+    ...(schemaProblems.length > 0
+      ? []
+      : checkCaseOperations(sdl, readFile(CONFORMANCE_SCHEMA_PATH), caseFiles)),
     ...(schemaProblems.length > 0 ? [] : checkSnippets(sdl, docFiles)),
     ...checkDocImports(docFiles, packageExports(files, readFile)),
     ...checkReferenceModule(sdl, readFile),
     ...checkExampleSchemas(
       sdl,
       files.filter(
-        ({ path }) => path.startsWith("examples/") && path.endsWith(".graphql"),
+        ({ path }) =>
+          (path.startsWith("examples/") || path === CONFORMANCE_SCHEMA_PATH) &&
+          path.endsWith(".graphql"),
       ),
     ),
   ];

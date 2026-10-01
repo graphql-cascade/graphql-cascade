@@ -1,35 +1,108 @@
 {
   "id": "TC-C-021",
-  "name": "Updated Entities Apply In Place",
-  "description": "Clients SHOULD NOT invalidate or refetch a cached query only because it contains an updated entity: the cascade carries the entity's full data, so queries that contain it read the new data from the cache without a network request",
+  "name": "Updated Entities Do Not Invalidate Queries",
+  "description": "Queries are not invalidated only because they contain an updated entity; they read its new data from the cache.",
   "category": "client",
   "subcategory": "cache-updates",
   "requirement": "REQ-031",
-  "priority": "medium",
+  "level": "standard",
+  "priority": "high",
   "input": {
-    "clientState": {
-      "cache": {
-        "User:1": { "__typename": "User", "id": "1", "name": "John" },
-        "Post:1": { "__typename": "Post", "id": "1", "title": "Hello", "authorId": "1" }
-      },
+    "state": {
+      "entities": [
+        {
+          "__typename": "User",
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
+        }
+      ],
       "queries": [
-        { "query": "getUser", "variables": { "id": "1" }, "result": { "user": { "__typename": "User", "id": "1" } } },
-        { "query": "getPosts", "variables": {}, "result": { "posts": [{ "__typename": "Post", "id": "1", "author": { "__typename": "User", "id": "1" } }] } }
+        {
+          "name": "users",
+          "result": [
+            {
+              "__typename": "User",
+              "id": "u1",
+              "name": "Ada",
+              "email": "ada@example.com"
+            },
+            {
+              "__typename": "User",
+              "id": "u2",
+              "name": "Grace",
+              "email": "grace@example.com"
+            }
+          ]
+        },
+        {
+          "name": "user",
+          "arguments": {
+            "id": "u1"
+          },
+          "result": {
+            "__typename": "User",
+            "id": "u1",
+            "name": "Ada",
+            "email": "ada@example.com"
+          }
+        }
       ]
     },
-    "cascade": {
-      "updated": [{ "typename": "User", "id": "1", "name": "John Updated" }],
-      "invalidations": [],
-      "metadata": { "affectedCount": 1, "operationType": "UPDATE" }
+    "result": {
+      "success": true,
+      "errors": [],
+      "data": {
+        "__typename": "User",
+        "id": "u1",
+        "name": "Ada Lovelace",
+        "email": "ada@example.com"
+      },
+      "cascade": {
+        "updated": [
+          {
+            "typename": "User",
+            "id": "u1",
+            "operation": "UPDATED",
+            "entity": {
+              "__typename": "User",
+              "id": "u1",
+              "name": "Ada Lovelace",
+              "email": "ada@example.com"
+            }
+          }
+        ],
+        "deleted": [],
+        "invalidations": [],
+        "typeInvalidations": [],
+        "metadata": {
+          "timestamp": "2026-01-01T00:00:00Z",
+          "depth": 1,
+          "affectedCount": 1,
+          "truncated": false
+        }
+      }
     }
   },
   "expected": {
-    "clientState": {
-      "cache": {
-        "User:1": { "__typename": "User", "id": "1", "name": "John Updated" }
+    "queries": [
+      {
+        "name": "users",
+        "state": "fresh"
       },
-      "invalidatedQueries": []
-    }
+      {
+        "name": "user",
+        "arguments": {
+          "id": "u1"
+        },
+        "state": "fresh",
+        "result": {
+          "name": "Ada Lovelace"
+        }
+      }
+    ]
   },
-  "tags": ["cache-update", "performance", "no-refetch"]
+  "tags": [
+    "no-overfetch"
+  ]
 }
