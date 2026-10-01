@@ -1,35 +1,41 @@
 {
   "id": "TC-S-020",
-  "name": "Transaction Rollback on Error",
-  "description": "Servers MUST NOT report any entity changes when a mutation fails and its transaction is rolled back: the cascade is present but empty",
+  "name": "Failed Mutations Report No Changes",
+  "description": "A mutation that fails still returns a cascade, and that cascade reports no entity changes.",
   "category": "server",
   "subcategory": "error-handling",
   "requirement": "REQ-020",
+  "level": "basic",
   "priority": "critical",
   "input": {
-    "mutation": "mutation UpdateUser($id: ID!, $name: String!) { updateUser(id: $id, name: $name) { id name } }",
-    "context": {
-      "variables": {
-        "id": "nonexistent_user",
-        "name": "New Name"
-      },
-      "entities": []
-    }
+    "state": {
+      "users": [
+        {
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
+        }
+      ]
+    },
+    "operation": "mutation RenameMissing {\n  updateUser(id: \"missing\", input: { name: \"Nobody\" }) {\n    success\n    errors { code message }\n    data { id }\n    cascade {\n      updated {\n        typename\n        id\n        operation\n        entity {\n          __typename\n          id\n          ... on User { name email postCount }\n          ... on Post { title published }\n        }\n      }\n      deleted { typename id deletedAt }\n      invalidations { queryName arguments strategy scope }\n      typeInvalidations { typename affectedCount }\n      metadata { timestamp depth affectedCount truncated }\n    }\n  }\n}",
+    "variables": {}
   },
   "expected": {
-    "error": {
-      "message": "User not found",
-      "extensions": {
-        "code": "NOT_FOUND"
+    "fields": {
+      "updateUser": {
+        "success": false,
+        "errors": [
+          {
+            "code": "NOT_FOUND"
+          }
+        ],
+        "cascade": {
+          "noChanges": true
+        }
       }
-    },
-    "cascade": {
-      "updated": [],
-      "deleted": [],
-      "invalidations": [],
-      "typeInvalidations": [],
-      "metadata": { "affectedCount": 0 }
     }
   },
-  "tags": ["error-handling", "rollback", "transaction"]
+  "tags": [
+    "errors"
+  ]
 }

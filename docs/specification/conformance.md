@@ -20,11 +20,19 @@ Normative statements carry requirement tags, such as **[REQ-103]** for `EXACT` h
 {
   "id": "TC-C-003",
   "requirement": "REQ-103",
+  "level": "basic",
   "category": "client",
-  "input": { "...": "the initial state and the cascade" },
-  "expected": { "...": "what the cache holds afterwards" }
+  "input": {
+    "state": { "queries": [{ "name": "user", "arguments": { "id": "u1" }, "result": { "...": "" } }] },
+    "result": { "success": true, "cascade": { "invalidations": [{ "queryName": "user", "arguments": { "id": "u1" }, "strategy": "INVALIDATE", "scope": "EXACT" }] } }
+  },
+  "expected": {
+    "queries": [{ "name": "user", "arguments": { "id": "u1" }, "state": "invalidated" }]
+  }
 }
 ```
+
+Server cases run against a small conformance domain, users and posts, that a server under test implements once; client cases seed a cache and apply a mutation result to it. The [cases README](https://github.com/graphql-cascade/graphql-cascade/blob/main/conformance-tests/README.md) defines both formats.
 
 The repository's checks keep the two in step: every case follows [`test-case-schema.json`](https://github.com/graphql-cascade/graphql-cascade/blob/main/conformance-tests/test-case-schema.json), cites a requirement the specification defines, and every requirement is tested by at least one case. `spec-version.json` records the specification version the cases target.
 

@@ -1,44 +1,66 @@
 {
   "id": "TC-C-005",
-  "name": "Result Union Success Payload",
-  "description": "Clients MUST apply the cascade of a CascadePayload (a result union's success member) exactly like a CascadeResponse's",
+  "name": "CascadePayload Cascades Apply",
+  "description": "A CascadePayload's cascade is applied exactly like a CascadeResponse's.",
   "category": "client",
-  "subcategory": "cache-updates",
+  "subcategory": "result-unions",
   "requirement": "REQ-105",
+  "level": "basic",
   "priority": "high",
   "input": {
-    "clientState": {
-      "cache": {
-        "User:1": { "__typename": "User", "id": "1", "name": "Old" }
-      }
+    "state": {
+      "entities": [
+        {
+          "__typename": "User",
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
+        }
+      ]
     },
     "result": {
       "__typename": "RenameUserPayload",
-      "data": { "__typename": "User", "id": "1" },
-      "warnings": [],
+      "data": {
+        "__typename": "User",
+        "id": "u1",
+        "name": "Ada Lovelace",
+        "email": "ada@example.com"
+      },
       "cascade": {
         "updated": [
           {
             "typename": "User",
-            "id": "1",
+            "id": "u1",
             "operation": "UPDATED",
-            "entity": { "__typename": "User", "id": "1", "name": "New" }
+            "entity": {
+              "__typename": "User",
+              "id": "u1",
+              "name": "Ada Lovelace",
+              "email": "ada@example.com"
+            }
           }
         ],
         "deleted": [],
         "invalidations": [],
         "typeInvalidations": [],
-        "metadata": { "affectedCount": 1 }
-      }
+        "metadata": {
+          "timestamp": "2026-01-01T00:00:00Z",
+          "depth": 1,
+          "affectedCount": 1,
+          "truncated": false
+        }
+      },
+      "warnings": []
     }
   },
   "expected": {
-    "clientState": {
-      "cache": {
-        "User:1": { "__typename": "User", "id": "1", "name": "New" }
-      },
-      "invalidatedQueries": []
+    "entities": {
+      "User:u1": {
+        "name": "Ada Lovelace"
+      }
     }
   },
-  "tags": ["result-union", "cache-update"]
+  "tags": [
+    "result-unions"
+  ]
 }

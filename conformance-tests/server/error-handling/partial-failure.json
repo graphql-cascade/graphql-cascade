@@ -1,40 +1,75 @@
 {
   "id": "TC-S-021",
-  "name": "Failed Field Leaves Other Cascades Intact",
-  "description": "A failed mutation field MUST NOT affect the cascades of the others: its own cascade reports no entity changes, and the fields that succeeded describe their changes in full",
+  "name": "A Failed Field Leaves Other Cascades Intact",
+  "description": "When one mutation field fails, its cascade reports no changes and the other fields' cascades describe their changes in full.",
   "category": "server",
   "subcategory": "error-handling",
   "requirement": "REQ-021",
+  "level": "standard",
   "priority": "high",
   "input": {
-    "mutation": "mutation BatchUpdate { user1: updateUser(id: \"1\", name: \"New Name\") { success data { id name } cascade { updated { typename id operation entity } deleted { typename id } typeInvalidations { typename } metadata { affectedCount } } } user2: updateUser(id: \"999\", name: \"Fail\") { success errors { message code } cascade { updated { typename id operation entity } deleted { typename id } typeInvalidations { typename } metadata { affectedCount } } } }",
-    "context": {
-      "entities": [
-        { "__typename": "User", "id": "1", "name": "Old Name" }
+    "state": {
+      "users": [
+        {
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
+        },
+        {
+          "id": "u2",
+          "name": "Grace",
+          "email": "grace@example.com"
+        }
       ]
-    }
+    },
+    "operation": "mutation RenameThree {\n  first: updateUser(id: \"u1\", input: { name: \"Ada Lovelace\" }) {\n    success\n    errors { code message }\n    data { id }\n    cascade {\n      updated {\n        typename\n        id\n        operation\n        entity {\n          __typename\n          id\n          ... on User { name email postCount }\n          ... on Post { title published }\n        }\n      }\n      deleted { typename id deletedAt }\n      invalidations { queryName arguments strategy scope }\n      typeInvalidations { typename affectedCount }\n      metadata { timestamp depth affectedCount truncated }\n    }\n  }\n  second: updateUser(id: \"missing\", input: { name: \"Nobody\" }) {\n    success\n    errors { code message }\n    data { id }\n    cascade {\n      updated {\n        typename\n        id\n        operation\n        entity {\n          __typename\n          id\n          ... on User { name email postCount }\n          ... on Post { title published }\n        }\n      }\n      deleted { typename id deletedAt }\n      invalidations { queryName arguments strategy scope }\n      typeInvalidations { typename affectedCount }\n      metadata { timestamp depth affectedCount truncated }\n    }\n  }\n  third: updateUser(id: \"u2\", input: { name: \"Grace Hopper\" }) {\n    success\n    errors { code message }\n    data { id }\n    cascade {\n      updated {\n        typename\n        id\n        operation\n        entity {\n          __typename\n          id\n          ... on User { name email postCount }\n          ... on Post { title published }\n        }\n      }\n      deleted { typename id deletedAt }\n      invalidations { queryName arguments strategy scope }\n      typeInvalidations { typename affectedCount }\n      metadata { timestamp depth affectedCount truncated }\n    }\n  }\n}",
+    "variables": {}
   },
   "expected": {
-    "cascades": {
-      "user1": {
-        "updated": [{ "typename": "User", "id": "1", "name": "New Name" }],
-        "deleted": [],
-        "invalidations": [],
-        "typeInvalidations": [],
-        "metadata": { "affectedCount": 1 }
+    "fields": {
+      "first": {
+        "success": true,
+        "cascade": {
+          "updated": [
+            {
+              "typename": "User",
+              "id": "u1",
+              "entity": {
+                "name": "Ada Lovelace"
+              }
+            }
+          ]
+        }
       },
-      "user2": {
-        "updated": [],
-        "deleted": [],
-        "invalidations": [],
-        "typeInvalidations": [],
-        "metadata": { "affectedCount": 0 }
+      "second": {
+        "success": false,
+        "errors": [
+          {
+            "code": "NOT_FOUND"
+          }
+        ],
+        "cascade": {
+          "noChanges": true
+        }
+      },
+      "third": {
+        "success": true,
+        "cascade": {
+          "updated": [
+            {
+              "typename": "User",
+              "id": "u2",
+              "entity": {
+                "name": "Grace Hopper"
+              }
+            }
+          ]
+        }
       }
-    },
-    "error": {
-      "message": "User not found: 999",
-      "extensions": { "code": "NOT_FOUND" }
     }
   },
-  "tags": ["error-handling", "partial-failure", "batch"]
+  "tags": [
+    "errors",
+    "batch"
+  ]
 }

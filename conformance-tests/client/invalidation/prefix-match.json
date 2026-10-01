@@ -1,31 +1,101 @@
 {
   "id": "TC-C-020",
-  "name": "Prefix-Based Query Invalidation",
-  "description": "Clients MUST invalidate all queries matching a prefix pattern when specified in cascade invalidations",
+  "name": "PREFIX Hints Select Queries by Name Prefix",
+  "description": "A PREFIX hint applies to every cached query whose name starts with its queryName.",
   "category": "client",
   "subcategory": "invalidation",
   "requirement": "REQ-030",
+  "level": "standard",
   "priority": "high",
   "input": {
-    "clientState": {
+    "state": {
       "queries": [
-        { "query": "getUsers", "variables": {}, "result": { "users": [] } },
-        { "query": "getUserById", "variables": { "id": "1" }, "result": { "user": {} } },
-        { "query": "getPosts", "variables": {}, "result": { "posts": [] } }
+        {
+          "name": "listUsers",
+          "result": [
+            {
+              "__typename": "User",
+              "id": "u1",
+              "name": "Ada",
+              "email": "ada@example.com"
+            }
+          ]
+        },
+        {
+          "name": "listUsersByManager",
+          "arguments": {
+            "managerId": "u2"
+          },
+          "result": [
+            {
+              "__typename": "User",
+              "id": "u1",
+              "name": "Ada",
+              "email": "ada@example.com"
+            }
+          ]
+        },
+        {
+          "name": "getUser",
+          "arguments": {
+            "id": "u1"
+          },
+          "result": {
+            "__typename": "User",
+            "id": "u1",
+            "name": "Ada",
+            "email": "ada@example.com"
+          }
+        }
       ]
     },
-    "cascade": {
-      "updated": [{ "typename": "User", "id": "1", "name": "Updated" }],
-      "invalidations": [
-        { "queryName": "getUser", "strategy": "INVALIDATE", "scope": "PREFIX" }
-      ],
-      "metadata": { "affectedCount": 1, "operationType": "UPDATE" }
+    "result": {
+      "success": true,
+      "errors": [],
+      "data": null,
+      "cascade": {
+        "updated": [],
+        "deleted": [],
+        "invalidations": [
+          {
+            "queryName": "listUsers",
+            "strategy": "INVALIDATE",
+            "scope": "PREFIX"
+          }
+        ],
+        "typeInvalidations": [],
+        "metadata": {
+          "timestamp": "2026-01-01T00:00:00Z",
+          "depth": 1,
+          "affectedCount": 0,
+          "truncated": false
+        }
+      }
     }
   },
   "expected": {
-    "clientState": {
-      "invalidatedQueries": ["getUsers", "getUserById"]
-    }
+    "queries": [
+      {
+        "name": "listUsers",
+        "state": "invalidated"
+      },
+      {
+        "name": "listUsersByManager",
+        "arguments": {
+          "managerId": "u2"
+        },
+        "state": "invalidated"
+      },
+      {
+        "name": "getUser",
+        "arguments": {
+          "id": "u1"
+        },
+        "state": "fresh"
+      }
+    ]
   },
-  "tags": ["invalidation", "prefix", "pattern-matching"]
+  "tags": [
+    "prefix-match"
+  ]
 }

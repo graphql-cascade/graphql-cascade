@@ -1,35 +1,78 @@
 {
   "id": "TC-S-030",
   "name": "Truncation Collapses Types Into Type Invalidations",
-  "description": "When a cascade exceeds the server's limits, servers MUST NOT silently drop entities: every omitted entity's type MUST appear in typeInvalidations and metadata.truncated MUST be true (Mutation Responses, Cascade Size Limits and Truncation)",
+  "description": "When a cascade exceeds a limit, whole types move into typeInvalidations and metadata.truncated is true, so no affected entity is dropped silently.",
   "category": "server",
   "subcategory": "response-building",
   "requirement": "REQ-050",
-  "priority": "critical",
+  "level": "standard",
+  "priority": "high",
   "input": {
-    "mutation": "mutation PublishAuthor($id: ID!) { publishAuthor(id: $id) { success cascade { updated { __typename id } typeInvalidations { typename affectedCount } metadata { truncated affectedCount } } } }",
-    "context": {
-      "variables": { "id": "author_1" },
-      "limits": { "maxUpdatedEntities": 3 },
-      "entities": [
-        { "__typename": "Author", "id": "author_1", "published": false },
-        { "__typename": "Post", "id": "post_1", "authorId": "author_1" },
-        { "__typename": "Post", "id": "post_2", "authorId": "author_1" },
-        { "__typename": "Post", "id": "post_3", "authorId": "author_1" },
-        { "__typename": "Post", "id": "post_4", "authorId": "author_1" }
+    "state": {
+      "users": [
+        {
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
+        }
+      ],
+      "posts": [
+        {
+          "id": "p1",
+          "title": "Post 1",
+          "published": false,
+          "authorId": "u1"
+        },
+        {
+          "id": "p2",
+          "title": "Post 2",
+          "published": false,
+          "authorId": "u1"
+        },
+        {
+          "id": "p3",
+          "title": "Post 3",
+          "published": false,
+          "authorId": "u1"
+        },
+        {
+          "id": "p4",
+          "title": "Post 4",
+          "published": false,
+          "authorId": "u1"
+        }
       ]
-    }
+    },
+    "limits": {
+      "maxUpdatedEntities": 2
+    },
+    "operation": "mutation PublishAll {\n  publishPosts(authorId: \"u1\") {\n    success\n    errors { code message }\n    data { id }\n    cascade {\n      updated {\n        typename\n        id\n        operation\n        entity {\n          __typename\n          id\n          ... on User { name email postCount }\n          ... on Post { title published }\n        }\n      }\n      deleted { typename id deletedAt }\n      invalidations { queryName arguments strategy scope }\n      typeInvalidations { typename affectedCount }\n      metadata { timestamp depth affectedCount truncated }\n    }\n  }\n}",
+    "variables": {}
   },
   "expected": {
-    "cascade": {
-      "updated": [{ "typename": "Author", "id": "author_1" }],
-      "invalidations": [],
-      "typeInvalidations": [{ "typename": "Post", "affectedCount": 4 }],
-      "metadata": {
-        "affectedCount": 5,
-        "truncated": true
+    "fields": {
+      "publishPosts": {
+        "success": true,
+        "cascade": {
+          "typeInvalidations": [
+            {
+              "typename": "Post",
+              "affectedCount": 4
+            }
+          ],
+          "absent": [
+            {
+              "typename": "Post"
+            }
+          ],
+          "metadata": {
+            "truncated": true
+          }
+        }
       }
     }
   },
-  "tags": ["truncation", "type-invalidation", "limits", "completeness"]
+  "tags": [
+    "truncation"
+  ]
 }

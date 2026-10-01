@@ -1,37 +1,75 @@
 {
   "id": "TC-S-012",
   "name": "One Cascade per Mutation Field",
-  "description": "When an operation contains several mutation fields, each field's payload MUST carry its own cascade, describing only the changes made by that field",
+  "description": "Each mutation field's payload carries its own cascade, describing only the changes that field made.",
   "category": "server",
   "subcategory": "response-building",
   "requirement": "REQ-012",
+  "level": "standard",
   "priority": "high",
   "input": {
-    "mutation": "mutation BatchUpdate { updateUser1: updateUser(id: \"1\", name: \"User 1\") { data { id name } cascade { updated { typename id operation entity } deleted { typename id } invalidations { queryName strategy scope } typeInvalidations { typename } metadata { affectedCount } } } updateUser2: updateUser(id: \"2\", name: \"User 2\") { data { id name } cascade { updated { typename id operation entity } deleted { typename id } invalidations { queryName strategy scope } typeInvalidations { typename } metadata { affectedCount } } } }",
-    "context": {
-      "entities": [
-        { "__typename": "User", "id": "1", "name": "Old Name 1" },
-        { "__typename": "User", "id": "2", "name": "Old Name 2" }
+    "state": {
+      "users": [
+        {
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
+        },
+        {
+          "id": "u2",
+          "name": "Grace",
+          "email": "grace@example.com"
+        }
       ]
-    }
+    },
+    "operation": "mutation RenameBoth {\n  first: updateUser(id: \"u1\", input: { name: \"Ada Lovelace\" }) {\n    success\n    errors { code message }\n    data { id }\n    cascade {\n      updated {\n        typename\n        id\n        operation\n        entity {\n          __typename\n          id\n          ... on User { name email postCount }\n          ... on Post { title published }\n        }\n      }\n      deleted { typename id deletedAt }\n      invalidations { queryName arguments strategy scope }\n      typeInvalidations { typename affectedCount }\n      metadata { timestamp depth affectedCount truncated }\n    }\n  }\n  second: updateUser(id: \"u2\", input: { name: \"Grace Hopper\" }) {\n    success\n    errors { code message }\n    data { id }\n    cascade {\n      updated {\n        typename\n        id\n        operation\n        entity {\n          __typename\n          id\n          ... on User { name email postCount }\n          ... on Post { title published }\n        }\n      }\n      deleted { typename id deletedAt }\n      invalidations { queryName arguments strategy scope }\n      typeInvalidations { typename affectedCount }\n      metadata { timestamp depth affectedCount truncated }\n    }\n  }\n}",
+    "variables": {}
   },
   "expected": {
-    "cascades": {
-      "updateUser1": {
-        "updated": [{ "typename": "User", "id": "1", "name": "User 1" }],
-        "deleted": [],
-        "invalidations": [],
-        "typeInvalidations": [],
-        "metadata": { "affectedCount": 1 }
+    "fields": {
+      "first": {
+        "success": true,
+        "cascade": {
+          "updated": [
+            {
+              "typename": "User",
+              "id": "u1",
+              "entity": {
+                "name": "Ada Lovelace"
+              }
+            }
+          ],
+          "absent": [
+            {
+              "typename": "User",
+              "id": "u2"
+            }
+          ]
+        }
       },
-      "updateUser2": {
-        "updated": [{ "typename": "User", "id": "2", "name": "User 2" }],
-        "deleted": [],
-        "invalidations": [],
-        "typeInvalidations": [],
-        "metadata": { "affectedCount": 1 }
+      "second": {
+        "success": true,
+        "cascade": {
+          "updated": [
+            {
+              "typename": "User",
+              "id": "u2",
+              "entity": {
+                "name": "Grace Hopper"
+              }
+            }
+          ],
+          "absent": [
+            {
+              "typename": "User",
+              "id": "u1"
+            }
+          ]
+        }
       }
     }
   },
-  "tags": ["batch", "multiple-mutations"]
+  "tags": [
+    "batch"
+  ]
 }

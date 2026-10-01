@@ -33,6 +33,7 @@ The **specification** is versioned independently: its version lives in
 - `@graphql-cascade/apollo`: `ALL`, `PREFIX` and `PATTERN` invalidation scopes now evict the matching root query fields; they were no-ops.
 
 ### Changed
+- Conformance cases are executable: server cases run against a conformance domain (`conformance-tests/schema.graphql`) with defined behavior, client cases seed a cache and apply a mutation result, and every case has a level. `check:spec` validates server case operations against the domain. The cases previously described intent without the inputs to run them.
 - **Breaking** (`@graphql-cascade/client`, for code that builds cascade entries): `UpdatedEntity` and `DeletedEntity` name the entity's type in `typename` (spec 1.3.0); `__typename` is optional and deprecated. The server sends both; clients read entries with the new `cascadeEntryTypename()`, which falls back to `__typename` for pre-1.3 servers. Apollo, urql and Relay adapters, the conformance validators and fixtures, and the Python reference server follow.
 - **Breaking** (`@graphql-cascade/server`): invalidation hints use the specification's `QueryInvalidation` shape (`queryName`, `queryHash`, `arguments`, `queryPattern`, `strategy`, `scope`) instead of `CascadeInvalidation` (`__typename`, `id`, `field`, `reason`), which no client could apply. Hints without a valid `strategy` and `scope` are dropped and reported through `onInvalidationError`.
 - `@graphql-cascade/conformance`: invalidations are checked for `strategy`, `scope` and the name or pattern their scope needs.

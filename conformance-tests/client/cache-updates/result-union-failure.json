@@ -1,29 +1,65 @@
 {
   "id": "TC-C-006",
-  "name": "Result Union Failure",
-  "description": "Clients MUST apply nothing for a CascadeFailure (a result union's failure member)",
+  "name": "CascadeFailure Applies Nothing",
+  "description": "A CascadeFailure means nothing was committed: the cache stays as it was.",
   "category": "client",
-  "subcategory": "cache-updates",
+  "subcategory": "result-unions",
   "requirement": "REQ-105",
+  "level": "basic",
   "priority": "high",
   "input": {
-    "clientState": {
-      "cache": {
-        "User:1": { "__typename": "User", "id": "1", "name": "Old" }
-      }
+    "state": {
+      "entities": [
+        {
+          "__typename": "User",
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
+        }
+      ],
+      "queries": [
+        {
+          "name": "user",
+          "arguments": {
+            "id": "u1"
+          },
+          "result": {
+            "__typename": "User",
+            "id": "u1",
+            "name": "Ada",
+            "email": "ada@example.com"
+          }
+        }
+      ]
     },
     "result": {
       "__typename": "CascadeFailure",
-      "errors": [{ "message": "User not found", "code": "NOT_FOUND" }]
+      "errors": [
+        {
+          "message": "Name already taken",
+          "code": "CONFLICT",
+          "field": "name"
+        }
+      ]
     }
   },
   "expected": {
-    "clientState": {
-      "cache": {
-        "User:1": { "__typename": "User", "id": "1", "name": "Old" }
-      },
-      "invalidatedQueries": []
-    }
+    "entities": {
+      "User:u1": {
+        "name": "Ada"
+      }
+    },
+    "queries": [
+      {
+        "name": "user",
+        "arguments": {
+          "id": "u1"
+        },
+        "state": "fresh"
+      }
+    ]
   },
-  "tags": ["result-union", "cache-update"]
+  "tags": [
+    "result-unions"
+  ]
 }

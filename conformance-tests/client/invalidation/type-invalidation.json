@@ -1,44 +1,94 @@
 {
   "id": "TC-C-004",
-  "name": "Type Invalidation",
-  "description": "Clients MUST treat every cached entity of an invalidated type, and every cached query that contains or may contain one, as stale. Queries that cannot contain the type MAY stay fresh (Cache Invalidation Protocol, Type Invalidation)",
+  "name": "Type Invalidations Mark Results Holding the Type Stale",
+  "description": "A type invalidation marks stale every cached result that contains, or may contain, an entity of the type, including empty lists.",
   "category": "client",
   "subcategory": "invalidation",
   "requirement": "REQ-104",
-  "priority": "critical",
+  "level": "standard",
+  "priority": "high",
   "input": {
-    "clientState": {
-      "cache": {
-        "Post:post_1": {
+    "state": {
+      "entities": [
+        {
           "__typename": "Post",
-          "id": "post_1",
-          "title": "Hello"
+          "id": "p1",
+          "title": "Notes",
+          "published": false
         },
-        "User:user_1": { "__typename": "User", "id": "user_1", "name": "Ada" },
-        "query:ListPosts:{}": { "posts": [{ "__ref": "Post:post_1" }] },
-        "query:Drafts:{}": { "drafts": [] },
-        "query:Me:{}": { "me": { "__ref": "User:user_1" } }
-      }
+        {
+          "__typename": "User",
+          "id": "u1",
+          "name": "Ada",
+          "email": "ada@example.com"
+        }
+      ],
+      "queries": [
+        {
+          "name": "posts",
+          "result": [
+            {
+              "__typename": "Post",
+              "id": "p1",
+              "title": "Notes",
+              "published": false
+            }
+          ]
+        },
+        {
+          "name": "drafts",
+          "result": []
+        },
+        {
+          "name": "users",
+          "result": [
+            {
+              "__typename": "User",
+              "id": "u1",
+              "name": "Ada",
+              "email": "ada@example.com"
+            }
+          ]
+        }
+      ]
     },
-    "cascade": {
-      "updated": [],
-      "deleted": [],
-      "invalidations": [],
-      "typeInvalidations": [{ "typename": "Post", "affectedCount": 800 }],
-      "metadata": {
-        "timestamp": "2026-01-01T00:00:00Z",
-        "affectedCount": 800,
-        "truncated": true
+    "result": {
+      "success": true,
+      "errors": [],
+      "data": null,
+      "cascade": {
+        "updated": [],
+        "deleted": [],
+        "invalidations": [],
+        "typeInvalidations": [
+          {
+            "typename": "Post",
+            "affectedCount": 120
+          }
+        ],
+        "metadata": {
+          "timestamp": "2026-01-01T00:00:00Z",
+          "depth": 1,
+          "affectedCount": 120,
+          "truncated": true
+        }
       }
     }
   },
   "expected": {
-    "clientState": {
-      "cache": {
-        "Post:post_1": null
+    "queries": [
+      {
+        "name": "posts",
+        "state": "invalidated"
       },
-      "invalidatedQueries": ["query:ListPosts:{}", "query:Drafts:{}"]
-    }
+      {
+        "name": "drafts",
+        "state": "invalidated"
+      }
+    ]
   },
-  "tags": ["type-invalidation", "truncation", "client"]
+  "tags": [
+    "type-invalidation",
+    "truncation"
+  ]
 }

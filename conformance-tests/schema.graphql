@@ -1,0 +1,82 @@
+# Conformance domain
+#
+# The schema every server conformance case runs against, merged with
+# reference/cascade_base.graphql. A server under test implements it with the
+# behavior described in conformance-tests/README.md.
+
+type Query {
+  user(id: ID!): User
+  users: [User!]!
+  post(id: ID!): Post
+  node(id: ID!): Node
+}
+
+type User implements Node {
+  id: ID!
+  name: String!
+  email: String!
+  manager: User
+  posts: [Post!]!
+  postCount: Int!
+}
+
+type Post implements Node {
+  id: ID!
+  title: String!
+  published: Boolean!
+  author: User!
+}
+
+input CreateUserInput {
+  name: String!
+  email: String!
+  managerId: ID
+}
+
+input UpdateUserInput {
+  name: String
+  email: String
+  managerId: ID
+}
+
+input CreatePostInput {
+  title: String!
+  authorId: ID!
+}
+
+input UpdatePostInput {
+  title: String
+  published: Boolean
+}
+
+type UserCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: User
+  cascade: CascadeUpdates!
+}
+
+type PostCascade implements CascadeResponse {
+  success: Boolean!
+  errors: [CascadeError!]
+  data: Post
+  cascade: CascadeUpdates!
+}
+
+type RenameUserPayload implements CascadePayload {
+  data: User!
+  cascade: CascadeUpdates!
+  warnings: [CascadeError!]!
+}
+
+union RenameUserResult = RenameUserPayload | CascadeFailure
+
+type Mutation {
+  createUser(input: CreateUserInput!): UserCascade!
+  updateUser(id: ID!, input: UpdateUserInput!): UserCascade!
+  deleteUser(id: ID!): UserCascade!
+  renameUser(id: ID!, name: String!): RenameUserResult!
+  createPost(input: CreatePostInput!): PostCascade!
+  updatePost(id: ID!, input: UpdatePostInput!): PostCascade!
+  publishPosts(authorId: ID!): UserCascade!
+}
