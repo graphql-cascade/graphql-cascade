@@ -14,6 +14,10 @@ The **specification** is versioned independently: its version lives in
 
 ## [Unreleased]
 
+### Removed
+- `reference/server-python`: a Python server predating several specification versions (it dropped entities past limits instead of invalidating their types). Python users: [FraiseQL](https://github.com/fraiseql/fraiseql) implements Cascade.
+- `compliance-tests/`, a placeholder Python compliance tool, with the `compliance-tests` and `test` workflows, whose steps could not fail, and the mock `scripts/publish.py`. Conformance testing belongs in `@graphql-cascade/conformance`.
+
 ### Fixed
 - Specification 1.9.1: chapters 01, 04, 07 and the reference schema allow result unions consistently with 1.9.0. See [release notes](releases/spec-v1.9.1.md).
 - **Security** (`@graphql-cascade/server`): an async `entityFilter` was silently skipped when building responses synchronously, leaking entities the viewer may not see; synchronous builds now refuse, and `buildResponseAsync()` applies the filter. The Apollo Server plugin sends a complete, limited cascade (with type invalidations and hints) built asynchronously; tracker failures no longer become an empty cascade; Express and NestJS integrations accept an invalidator.
