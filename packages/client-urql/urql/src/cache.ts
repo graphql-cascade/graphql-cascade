@@ -26,11 +26,17 @@ interface CachedQuery {
   isStale: boolean;
 }
 
+/** Where a normalized value refers to an entity */
+type EntityRef = { __ref: string };
+
+const isRef = (value: unknown): value is EntityRef =>
+  value !== null && typeof value === "object" && "__ref" in value;
+
 /**
- * Simple in-memory cache adapter for GraphQL Cascade.
- *
- * This is a basic implementation suitable for testing and simple use cases.
- * For production with URQL graphcache, use GraphcacheCascadeAdapter.
+ * A normalized in-memory cache: entities are stored once, by type name and
+ * id, and query results refer to them, so an entity update shows in every
+ * query that holds the entity. Stored entities refer to nested entities as
+ * `{ __ref: "Type:id" }`.
  */
 export class InMemoryCascadeCache implements CascadeCache {
   private entities: Map<string, CacheEntity> = new Map();
@@ -76,10 +82,21 @@ export class InMemoryCascadeCache implements CascadeCache {
    */
   write(typename: string, id: string, data: Record<string, unknown>): void {
     const key = this.entityKey(typename, id);
+    const fields = Object.fromEntries(
+      Object.entries(data).map(([field, value]) => [
+        field,
+        this.normalize(value),
+      ]),
+    );
     this.entities.set(key, {
       typename,
       id,
-      data: { ...data, __typename: typename, id },
+      data: {
+        ...this.entities.get(key)?.data,
+        ...fields,
+        __typename: typename,
+        id,
+      },
       updatedAt: Date.now(),
     });
   }
@@ -182,7 +199,7 @@ export class InMemoryCascadeCache implements CascadeCache {
     this.queries.set(key, {
       name,
       args,
-      data,
+      data: this.normalize(data),
       fetchedAt: Date.now(),
       isStale: false,
     });
@@ -200,7 +217,60 @@ export class InMemoryCascadeCache implements CascadeCache {
     if (!query) {
       return null;
     }
-    return { data: query.data, isStale: query.isStale };
+    return { data: this.denormalize(query.data), isStale: query.isStale };
+  }
+
+  /**
+   * Store the entities in `value`, replacing each with a reference.
+   */
+  private normalize(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map((item) => this.normalize(item));
+    if (value === null || typeof value !== "object" || isRef(value)) {
+      return value;
+    }
+    const object = value as Record<string, unknown>;
+    if (
+      typeof object.__typename === "string" &&
+      (typeof object.id === "string" || typeof object.id === "number")
+    ) {
+      const id = String(object.id);
+      this.write(object.__typename, id, object);
+      return { __ref: this.entityKey(object.__typename, id) };
+    }
+    return Object.fromEntries(
+      Object.entries(object).map(([field, nested]) => [
+        field,
+        this.normalize(nested),
+      ]),
+    );
+  }
+
+  /**
+   * Replace references with the entities' current data. References to
+   * evicted entities read as null, and drop out of lists; an entity met again
+   * inside itself, through a cycle, reads as its type name and id.
+   */
+  private denormalize(value: unknown, path: string[] = []): unknown {
+    if (Array.isArray(value)) {
+      return value
+        .filter((item) => !isRef(item) || this.entities.has(item.__ref))
+        .map((item) => this.denormalize(item, path));
+    }
+    if (isRef(value)) {
+      const entity = this.entities.get(value.__ref);
+      if (!entity) return null;
+      if (path.includes(value.__ref)) {
+        return { __typename: entity.typename, id: entity.id };
+      }
+      return this.denormalize(entity.data, [...path, value.__ref]);
+    }
+    if (value === null || typeof value !== "object") return value;
+    return Object.fromEntries(
+      Object.entries(value).map(([field, nested]) => [
+        field,
+        this.denormalize(nested, path),
+      ]),
+    );
   }
 
   /**

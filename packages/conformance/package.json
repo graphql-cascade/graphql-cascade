@@ -31,6 +31,7 @@
     "graphql": "^16.0.0"
   },
   "devDependencies": {
+    "@graphql-cascade/client": "workspace:*",
     "@types/jest": "^29.0.0",
     "@types/node": "^18.0.0",
     "ajv": "^8.17.1",

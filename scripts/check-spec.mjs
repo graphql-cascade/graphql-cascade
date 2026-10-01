@@ -21,10 +21,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import {
-  REFERENCE_MODULE_PATH,
-  renderReferenceModule,
-} from "./reference-module.mjs";
+import { GENERATED_MODULES, caseFilePaths } from "./generated-modules.mjs";
 import {
   Kind,
   buildASTSchema,
@@ -269,16 +266,21 @@ export function checkCaseOperations(sdl, domainSdl, caseFiles) {
 }
 
 /**
- * @param {string} sdl the reference schema
+ * @param {typeof GENERATED_MODULES} modules
  * @param {(path: string) => string} readFile
- * @returns {string[]} a message when the shipped copy differs from the reference
+ * @param {string[]} paths tracked files
+ * @returns {string[]} a message for each generated module that is out of date
  */
-export function checkReferenceModule(sdl, readFile) {
-  return readFile(REFERENCE_MODULE_PATH) === renderReferenceModule(sdl)
-    ? []
-    : [
-        `${REFERENCE_MODULE_PATH} differs from ${REFERENCE_PATH}: run pnpm run sync:reference`,
-      ];
+export function checkGeneratedModules(modules, readFile, paths) {
+  return modules
+    .filter(({ path, render }) => {
+      try {
+        return readFile(path) !== render(readFile, paths);
+      } catch {
+        return true;
+      }
+    })
+    .map(({ path }) => `${path} is out of date: run pnpm run sync:generated`);
 }
 
 /**
@@ -634,13 +636,8 @@ function main() {
   const specFiles = files.filter(
     ({ path }) => path.startsWith("specification/") && path.endsWith(".md"),
   );
-  const caseFiles = files.filter(
-    ({ path }) =>
-      path.startsWith("conformance-tests/") &&
-      path.endsWith(".json") &&
-      !path.endsWith("test-case-schema.json") &&
-      !path.endsWith("spec-version.json"),
-  );
+  const casePaths = new Set(caseFilePaths(files.map(({ path }) => path)));
+  const caseFiles = files.filter(({ path }) => casePaths.has(path));
   const docFiles = files.filter(({ path }) =>
     CHECKED_DOCS.some((pattern) => pattern.test(path)),
   );
@@ -657,7 +654,11 @@ function main() {
       : checkCaseOperations(sdl, readFile(CONFORMANCE_SCHEMA_PATH), caseFiles)),
     ...(schemaProblems.length > 0 ? [] : checkSnippets(sdl, docFiles)),
     ...checkDocImports(docFiles, packageExports(files, readFile)),
-    ...checkReferenceModule(sdl, readFile),
+    ...checkGeneratedModules(
+      GENERATED_MODULES,
+      readFile,
+      files.map(({ path }) => path),
+    ),
     ...checkExampleSchemas(
       sdl,
       files.filter(

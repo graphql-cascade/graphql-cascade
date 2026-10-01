@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   checkCaseOperations,
-  checkReferenceModule,
+  checkGeneratedModules,
   findCorruption,
   checkVersionConsistency,
   checkReferenceSchema,
@@ -13,10 +13,6 @@ import {
   checkDocImports,
   exportedNames,
 } from "./check-spec.mjs";
-import {
-  REFERENCE_MODULE_PATH,
-  renderReferenceModule,
-} from "./reference-module.mjs";
 
 // Built from parts so this file never matches the pattern it tests.
 const MARKER = ["</xai", "function_call>"].join(":");
@@ -468,28 +464,27 @@ describe("checkDocImports", () => {
   });
 });
 
-describe("checkReferenceModule", () => {
-  const sdl = "type Query { a: Int }\n";
-  const reading = (content) => (path) =>
-    path === REFERENCE_MODULE_PATH ? content : "";
+describe("checkGeneratedModules", () => {
+  const modules = [
+    { path: "out.ts", render: (readFile) => `export const A = ${readFile("a.txt")};\n` },
+  ];
+  const files = (out) => (path) => ({ "a.txt": "1", "out.ts": out })[path];
 
-  it("accepts a module rendered from the reference schema", () => {
+  it("accepts modules matching their sources", () => {
     assert.deepEqual(
-      checkReferenceModule(sdl, reading(renderReferenceModule(sdl))),
+      checkGeneratedModules(modules, files("export const A = 1;\n"), []),
       [],
     );
   });
 
-  it("reports a module rendered from another schema", () => {
-    assert.equal(
-      checkReferenceModule(
-        sdl,
-        reading(renderReferenceModule("type Query { b: Int }\n")),
-      ).length,
-      1,
+  it("reports modules that differ from their sources", () => {
+    assert.deepEqual(
+      checkGeneratedModules(modules, files("export const A = 2;\n"), []),
+      ["out.ts is out of date: run pnpm run sync:generated"],
     );
   });
 });
+
 
 describe("checkCaseOperations", () => {
   const reference = "interface Node { id: ID! }";

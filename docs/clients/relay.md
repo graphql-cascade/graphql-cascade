@@ -79,20 +79,22 @@ const environment = createCascadeRelayEnvironment(network, store, { getDataID })
 |---------|-------------|
 | `updated` | Scalar fields with `setValue`; fields holding entities (objects with `__typename` and `id`) as linked records; other nested objects are left to the next query that selects them |
 | `deleted` | `store.delete` of the record |
-| `invalidations` | `invalidateRecord` on the root, so every query refetches on its next read |
+| `invalidations` | Unset the root fields the hint selects, such as `user(id:"1")`, so the queries reading them refetch on their next read |
 | `typeInvalidations` | `invalidateStore`, since Relay cannot mark one type's records stale |
 
-Relay marks records stale, not queries, so a hint naming one query marks every query stale: always correct, only less precise. Where that refetches too much, keep lists current in the mutation instead, with Relay's `@appendEdge` / `@deleteEdge` directives or an `updater`, and have the server send no hint for them.
+Hints match root fields by name and arguments, as the specification's scopes define. Connections stored under handle keys (`@connection`) are not root fields of the query name; keep them current in the mutation instead, with Relay's `@appendEdge` / `@deleteEdge` directives or an `updater`.
 
 ## Applying a Cascade Yourself
 
-`createCascadeUpdater(cascade, { getDataID })` returns a store updater, for `commitUpdate` or a mutation's `updater`; `applyCascadeToStore(store, cascade)` applies one directly.
+`commitCascade(environment, cascade)` applies a cascade received another way, such as through a subscription, exactly as cascade environments apply mutation responses:
 
 ```typescript
-import { createCascadeUpdater } from "@graphql-cascade/relay";
+import { commitCascade } from "@graphql-cascade/relay";
 
-environment.commitUpdate(createCascadeUpdater(cascade));
+commitCascade(environment, cascade);
 ```
+
+`createCascadeUpdater(cascade, { getDataID, rootFields })` returns the store updater itself, for a mutation's `updater`; `applyCascadeToStore(store, cascade)` applies one directly. They need the root record's storage keys in `rootFields` to single out queries; without them, a hint marks every query stale.
 
 ## Retrying Failed Requests
 
